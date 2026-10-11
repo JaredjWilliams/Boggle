@@ -42,8 +42,13 @@ export function pathWord(board: Board, path: readonly Cell[]): string {
   return word
 }
 
-function onBoard(row: number, col: number): boolean {
-  return row >= 0 && row < 4 && col >= 0 && col < 4
+function onBoard(board: Board, row: number, col: number): boolean {
+  const rowCells = board[row]
+  return rowCells != null && col >= 0 && col < rowCells.length
+}
+
+function cellBit(row: number, col: number, width: number): number {
+  return 1 << (row * width + col)
 }
 
 function walk(
@@ -54,7 +59,7 @@ function walk(
   index: number,
   seen: number,
 ): boolean {
-  const bit = 1 << (row * 4 + col)
+  const bit = cellBit(row, col, board[row].length)
   if (seen & bit) return false
 
   const letters = board[row][col].toLowerCase()
@@ -68,7 +73,7 @@ function walk(
   for (const [dRow, dCol] of NEIGHBORS) {
     const nextRow = row + dRow
     const nextCol = col + dCol
-    if (!onBoard(nextRow, nextCol)) continue
+    if (!onBoard(board, nextRow, nextCol)) continue
     if (walk(board, target, nextRow, nextCol, nextIndex, nextSeen)) return true
   }
   return false
@@ -78,8 +83,8 @@ export function canFormWord(board: Board, word: string): boolean {
   const target = word.toLowerCase()
   if (!/^[a-z]{3,}$/.test(target)) return false
 
-  for (let row = 0; row < 4; row += 1) {
-    for (let col = 0; col < 4; col += 1) {
+  for (let row = 0; row < board.length; row += 1) {
+    for (let col = 0; col < board[row].length; col += 1) {
       if (walk(board, target, row, col, 0, 0)) return true
     }
   }
@@ -95,7 +100,7 @@ function search(
   prefix: string,
   found: Set<string>,
 ): void {
-  const bit = 1 << (row * 4 + col)
+  const bit = cellBit(row, col, board[row].length)
   if (seen & bit) return
 
   let current = node
@@ -114,7 +119,7 @@ function search(
   for (const [dRow, dCol] of NEIGHBORS) {
     const nextRow = row + dRow
     const nextCol = col + dCol
-    if (!onBoard(nextRow, nextCol)) continue
+    if (!onBoard(board, nextRow, nextCol)) continue
     search(board, current, nextRow, nextCol, nextSeen, word, found)
   }
 }
@@ -128,8 +133,8 @@ function hasChild(node: Trie): boolean {
 
 export function findAllWords(board: Board, trie: Trie): string[] {
   const found = new Set<string>()
-  for (let row = 0; row < 4; row += 1) {
-    for (let col = 0; col < 4; col += 1) {
+  for (let row = 0; row < board.length; row += 1) {
+    for (let col = 0; col < board[row].length; col += 1) {
       search(board, trie, row, col, 0, '', found)
     }
   }

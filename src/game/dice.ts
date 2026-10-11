@@ -1,20 +1,31 @@
+const SIDE = 5
+
 const CUBES = [
-  'AAEEGN',
-  'ABBJOO',
-  'ACHOPS',
-  'AFFKPS',
-  'AOOTTW',
-  'CIMOTU',
-  'DEILRX',
-  'DELRVY',
-  'DISTTY',
-  'EEGHNW',
-  'EEINSU',
-  'EHRTVW',
-  'EIOSST',
-  'ELRTTY',
-  'HIMNQU',
-  'HLNNRZ',
+  'AAAFRS',
+  'AAEEEE',
+  'AAFIRS',
+  'ADENNN',
+  'AEEEEM',
+  'AEEGMU',
+  'AEGMNN',
+  'AFIRSY',
+  'BJKQXZ',
+  'CCNSTW',
+  'CEIILT',
+  'CEILPT',
+  'CEIPST',
+  'DDLNOR',
+  'DHHLOR',
+  'DHHNOT',
+  'DHLNOR',
+  'EIIITT',
+  'EMOTTT',
+  'ENSSSU',
+  'FIPRSY',
+  'GORRVW',
+  'HIPRRY',
+  'NOOTUW',
+  'OOOTTU',
 ]
 
 export type Board = string[][]
@@ -37,10 +48,7 @@ function faceOf(cube: string): string {
 
 export function shakeBoard(): Board {
   const faces = shuffle(CUBES).map(faceOf)
-  return [
-    faces.slice(0, 4),
-    faces.slice(4, 8),
-    faces.slice(8, 12),
-    faces.slice(12, 16),
-  ]
+  return Array.from({ length: SIDE }, (_, row) =>
+    faces.slice(row * SIDE, (row + 1) * SIDE),
+  )
 }
