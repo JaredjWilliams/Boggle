@@ -1,29 +1,112 @@
-.end-panel {
+.summary {
+  display: flex;
   flex: 1;
+  flex-direction: column;
   min-height: 0;
-  overflow: auto;
-  padding-bottom: calc(16px + env(safe-area-inset-bottom));
 }
 
-.end-score {
-  margin: 0 16px;
-  font-size: 18px;
+.summary-top {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex: none;
+  padding: 16px 16px 8px;
 }
 
-.end-score strong {
-  font-size: 28px;
-}
-
-.end-panel h2 {
-  margin: 16px 16px 0;
+.summary-kicker {
+  margin: 0 0 6px;
+  color: var(--ink);
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
+.summary-score {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+}
+
+.summary-score .label {
+  color: #6d6458;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.summary-score strong {
+  font-size: 40px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.play-again {
+  margin-left: auto;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--cream);
+  font: inherit;
+  font-weight: 700;
+}
+
+.summary-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: 1;
+  min-height: 0;
+  border-top: 1px solid var(--line);
+}
+
+.summary-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.summary-column + .summary-column {
+  border-left: 1px solid var(--line);
+}
+
+.summary-column h2 {
+  flex: none;
+  margin: 0;
+  padding: 12px 12px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.summary-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+}
+
+.summary-scroll .word-list {
+  padding: 0 12px;
+}
+
+.summary-scroll .word-list li {
+  gap: 8px;
+  font-size: 14px;
+}
+
+.summary-scroll .word-list li span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .empty {
   margin: 0;
-  padding: 0 16px;
+  padding: 4px 12px 0;
   color: #6d6458;
 }

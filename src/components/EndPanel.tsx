@@ -6,26 +6,56 @@ type Props = {
   score: number
   found: ScoredWord[]
   missed: ScoredWord[]
+  onPlayAgain: () => void
 }
 
-export function EndPanel({ score, found, missed }: Props) {
+export function EndPanel({ score, found, missed, onPlayAgain }: Props) {
   return (
-    <section className="end-panel">
-      <p className="end-score">
-        Score <strong>{score}</strong>
-      </p>
-      <h2>Your words</h2>
-      {found.length === 0 ? (
-        <p className="empty">None</p>
-      ) : (
-        <WordList words={found} flat />
-      )}
-      <h2>Missed words</h2>
-      {missed.length === 0 ? (
-        <p className="empty">No missed words.</p>
-      ) : (
-        <WordList words={missed} flat />
-      )}
+    <section className="summary">
+      <div className="summary-top">
+        <div>
+          <p className="summary-kicker">Time's up</p>
+          <p className="summary-score">
+            <span className="label">Score</span>
+            <strong>{score}</strong>
+          </p>
+        </div>
+        <button type="button" className="play-again" onClick={onPlayAgain}>
+          Play again
+        </button>
+      </div>
+
+      <div className="summary-columns">
+        <WordColumn title="Your words" words={found} empty="None this round." />
+        <WordColumn
+          title="Possible words"
+          words={missed}
+          empty="You found every word."
+        />
+      </div>
+    </section>
+  )
+}
+
+function WordColumn({
+  title,
+  words,
+  empty,
+}: {
+  title: string
+  words: ScoredWord[]
+  empty: string
+}) {
+  return (
+    <section className="summary-column">
+      <h2>{title}</h2>
+      <div className="summary-scroll">
+        {words.length === 0 ? (
+          <p className="empty">{empty}</p>
+        ) : (
+          <WordList words={words} flat />
+        )}
+      </div>
     </section>
   )
 }

@@ -46,3 +46,9 @@ if (word == null || word.isBlank()) {
 ```
 
 Ship the smallest change that looks finished. Match surrounding code, then verify the screen a person actually uses.
+
+After each implementation, run the unit tests and fix any failure before finishing. That is how we know the change did not break existing behavior.
+
+```
+npm test
+```

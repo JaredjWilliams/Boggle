@@ -13,6 +13,22 @@ function App() {
     ? 'Could not load the word list.'
     : round.message
 
+  if (round.phase === 'ended') {
+    return (
+      <>
+        <Header />
+        <div className="screen">
+          <EndPanel
+            score={round.score}
+            found={round.found}
+            missed={round.missed}
+            onPlayAgain={round.startRound}
+          />
+        </div>
+      </>
+    )
+  }
+
   return (
     <>
       <Header />
@@ -54,14 +70,6 @@ function App() {
             />
             <WordList words={round.found} />
           </>
-        )}
-
-        {round.phase === 'ended' && (
-          <EndPanel
-            score={round.score}
-            found={round.found}
-            missed={round.missed}
-          />
         )}
       </div>
     </>
