@@ -5,27 +5,38 @@
   min-height: 0;
 }
 
-.path {
-  flex: none;
-  min-height: 1.3em;
-  margin: 10px 16px 0;
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
 .message,
 .loading {
   margin: 0;
 }
 
 .message {
+  position: relative;
   flex: none;
   min-height: 1.3em;
-  margin: 2px 16px 8px;
+  margin: 8px 16px;
   color: #9a3412;
   font-size: 14px;
+}
+
+.message-repeat {
+  color: var(--warn);
+}
+
+.message-invalid {
+  color: var(--bad);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .loading {

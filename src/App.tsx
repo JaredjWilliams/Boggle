@@ -1,10 +1,11 @@
 import { Board } from './components/Board'
+import { BuiltWord } from './components/BuiltWord'
 import { EndPanel } from './components/EndPanel'
 import { Header } from './components/Header'
 import { StatusBar } from './components/StatusBar'
 import { WordForm } from './components/WordForm'
 import { WordList } from './components/WordList'
-import { useRound } from './hooks/useRound'
+import { useRound, type AttemptFeedback } from './hooks/useRound'
 import './App.css'
 
 function App() {
@@ -40,6 +41,8 @@ function App() {
           shakeDisabled={round.phase === 'loading' || round.loadError}
         />
 
+        <BuiltWord traced={round.traced} feedback={round.feedback} />
+
         {round.board.length > 0 && (
           <Board
             board={round.board}
@@ -52,9 +55,15 @@ function App() {
           />
         )}
 
-        <p className="path">{round.traced || '\u00a0'}</p>
-        <p className="message" role="status">
-          {notice || '\u00a0'}
+        <p
+          className={messageClass(round.feedback, round.message, round.loadError)}
+          role="status"
+        >
+          {round.feedback?.kind === 'new' ? (
+            <span className="sr-only">{pointsStatus(round.feedback)}</span>
+          ) : (
+            notice || '\u00a0'
+          )}
         </p>
 
         {round.phase === 'loading' && !round.loadError && (
@@ -74,6 +83,22 @@ function App() {
       </div>
     </>
   )
+}
+
+function messageClass(
+  feedback: AttemptFeedback | null,
+  message: string,
+  loadError: boolean,
+): string {
+  if (loadError || !message) return 'message'
+  if (feedback?.kind === 'repeat') return 'message message-repeat'
+  if (feedback?.kind === 'invalid') return 'message message-invalid'
+  return 'message'
+}
+
+function pointsStatus(feedback: AttemptFeedback): string {
+  const label = feedback.points === 1 ? 'point' : 'points'
+  return `${feedback.word}, ${feedback.points} ${label}`
 }
 
 export default App

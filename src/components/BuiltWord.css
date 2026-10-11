@@ -1,0 +1,73 @@
+.built-slot {
+  display: flex;
+  align-items: center;
+  flex: none;
+  height: 32px;
+  padding: 0 16px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.built {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.built-word {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.built-points {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+.built-new,
+.built-repeat,
+.built-invalid {
+  animation: built-fade 1.15s ease forwards;
+}
+
+.built-new {
+  color: var(--good);
+}
+
+.built-repeat {
+  color: var(--warn);
+}
+
+.built-invalid {
+  color: var(--bad);
+}
+
+@keyframes built-fade {
+  0%,
+  65% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .built-new,
+  .built-repeat,
+  .built-invalid {
+    animation: built-fade 1.4s linear forwards;
+  }
+}

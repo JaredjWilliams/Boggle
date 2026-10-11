@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -72,7 +72,7 @@ describe('end of round', () => {
     expect(await screen.findByRole('button', { name: 'Add' })).toBeInTheDocument()
     await user.type(screen.getByRole('textbox', { name: 'Type a word' }), 'cat')
     await user.click(screen.getByRole('button', { name: 'Add' }))
-    expect(screen.getByText('cat')).toBeInTheDocument()
+    expect(screen.getByRole('listitem')).toHaveTextContent('cat')
 
     await act(async () => {
       vi.advanceTimersByTime(10_000)
@@ -91,16 +91,16 @@ describe('end of round', () => {
     expect(screen.queryByRole('button', { name: 'C' })).not.toBeInTheDocument()
     expect(vi.mocked(shakeBoard)).toHaveBeenCalledTimes(1)
 
-    expect(screen.getByText('Score').closest('p')).toHaveTextContent(/^Score1$/)
-    expect(items(column('Your words'))).toEqual([{ word: 'cat', points: '1' }])
+    expect(screen.getByText('Score').closest('p')).toHaveTextContent(/^Score100$/)
+    expect(items(column('Your words'))).toEqual([{ word: 'cat', points: '100' }])
     expect(items(column('Possible words'))).toEqual([
-      { word: 'cats', points: '1' },
-      { word: 'ate', points: '1' },
-      { word: 'car', points: '1' },
-      { word: 'eat', points: '1' },
-      { word: 'rat', points: '1' },
-      { word: 'tar', points: '1' },
-      { word: 'tea', points: '1' },
+      { word: 'cats', points: '400' },
+      { word: 'ate', points: '100' },
+      { word: 'car', points: '100' },
+      { word: 'eat', points: '100' },
+      { word: 'rat', points: '100' },
+      { word: 'tar', points: '100' },
+      { word: 'tea', points: '100' },
     ])
 
     await act(async () => {
@@ -126,6 +126,104 @@ describe('end of round', () => {
     expect(screen.getByText('3:00')).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: 'Z' })).toHaveLength(25)
     expect(vi.mocked(shakeBoard)).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('word result', () => {
+  beforeEach(() => {
+    boards.queue = [firstBoard, nextBoard]
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows a new word and its score in green above the board', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    const input = await screen.findByRole('textbox', { name: 'Type a word' })
+    await user.type(input, 'cat')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+
+    const attempt = screen.getByTestId('attempt')
+    const board = document.querySelector('.grid')
+    expect(board).not.toBeNull()
+    expect(
+      attempt.compareDocumentPosition(board as Node) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(attempt).toHaveClass('built-new')
+    expect(attempt).toHaveTextContent(/cat/i)
+    expect(attempt).toHaveTextContent('+100')
+    expect(screen.queryByTestId('score-gain')).not.toBeInTheDocument()
+    expect(screen.getByText('Score').closest('p')).not.toHaveTextContent('+')
+    expect(screen.getByRole('listitem')).toHaveTextContent('cat')
+  })
+
+  it('shows an already guessed word in orange', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    const input = await screen.findByRole('textbox', { name: 'Type a word' })
+    await user.type(input, 'cat')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+    await user.type(input, 'cat')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+
+    const attempt = screen.getByTestId('attempt')
+    expect(attempt).toHaveClass('built-repeat')
+    expect(attempt).toHaveTextContent(/cat/i)
+    expect(attempt).toHaveTextContent('100')
+    expect(attempt).not.toHaveTextContent('+')
+    expect(screen.getByText('Already found')).toHaveClass('message-repeat')
+  })
+
+  it('shows a word that is not legal in red', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    const input = await screen.findByRole('textbox', { name: 'Type a word' })
+    await user.type(input, 'xyz')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+
+    const attempt = screen.getByTestId('attempt')
+    expect(attempt).toHaveClass('built-invalid')
+    expect(attempt).toHaveTextContent(/xyz/i)
+    expect(attempt.querySelector('.built-points')).toBeNull()
+    expect(screen.getByText('Not in the dictionary')).toHaveClass('message-invalid')
+    expect(screen.queryByTestId('score-gain')).not.toBeInTheDocument()
+  })
+
+  it('shows the same result when a dragged word is released', async () => {
+    render(<App />)
+    const tileC = await screen.findByRole('button', { name: 'C' })
+    const cells: Record<string, HTMLElement> = {
+      '10,10': tileC,
+      '20,10': screen.getByRole('button', { name: 'A' }),
+      '30,10': screen.getByRole('button', { name: 'T' }),
+    }
+    const original = document.elementFromPoint
+    document.elementFromPoint = (x: number, y: number) => cells[`${x},${y}`] ?? null
+    const grid = tileC.parentElement
+    if (!grid) throw new Error('Missing board')
+
+    try {
+      fireEvent.pointerDown(grid, { clientX: 10, clientY: 10, pointerId: 1 })
+      fireEvent.pointerMove(grid, { clientX: 20, clientY: 10, pointerId: 1 })
+      expect(document.querySelector('.built-slot')).toHaveTextContent(/ca/i)
+      expect(screen.queryByTestId('attempt')).not.toBeInTheDocument()
+
+      fireEvent.pointerMove(grid, { clientX: 30, clientY: 10, pointerId: 1 })
+      fireEvent.pointerUp(grid, { clientX: 30, clientY: 10, pointerId: 1 })
+    } finally {
+      document.elementFromPoint = original
+    }
+
+    const attempt = screen.getByTestId('attempt')
+    expect(attempt).toHaveClass('built-new')
+    expect(attempt).toHaveTextContent(/cat/i)
+    expect(attempt).toHaveTextContent('+100')
+    expect(
+      attempt.compareDocumentPosition(grid) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
   })
 })
 

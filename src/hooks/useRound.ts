@@ -8,10 +8,11 @@ import {
 import { shakeBoard, type Board } from '../game/dice'
 import { loadDictionary, type Dictionary } from '../game/dictionary'
 import {
-  invalidWordMessage,
+  judgeWord,
   ROUND_SECONDS,
   totalScore,
   unfoundWords,
+  type AttemptKind,
   type Phase,
   type ScoredWord,
 } from '../game/round'
@@ -21,6 +22,13 @@ import { pathWord, scoreWord, type Cell } from '../game/words'
 type Gesture = {
   path: Cell[]
   moved: boolean
+}
+
+export type AttemptFeedback = {
+  id: number
+  word: string
+  kind: AttemptKind
+  points: number
 }
 
 export function useRound() {
@@ -33,6 +41,7 @@ export function useRound() {
   const [path, setPath] = useState<Cell[]>([])
   const [draft, setDraft] = useState('')
   const [message, setMessage] = useState('')
+  const [feedback, setFeedback] = useState<AttemptFeedback | null>(null)
   const [loadError, setLoadError] = useState(false)
 
   const dictRef = useRef<Dictionary | null>(null)
@@ -42,6 +51,7 @@ export function useRound() {
   const pathRef = useRef(path)
   const secondsRef = useRef(secondsLeft)
   const gestureRef = useRef<Gesture | null>(null)
+  const attemptSeq = useRef(0)
 
   boardRef.current = board
   foundRef.current = found
@@ -63,6 +73,7 @@ export function useRound() {
     setFound([])
     setMissed([])
     setMessage('')
+    setFeedback(null)
     setSecondsLeft(ROUND_SECONDS)
     setRound((current) => current + 1)
     setPhase('playing')
@@ -119,21 +130,32 @@ export function useRound() {
       clearPath()
       if (!word) return
 
-      const problem = invalidWordMessage(
+      const verdict = judgeWord(
         word,
         boardRef.current,
         dictionary.words,
         foundRef.current.some((item) => item.word === word),
       )
-      if (problem) {
-        setMessage(problem)
+      const points = scoreWord(word)
+      attemptSeq.current += 1
+      const id = attemptSeq.current
+
+      if (verdict.kind !== 'new') {
+        setMessage(verdict.message)
+        setFeedback({
+          id,
+          word,
+          kind: verdict.kind,
+          points: verdict.kind === 'repeat' ? points : 0,
+        })
         return
       }
 
-      const next = [{ word, points: scoreWord(word) }, ...foundRef.current]
+      const next = [{ word, points }, ...foundRef.current]
       foundRef.current = next
       setFound(next)
       setMessage('')
+      setFeedback({ id, word, kind: 'new', points })
     },
     [clearPath],
   )
@@ -175,8 +197,12 @@ export function useRound() {
   }
 
   function onPointerUp(event: PointerEvent<HTMLDivElement>) {
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId)
+    const target = event.currentTarget
+    if (
+      typeof target.hasPointerCapture === 'function' &&
+      target.hasPointerCapture(event.pointerId)
+    ) {
+      target.releasePointerCapture(event.pointerId)
     }
     const gesture = gestureRef.current
     gestureRef.current = null
@@ -211,6 +237,7 @@ export function useRound() {
     path,
     draft,
     message,
+    feedback,
     loadError,
     score: totalScore(found),
     traced: pathWord(board, path),

@@ -15,17 +15,37 @@ export function totalScore(words: readonly ScoredWord[]): number {
   return words.reduce((sum, word) => sum + word.points, 0)
 }
 
+export type AttemptKind = 'new' | 'repeat' | 'invalid'
+
+export type WordVerdict =
+  | { kind: 'new'; message: null }
+  | { kind: 'repeat'; message: string }
+  | { kind: 'invalid'; message: string }
+
+export function judgeWord(
+  word: string,
+  board: Board,
+  dictionary: ReadonlySet<string>,
+  alreadyFound: boolean,
+): WordVerdict {
+  if (word.length < 3) return { kind: 'invalid', message: 'Too short' }
+  if (alreadyFound) return { kind: 'repeat', message: 'Already found' }
+  if (!dictionary.has(word)) {
+    return { kind: 'invalid', message: 'Not in the dictionary' }
+  }
+  if (!canFormWord(board, word)) {
+    return { kind: 'invalid', message: 'Not on the board' }
+  }
+  return { kind: 'new', message: null }
+}
+
 export function invalidWordMessage(
   word: string,
   board: Board,
   dictionary: ReadonlySet<string>,
   alreadyFound: boolean,
 ): string | null {
-  if (word.length < 3) return 'Too short'
-  if (alreadyFound) return 'Already found'
-  if (!dictionary.has(word)) return 'Not in the dictionary'
-  if (!canFormWord(board, word)) return 'Not on the board'
-  return null
+  return judgeWord(word, board, dictionary, alreadyFound).message
 }
 
 export function unfoundWords(

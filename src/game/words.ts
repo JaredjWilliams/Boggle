@@ -17,13 +17,30 @@ const NEIGHBORS: ReadonlyArray<readonly [number, number]> = [
   [1, 1],
 ]
 
+const SCORE_BY_LENGTH = [0, 0, 0, 100, 400, 800, 1400, 1800, 2200]
+
 export function scoreWord(word: string): number {
   const length = word.length
-  if (length <= 4) return length >= 3 ? 1 : 0
-  if (length === 5) return 2
-  if (length === 6) return 3
-  if (length === 7) return 5
-  return 11
+  if (length < 3) return 0
+  if (length <= 8) return SCORE_BY_LENGTH[length]
+  return 2200 + 400 * (length - 8)
+}
+
+// Large awards race up, then finish one point at a time.
+export function scoreStep(remaining: number): number {
+  if (remaining <= 0) return 0
+  if (remaining <= 12) return 1
+  return Math.ceil((remaining - 12) / 8)
+}
+
+export function advanceScore(shown: number, target: number, elapsedMs: number): number {
+  if (target <= shown) return target
+  const frames = Math.max(1, Math.min(40, Math.round(elapsedMs / 16)))
+  let next = shown
+  for (let i = 0; i < frames && next < target; i += 1) {
+    next += scoreStep(target - next)
+  }
+  return Math.min(target, next)
 }
 
 export function compareWords(a: string, b: string): number {
