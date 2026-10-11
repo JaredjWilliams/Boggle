@@ -1,0 +1,30 @@
+.word-list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 4px 16px calc(16px + env(safe-area-inset-bottom));
+  overflow: auto;
+  list-style: none;
+}
+
+.word-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.points {
+  color: #6d6458;
+  font-variant-numeric: tabular-nums;
+}
+
+.word-list.flat {
+  flex: none;
+  overflow: visible;
+  padding-bottom: 0;
+}

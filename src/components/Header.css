@@ -1,0 +1,20 @@
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+  padding: calc(16px + env(safe-area-inset-top)) 20px 16px;
+  background: var(--ink);
+  color: var(--cream);
+}
+
+.brand-icon {
+  width: 36px;
+  height: 36px;
+  flex: none;
+}
+
+.brand-logo {
+  height: 32px;
+  width: auto;
+}
