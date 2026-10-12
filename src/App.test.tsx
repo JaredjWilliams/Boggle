@@ -72,7 +72,8 @@ describe('end of round', () => {
     expect(await screen.findByRole('button', { name: 'Add' })).toBeInTheDocument()
     await user.type(screen.getByRole('textbox', { name: 'Type a word' }), 'cat')
     await user.click(screen.getByRole('button', { name: 'Add' }))
-    expect(screen.getByRole('listitem')).toHaveTextContent('cat')
+    expect(screen.getByTestId('attempt')).toHaveTextContent(/cat/i)
+    expect(screen.queryByRole('list')).not.toBeInTheDocument()
 
     await act(async () => {
       vi.advanceTimersByTime(10_000)
@@ -157,7 +158,7 @@ describe('word result', () => {
     expect(attempt).toHaveTextContent('+100')
     expect(screen.queryByTestId('score-gain')).not.toBeInTheDocument()
     expect(screen.getByText('Score').closest('p')).not.toHaveTextContent('+')
-    expect(screen.getByRole('listitem')).toHaveTextContent('cat')
+    expect(screen.queryByRole('list')).not.toBeInTheDocument()
   })
 
   it('shows an already guessed word in orange', async () => {

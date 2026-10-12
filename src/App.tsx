@@ -4,7 +4,6 @@ import { EndPanel } from './components/EndPanel'
 import { Header } from './components/Header'
 import { StatusBar } from './components/StatusBar'
 import { WordForm } from './components/WordForm'
-import { WordList } from './components/WordList'
 import { useRound, type AttemptFeedback } from './hooks/useRound'
 import './App.css'
 
@@ -72,14 +71,11 @@ function App() {
         )}
 
         {round.phase === 'playing' && (
-          <>
-            <WordForm
-              draft={round.draft}
-              onDraftChange={round.onDraftChange}
-              onSubmit={round.onSubmit}
-            />
-            <WordList words={round.found} />
-          </>
+          <WordForm
+            draft={round.draft}
+            onDraftChange={round.onDraftChange}
+            onSubmit={round.onSubmit}
+          />
         )}
       </div>
     </>
