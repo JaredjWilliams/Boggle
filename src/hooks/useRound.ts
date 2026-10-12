@@ -24,6 +24,12 @@ type Gesture = {
   moved: boolean
 }
 
+export type DragAim = {
+  x: number
+  y: number
+  over: Cell | null
+}
+
 export type AttemptFeedback = {
   id: number
   word: string
@@ -39,6 +45,7 @@ export function useRound() {
   const [phase, setPhase] = useState<Phase>('loading')
   const [round, setRound] = useState(0)
   const [path, setPath] = useState<Cell[]>([])
+  const [drag, setDrag] = useState<DragAim | null>(null)
   const [draft, setDraft] = useState('')
   const [message, setMessage] = useState('')
   const [feedback, setFeedback] = useState<AttemptFeedback | null>(null)
@@ -63,6 +70,7 @@ export function useRound() {
     gestureRef.current = null
     pathRef.current = []
     setPath([])
+    setDrag(null)
     setDraft('')
   }, [])
 
@@ -112,6 +120,7 @@ export function useRound() {
     gestureRef.current = null
     pathRef.current = []
     setPath([])
+    setDrag(null)
     setDraft('')
     setMessage('')
 
@@ -183,10 +192,12 @@ export function useRound() {
   function onPointerMove(event: PointerEvent<HTMLDivElement>) {
     const gesture = gestureRef.current
     if (!gesture || phaseRef.current !== 'playing') return
-    const cell = tileAt(event.clientX, event.clientY)
-    if (!cell) return
 
-    const nextPath = pathOnDrag(gesture.path, cell)
+    const over = tileAt(event.clientX, event.clientY)
+    setDrag({ x: event.clientX, y: event.clientY, over })
+    if (!over) return
+
+    const nextPath = pathOnDrag(gesture.path, over)
     if (!nextPath) return
 
     if (gesture.path.length > 0) gesture.moved = true
@@ -206,11 +217,13 @@ export function useRound() {
     }
     const gesture = gestureRef.current
     gestureRef.current = null
+    setDrag(null)
     if (gesture?.moved) submitWord(pathWord(boardRef.current, gesture.path))
   }
 
   function onPointerCancel() {
     gestureRef.current = null
+    setDrag(null)
   }
 
   function onDraftChange(value: string) {
@@ -219,6 +232,7 @@ export function useRound() {
       gestureRef.current = null
       pathRef.current = []
       setPath([])
+      setDrag(null)
     }
   }
 
@@ -235,6 +249,7 @@ export function useRound() {
     secondsLeft,
     phase,
     path,
+    drag,
     draft,
     message,
     feedback,

@@ -202,21 +202,44 @@ describe('word result', () => {
     }
     const original = document.elementFromPoint
     document.elementFromPoint = (x: number, y: number) => cells[`${x},${y}`] ?? null
+    const rects = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function tileRect() {
+        const element = this as HTMLElement
+        if (element.classList.contains('grid')) return box(0, 0, 250, 250)
+        const row = Number(element.dataset.row)
+        const col = Number(element.dataset.col)
+        if (Number.isNaN(row) || Number.isNaN(col)) return box(0, 0, 0, 0)
+        return box(col * 40, row * 40, 40, 40)
+      })
     const grid = tileC.parentElement
     if (!grid) throw new Error('Missing board')
 
     try {
       fireEvent.pointerDown(grid, { clientX: 10, clientY: 10, pointerId: 1 })
+      expect(document.querySelector('.connectors')).toBeNull()
+
+      fireEvent.pointerMove(grid, { clientX: 45, clientY: 20, pointerId: 1 })
+      expect(document.querySelector('.built-slot')).toHaveTextContent(/^c$/i)
+      expect(connectorPoints()).toEqual([
+        { x1: '20', y1: '20', x2: '60', y2: '20' },
+      ])
+
       fireEvent.pointerMove(grid, { clientX: 20, clientY: 10, pointerId: 1 })
       expect(document.querySelector('.built-slot')).toHaveTextContent(/ca/i)
+      expect(connectorPoints()).toEqual([
+        { x1: '20', y1: '20', x2: '60', y2: '20' },
+      ])
       expect(screen.queryByTestId('attempt')).not.toBeInTheDocument()
 
       fireEvent.pointerMove(grid, { clientX: 30, clientY: 10, pointerId: 1 })
       fireEvent.pointerUp(grid, { clientX: 30, clientY: 10, pointerId: 1 })
     } finally {
       document.elementFromPoint = original
+      rects.mockRestore()
     }
 
+    expect(document.querySelector('.connectors')).toBeNull()
     const attempt = screen.getByTestId('attempt')
     expect(attempt).toHaveClass('built-new')
     expect(attempt).toHaveTextContent(/cat/i)
@@ -226,6 +249,31 @@ describe('word result', () => {
     ).toBeTruthy()
   })
 })
+
+function connectorPoints() {
+  return [...document.querySelectorAll('.connectors line')].map((line) => ({
+    x1: line.getAttribute('x1'),
+    y1: line.getAttribute('y1'),
+    x2: line.getAttribute('x2'),
+    y2: line.getAttribute('y2'),
+  }))
+}
+
+function box(left: number, top: number, width: number, height: number): DOMRect {
+  return {
+    x: left,
+    y: top,
+    left,
+    top,
+    width,
+    height,
+    right: left + width,
+    bottom: top + height,
+    toJSON() {
+      return {}
+    },
+  }
+}
 
 function column(title: string) {
   const heading = screen.getByRole('heading', { name: title })
