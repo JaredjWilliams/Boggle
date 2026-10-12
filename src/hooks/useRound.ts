@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type PointerEvent,
@@ -17,7 +18,9 @@ import {
   type ScoredWord,
 } from '../game/round'
 import { pathOnDrag, pathOnPress, tileAt } from '../game/trace'
-import { pathWord, scoreWord, type Cell } from '../game/words'
+import { pathWord, scoreWord, typedHighlight, type Cell } from '../game/words'
+
+const EMPTY_DICTIONARY: ReadonlySet<string> = new Set()
 
 type Gesture = {
   path: Cell[]
@@ -47,6 +50,7 @@ export function useRound() {
   const [path, setPath] = useState<Cell[]>([])
   const [drag, setDrag] = useState<DragAim | null>(null)
   const [draft, setDraft] = useState('')
+  const [words, setWords] = useState<ReadonlySet<string>>(EMPTY_DICTIONARY)
   const [message, setMessage] = useState('')
   const [feedback, setFeedback] = useState<AttemptFeedback | null>(null)
   const [loadError, setLoadError] = useState(false)
@@ -93,6 +97,7 @@ export function useRound() {
       .then((dictionary) => {
         if (cancel) return
         dictRef.current = dictionary
+        setWords(dictionary.words)
         startRound()
       })
       .catch(() => {
@@ -242,6 +247,11 @@ export function useRound() {
     else submitWord(pathWord(boardRef.current, pathRef.current))
   }
 
+  const highlight = useMemo(
+    () => typedHighlight(board, draft, words),
+    [board, draft, words],
+  )
+
   return {
     board,
     found,
@@ -249,6 +259,7 @@ export function useRound() {
     secondsLeft,
     phase,
     path,
+    highlight,
     drag,
     draft,
     message,

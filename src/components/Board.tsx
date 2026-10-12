@@ -1,12 +1,18 @@
 import { useLayoutEffect, useRef, useState, type PointerEvent } from 'react'
 import type { Board as LetterBoard } from '../game/dice'
 import type { DragAim } from '../hooks/useRound'
-import { isAdjacent, type Cell } from '../game/words'
+import {
+  emptyHighlight,
+  isAdjacent,
+  type Cell,
+  type LetterHighlight,
+} from '../game/words'
 import './Board.css'
 
 type Props = {
   board: LetterBoard
   path: Cell[]
+  highlight?: LetterHighlight
   drag: DragAim | null
   locked: boolean
   onPointerDown: (event: PointerEvent<HTMLDivElement>) => void
@@ -30,6 +36,7 @@ type Segment = {
 export function Board({
   board,
   path,
+  highlight = emptyHighlight,
   drag,
   locked,
   onPointerDown,
@@ -39,12 +46,15 @@ export function Board({
 }: Props) {
   const gridRef = useRef<HTMLDivElement>(null)
   const [segments, setSegments] = useState<Segment[]>([])
+  const lit = new Set(highlight.cells.map((cell) => `${cell.row},${cell.col}`))
 
   useLayoutEffect(() => {
     const grid = gridRef.current
-    const next = grid ? measureConnectors(grid, path, drag) : []
+    const next = grid
+      ? [...measureConnectors(grid, path, drag), ...measureLinks(grid, highlight.links)]
+      : []
     setSegments((current) => (sameSegments(current, next) ? current : next))
-  }, [path, drag])
+  }, [path, drag, highlight])
 
   return (
     <div
@@ -71,13 +81,16 @@ export function Board({
       )}
       {board.map((row, rowIndex) =>
         row.map((letter, colIndex) => {
-          const step = path.findIndex(
+          const dragStep = path.findIndex(
             (cell) => cell.row === rowIndex && cell.col === colIndex,
           )
+          const typedStep = highlight.steps[`${rowIndex},${colIndex}`]
+          const step = dragStep >= 0 ? dragStep : (typedStep ?? -1)
+          const selected = dragStep >= 0 || lit.has(`${rowIndex},${colIndex}`)
           return (
             <div
               key={`${rowIndex}-${colIndex}`}
-              className={step >= 0 ? 'tile selected' : 'tile'}
+              className={selected ? 'tile selected' : 'tile'}
               role="button"
               aria-label={letter}
               data-row={rowIndex}
@@ -122,6 +135,30 @@ function measureConnectors(
   for (let index = 1; index < points.length; index += 1) {
     const from = points[index - 1]
     const to = points[index]
+    const segment = {
+      x1: Math.round(from.x),
+      y1: Math.round(from.y),
+      x2: Math.round(to.x),
+      y2: Math.round(to.y),
+    }
+    if (segment.x1 === segment.x2 && segment.y1 === segment.y2) continue
+    segments.push(segment)
+  }
+  return segments
+}
+
+function measureLinks(
+  grid: HTMLElement,
+  links: LetterHighlight['links'],
+): Segment[] {
+  if (links.length === 0) return []
+
+  const gridBox = grid.getBoundingClientRect()
+  const segments: Segment[] = []
+  for (const link of links) {
+    const from = tileCenter(grid, gridBox, link.from)
+    const to = tileCenter(grid, gridBox, link.to)
+    if (!from || !to) continue
     const segment = {
       x1: Math.round(from.x),
       y1: Math.round(from.y),

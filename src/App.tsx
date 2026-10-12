@@ -46,6 +46,7 @@ function App() {
           <Board
             board={round.board}
             path={round.path}
+            highlight={round.highlight}
             drag={round.drag}
             locked={round.phase !== 'playing'}
             onPointerDown={round.onPointerDown}

@@ -1,5 +1,6 @@
 import { render } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { typedHighlight } from '../game/words'
 import { Board } from './Board'
 
 const board = [
@@ -248,6 +249,105 @@ describe('Board drag connector', () => {
     expect(linePoints()).toEqual([{ x1: '36', y1: '32', x2: '36', y2: '80' }])
   })
 })
+
+describe('typed highlights', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  const dictionary = new Set(['the'])
+  const theBoard = [
+    ['T', 'H', 'E', 'A', 'B'],
+    ['C', 'D', 'F', 'G', 'I'],
+    ['T', 'H', 'E', 'J', 'K'],
+    ['L', 'M', 'N', 'O', 'P'],
+    ['T', 'H', 'E', 'Q', 'R'],
+  ]
+
+  it('lights every matching route and joins each one', () => {
+    mockTileGeometry()
+    render(
+      <Board
+        board={theBoard}
+        path={[]}
+        highlight={typedHighlight(theBoard, 'th', dictionary)}
+        drag={null}
+        locked={false}
+        {...handlers}
+      />,
+    )
+
+    for (const row of [0, 2, 4]) {
+      expect(tile(row, 0)).toHaveClass('selected')
+      expect(tile(row, 1)).toHaveClass('selected')
+      expect(tile(row, 2)).not.toHaveClass('selected')
+      expect(tile(row, 0).querySelector('.step')).toHaveTextContent('1')
+      expect(tile(row, 1).querySelector('.step')).toHaveTextContent('2')
+    }
+    expect(linePoints()).toEqual([
+      { x1: '36', y1: '32', x2: '84', y2: '32' },
+      { x1: '36', y1: '128', x2: '84', y2: '128' },
+      { x1: '36', y1: '224', x2: '84', y2: '224' },
+    ])
+  })
+
+  it('lights one route once the typed word is legal', () => {
+    mockTileGeometry()
+    render(
+      <Board
+        board={theBoard}
+        path={[]}
+        highlight={typedHighlight(theBoard, 'the', dictionary)}
+        drag={null}
+        locked={false}
+        {...handlers}
+      />,
+    )
+
+    expect(tile(0, 0)).toHaveClass('selected')
+    expect(tile(0, 1)).toHaveClass('selected')
+    expect(tile(0, 2)).toHaveClass('selected')
+    expect(tile(0, 2).querySelector('.step')).toHaveTextContent('3')
+    expect(tile(2, 0)).not.toHaveClass('selected')
+    expect(tile(4, 2)).not.toHaveClass('selected')
+    expect(linePoints()).toEqual([
+      { x1: '36', y1: '32', x2: '84', y2: '32' },
+      { x1: '84', y1: '32', x2: '132', y2: '32' },
+    ])
+  })
+
+  it('highlights a tile whose routes disagree on its step', () => {
+    mockTileGeometry()
+    render(
+      <Board
+        board={board}
+        path={[]}
+        highlight={{
+          cells: [
+            { row: 0, col: 0 },
+            { row: 0, col: 1 },
+          ],
+          links: [{ from: { row: 0, col: 0 }, to: { row: 0, col: 1 } }],
+          steps: { '0,1': 1 },
+        }}
+        drag={null}
+        locked={false}
+        {...handlers}
+      />,
+    )
+
+    expect(tile(0, 0)).toHaveClass('selected')
+    expect(tile(0, 0).querySelector('.step')).toBeNull()
+    expect(tile(0, 1).querySelector('.step')).toHaveTextContent('2')
+    expect(linePoints()).toEqual([{ x1: '36', y1: '32', x2: '84', y2: '32' }])
+  })
+})
+
+function tile(row: number, col: number) {
+  const element = document.querySelector(`[data-row="${row}"][data-col="${col}"]`)
+  if (!(element instanceof HTMLElement)) throw new Error(`Missing tile ${row},${col}`)
+  return element
+}
 
 function linePoints() {
   return [...document.querySelectorAll('.connectors line')].map((line) => ({

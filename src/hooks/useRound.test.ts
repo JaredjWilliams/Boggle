@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PointerEvent } from 'react'
+import { shakeBoard } from '../game/dice'
 import { useRound } from './useRound'
 
 const firstBoard = [
@@ -15,7 +16,7 @@ vi.mock('../game/dice', async () => {
   const actual = await vi.importActual<typeof import('../game/dice')>('../game/dice')
   return {
     ...actual,
-    shakeBoard: () => firstBoard.map((row) => [...row]),
+    shakeBoard: vi.fn(() => firstBoard.map((row) => [...row])),
   }
 })
 
@@ -32,6 +33,11 @@ vi.mock('../game/dictionary', async () => {
 const elementFromPoint = document.elementFromPoint
 
 describe('useRound drag', () => {
+  beforeEach(() => {
+    vi.mocked(shakeBoard).mockReset()
+    vi.mocked(shakeBoard).mockImplementation(() => firstBoard.map((row) => [...row]))
+  })
+
   afterEach(() => {
     document.elementFromPoint = elementFromPoint
     vi.restoreAllMocks()
@@ -125,7 +131,45 @@ describe('useRound drag', () => {
     expect(round.result.current.path).toEqual([])
     expect(round.result.current.draft).toBe('c')
   })
+
+  it('lights every typed route until the word is in the dictionary', async () => {
+    vi.mocked(shakeBoard).mockReturnValueOnce([
+      ['C', 'A', 'T', 'X', 'X'],
+      ['Z', 'Z', 'Z', 'Z', 'Z'],
+      ['C', 'A', 'T', 'X', 'X'],
+      ['Z', 'Z', 'Z', 'Z', 'Z'],
+      ['C', 'A', 'T', 'X', 'X'],
+    ])
+    const round = await startPlaying()
+
+    act(() => {
+      round.result.current.onDraftChange('ca')
+    })
+    expect(round.result.current.path).toEqual([])
+    expect(cellKeys(round.result.current.highlight)).toEqual([
+      '0,0',
+      '0,1',
+      '2,0',
+      '2,1',
+      '4,0',
+      '4,1',
+    ])
+
+    act(() => {
+      round.result.current.onDraftChange('cat')
+    })
+    expect(cellKeys(round.result.current.highlight)).toEqual(['0,0', '0,1', '0,2'])
+    expect(round.result.current.highlight.steps).toEqual({
+      '0,0': 0,
+      '0,1': 1,
+      '0,2': 2,
+    })
+  })
 })
+
+function cellKeys(highlight: { cells: readonly { row: number; col: number }[] }) {
+  return highlight.cells.map((cell) => `${cell.row},${cell.col}`)
+}
 
 async function startPlaying() {
   const round = renderHook(() => useRound())

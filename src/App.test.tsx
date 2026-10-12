@@ -249,7 +249,38 @@ describe('word result', () => {
       attempt.compareDocumentPosition(grid) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
   })
+
+  it('highlights board tiles as a word is typed', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    const input = await screen.findByRole('textbox', { name: 'Type a word' })
+
+    await user.type(input, 'c')
+    expect(screen.getByRole('button', { name: 'C' })).toHaveClass('selected')
+    expect(screen.getByRole('button', { name: 'A' })).not.toHaveClass('selected')
+
+    await user.type(input, 'a')
+    expect(screen.getByRole('button', { name: 'C' })).toHaveClass('selected')
+    expect(screen.getByRole('button', { name: 'A' })).toHaveClass('selected')
+    expect(screen.getByRole('button', { name: 'T' })).not.toHaveClass('selected')
+    expect(stepNumber('C')).toBe('1')
+    expect(stepNumber('A')).toBe('2')
+
+    await user.type(input, 't')
+    expect(screen.getByRole('button', { name: 'T' })).toHaveClass('selected')
+    expect(screen.getByRole('button', { name: 'S' })).not.toHaveClass('selected')
+    expect(stepNumber('T')).toBe('3')
+
+    await user.clear(input)
+    expect(screen.getByRole('button', { name: 'C' })).not.toHaveClass('selected')
+    expect(screen.getByRole('button', { name: 'A' })).not.toHaveClass('selected')
+    expect(screen.getByRole('button', { name: 'T' })).not.toHaveClass('selected')
+  })
 })
+
+function stepNumber(letter: string) {
+  return screen.getByRole('button', { name: letter }).querySelector('.step')?.textContent
+}
 
 function connectorPoints() {
   return [...document.querySelectorAll('.connectors line')].map((line) => ({
