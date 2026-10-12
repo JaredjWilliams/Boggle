@@ -1,10 +1,29 @@
 import './Header.css'
 
-export function Header() {
+type Props = {
+  onHome?: () => void
+  onSignOut?: () => void
+}
+
+export function Header({ onHome, onSignOut }: Props) {
   return (
     <header className="app-header">
       <GridIcon />
       <Wordmark />
+      {(onHome || onSignOut) && (
+        <div className="header-actions">
+          {onSignOut && (
+            <button type="button" className="header-home" onClick={onSignOut}>
+              Sign out
+            </button>
+          )}
+          {onHome && (
+            <button type="button" className="header-home" onClick={onHome}>
+              Home
+            </button>
+          )}
+        </div>
+      )}
     </header>
   )
 }

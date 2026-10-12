@@ -5,11 +5,6 @@
   min-height: 0;
 }
 
-.message,
-.loading {
-  margin: 0;
-}
-
 .message {
   position: relative;
   flex: none;
@@ -39,7 +34,3 @@
   border: 0;
 }
 
-.loading {
-  padding: 0 16px;
-  color: #6d6458;
-}

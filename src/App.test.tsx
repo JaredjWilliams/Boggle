@@ -1,6 +1,7 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { writeSession } from './auth/profiles'
 import App from './App'
 import { shakeBoard } from './game/dice'
 import { ROUND_SECONDS } from './game/round'
@@ -54,6 +55,10 @@ vi.mock('./game/dictionary', async () => {
   }
 })
 
+beforeEach(() => {
+  writeSession({ name: 'Ada Lovelace', username: 'ada' })
+})
+
 describe('end of round', () => {
   beforeEach(() => {
     boards.queue = [firstBoard, nextBoard]
@@ -68,6 +73,7 @@ describe('end of round', () => {
   it('shows the summary when time runs out and does not start a new game', async () => {
     const user = userEvent.setup()
     render(<App />)
+    await leaveHome()
 
     expect(await screen.findByRole('button', { name: 'Add' })).toBeInTheDocument()
     await user.type(screen.getByRole('textbox', { name: 'Type a word' }), 'cat')
@@ -113,6 +119,7 @@ describe('end of round', () => {
 
   it('starts a new game when Play again is pressed', async () => {
     render(<App />)
+    await leaveHome()
     expect(await screen.findByRole('button', { name: 'Add' })).toBeInTheDocument()
 
     await act(async () => {
@@ -142,6 +149,7 @@ describe('word result', () => {
   it('shows a new word and its score in green above the board', async () => {
     const user = userEvent.setup()
     render(<App />)
+    await leaveHome()
     const input = await screen.findByRole('textbox', { name: 'Type a word' })
     await user.type(input, 'cat')
     await user.click(screen.getByRole('button', { name: 'Add' }))
@@ -164,6 +172,7 @@ describe('word result', () => {
   it('shows an already guessed word in orange', async () => {
     const user = userEvent.setup()
     render(<App />)
+    await leaveHome()
     const input = await screen.findByRole('textbox', { name: 'Type a word' })
     await user.type(input, 'cat')
     await user.click(screen.getByRole('button', { name: 'Add' }))
@@ -181,6 +190,7 @@ describe('word result', () => {
   it('shows a word that is not legal in red', async () => {
     const user = userEvent.setup()
     render(<App />)
+    await leaveHome()
     const input = await screen.findByRole('textbox', { name: 'Type a word' })
     await user.type(input, 'xyz')
     await user.click(screen.getByRole('button', { name: 'Add' }))
@@ -195,6 +205,7 @@ describe('word result', () => {
 
   it('shows the same result when a dragged word is released', async () => {
     render(<App />)
+    await leaveHome()
     const tileC = await screen.findByRole('button', { name: 'C' })
     const cells: Record<string, HTMLElement> = {
       '10,10': tileC,
@@ -253,6 +264,7 @@ describe('word result', () => {
   it('highlights board tiles as a word is typed', async () => {
     const user = userEvent.setup()
     render(<App />)
+    await leaveHome()
     const input = await screen.findByRole('textbox', { name: 'Type a word' })
 
     await user.type(input, 'c')
@@ -307,6 +319,12 @@ function box(left: number, top: number, width: number, height: number): DOMRect 
   }
 }
 
+async function leaveHome() {
+  const start = await screen.findByRole('button', { name: 'Start game' })
+  await waitFor(() => expect(start).toBeEnabled())
+  await userEvent.click(start)
+}
+
 function column(title: string) {
   const heading = screen.getByRole('heading', { name: title })
   const section = heading.closest('.summary-column')
@@ -315,6 +333,121 @@ function column(title: string) {
   }
   return section
 }
+
+describe('sign in', () => {
+  beforeEach(() => {
+    boards.queue = [firstBoard]
+    localStorage.clear()
+  })
+
+  it('saves a profile and opens that player dashboard', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Find every word.' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'New here? Create an account' }))
+    await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Grace Hopper')
+    await user.type(screen.getByRole('textbox', { name: 'Username' }), 'grace')
+    await user.type(screen.getByLabelText('Password'), 'cobol')
+    await user.click(screen.getByRole('button', { name: 'Save profile' }))
+
+    expect(await screen.findByRole('heading', { name: 'Find every word.' })).toBeInTheDocument()
+    expect(screen.getByText('Your dashboard').closest('p')).toHaveTextContent(
+      /^Your dashboardGrace Hopper$/,
+    )
+    expect(JSON.parse(localStorage.getItem('boggle.profiles') ?? '[]')).toEqual([
+      { name: 'Grace Hopper', username: 'grace', password: 'cobol' },
+    ])
+  })
+
+  it('returns to the login page and keeps the saved profile', async () => {
+    writeSession({ name: 'Ada Lovelace', username: 'ada' })
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(await screen.findByRole('button', { name: 'Sign out' }))
+
+    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Start game' })).not.toBeInTheDocument()
+    expect(JSON.parse(localStorage.getItem('boggle.session') ?? 'null')).toBeNull()
+  })
+})
+
+describe('home dashboard', () => {
+  beforeEach(() => {
+    boards.queue = [firstBoard, nextBoard]
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.clearAllMocks()
+  })
+
+  it('deals a board only after Start game', async () => {
+    render(<App />)
+
+    expect(screen.getByRole('heading', { name: 'Find every word.' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Home' })).not.toBeInTheDocument()
+    expect(vi.mocked(shakeBoard)).not.toHaveBeenCalled()
+
+    await leaveHome()
+
+    expect(await screen.findByRole('button', { name: 'Add' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Home' })).toBeInTheDocument()
+    expect(screen.getByText('3:00')).toBeInTheDocument()
+    expect(vi.mocked(shakeBoard)).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not run the clock on the dashboard', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    render(<App />)
+    expect(await screen.findByRole('button', { name: 'Start game' })).toBeEnabled()
+
+    await act(async () => {
+      vi.advanceTimersByTime(ROUND_SECONDS * 1000)
+    })
+
+    expect(screen.getByRole('heading', { name: 'Find every word.' })).toBeInTheDocument()
+    expect(screen.queryByText("Time's up")).not.toBeInTheDocument()
+    expect(vi.mocked(shakeBoard)).not.toHaveBeenCalled()
+  })
+
+  it('returns home from a round without saving an unfinished score', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await leaveHome()
+    await screen.findByRole('button', { name: 'Add' })
+
+    await user.click(screen.getByRole('button', { name: 'Home' }))
+
+    expect(screen.getByRole('heading', { name: 'Find every word.' })).toBeInTheDocument()
+    expect(screen.queryByText('Last score')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Shake' })).not.toBeInTheDocument()
+  })
+
+  it('shows the finished score after returning home', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    const user = userEvent.setup()
+    render(<App />)
+    await leaveHome()
+    const input = await screen.findByRole('textbox', { name: 'Type a word' })
+    await user.type(input, 'cat')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+
+    await act(async () => {
+      vi.advanceTimersByTime(ROUND_SECONDS * 1000)
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Home' }))
+
+    expect(screen.getByText('Last score').closest('p')).toHaveTextContent(/^Last score100$/)
+    expect(screen.queryByText("Time's up")).not.toBeInTheDocument()
+    expect(vi.mocked(shakeBoard)).toHaveBeenCalledTimes(1)
+  })
+})
 
 function items(section: HTMLElement) {
   return within(section)

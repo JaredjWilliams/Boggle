@@ -1,4 +1,4 @@
-const SIDE = 5
+export const SIDE = 5
 
 const CUBES = [
   'AAAFRS',

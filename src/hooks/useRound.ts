@@ -54,6 +54,7 @@ export function useRound() {
   const [message, setMessage] = useState('')
   const [feedback, setFeedback] = useState<AttemptFeedback | null>(null)
   const [loadError, setLoadError] = useState(false)
+  const [lastScore, setLastScore] = useState<number | null>(null)
 
   const dictRef = useRef<Dictionary | null>(null)
   const boardRef = useRef(board)
@@ -91,6 +92,14 @@ export function useRound() {
     setPhase('playing')
   }, [clearPath])
 
+  const goHome = useCallback(() => {
+    if (!dictRef.current) return
+    clearPath()
+    setMessage('')
+    setFeedback(null)
+    setPhase('ready')
+  }, [clearPath])
+
   useEffect(() => {
     let cancel = false
     loadDictionary()
@@ -98,7 +107,7 @@ export function useRound() {
         if (cancel) return
         dictRef.current = dictionary
         setWords(dictionary.words)
-        startRound()
+        setPhase('ready')
       })
       .catch(() => {
         if (!cancel) setLoadError(true)
@@ -106,7 +115,7 @@ export function useRound() {
     return () => {
       cancel = true
     }
-  }, [startRound])
+  }, [])
 
   useEffect(() => {
     if (phase !== 'playing') return
@@ -131,6 +140,7 @@ export function useRound() {
 
     const dictionary = dictRef.current
     if (!dictionary) return
+    setLastScore(totalScore(foundRef.current))
     setMissed(unfoundWords(boardRef.current, dictionary.trie, foundRef.current))
   }, [phase])
 
@@ -265,9 +275,11 @@ export function useRound() {
     message,
     feedback,
     loadError,
+    lastScore,
     score: totalScore(found),
     traced: pathWord(board, path),
     startRound,
+    goHome,
     onPointerDown,
     onPointerMove,
     onPointerUp,

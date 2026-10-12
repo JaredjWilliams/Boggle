@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PointerEvent } from 'react'
 import { shakeBoard } from '../game/dice'
+import { ROUND_SECONDS } from '../game/round'
 import { useRound } from './useRound'
 
 const firstBoard = [
@@ -31,6 +32,66 @@ vi.mock('../game/dictionary', async () => {
 })
 
 const elementFromPoint = document.elementFromPoint
+
+describe('home', () => {
+  beforeEach(() => {
+    vi.mocked(shakeBoard).mockReset()
+    vi.mocked(shakeBoard).mockImplementation(() => firstBoard.map((row) => [...row]))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('waits until a round is started', async () => {
+    const round = renderHook(() => useRound())
+
+    await waitFor(() => expect(round.result.current.phase).toBe('ready'))
+    expect(shakeBoard).not.toHaveBeenCalled()
+    expect(round.result.current.lastScore).toBeNull()
+
+    act(() => {
+      round.result.current.startRound()
+    })
+    expect(round.result.current.phase).toBe('playing')
+    expect(shakeBoard).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      round.result.current.goHome()
+    })
+    expect(round.result.current.phase).toBe('ready')
+    expect(round.result.current.lastScore).toBeNull()
+  })
+
+  it('keeps a finished score after returning home', async () => {
+    const round = renderHook(() => useRound())
+    await waitFor(() => expect(round.result.current.phase).toBe('ready'))
+
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    act(() => {
+      round.result.current.startRound()
+    })
+    act(() => {
+      round.result.current.onDraftChange('cat')
+    })
+    act(() => {
+      round.result.current.onSubmit()
+    })
+
+    await act(async () => {
+      vi.advanceTimersByTime(ROUND_SECONDS * 1000)
+    })
+
+    expect(round.result.current.phase).toBe('ended')
+    expect(round.result.current.lastScore).toBe(100)
+
+    act(() => {
+      round.result.current.goHome()
+    })
+    expect(round.result.current.phase).toBe('ready')
+    expect(round.result.current.lastScore).toBe(100)
+  })
+})
 
 describe('useRound drag', () => {
   beforeEach(() => {
@@ -173,7 +234,10 @@ function cellKeys(highlight: { cells: readonly { row: number; col: number }[] })
 
 async function startPlaying() {
   const round = renderHook(() => useRound())
-  await waitFor(() => expect(round.result.current.phase).toBe('playing'))
+  await waitFor(() => expect(round.result.current.phase).toBe('ready'))
+  act(() => {
+    round.result.current.startRound()
+  })
   return round
 }
 
