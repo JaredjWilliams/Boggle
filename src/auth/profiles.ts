@@ -1,5 +1,13 @@
+import {
+  createRemoteProfile,
+  endRemoteSession,
+  matchRemoteProfile,
+  restorePlayer,
+} from './remote'
+
 const PROFILES_KEY = 'boggle.profiles'
 const SESSION_KEY = 'boggle.session'
+const localOnly = import.meta.env.MODE === 'test'
 
 export type Credentials = {
   name: string
@@ -8,6 +16,7 @@ export type Credentials = {
 }
 
 export type Player = {
+  id?: string
   name: string
   username: string
 }
@@ -16,7 +25,12 @@ export type AuthResult =
   | { ok: true; player: Player }
   | { ok: false; error: string }
 
-export function createProfile(input: Credentials): AuthResult {
+export function createProfile(input: Credentials): AuthResult | Promise<AuthResult> {
+  if (!localOnly) return createRemoteProfile(input)
+  return createLocalProfile(input)
+}
+
+function createLocalProfile(input: Credentials): AuthResult {
   const name = input.name.trim()
   const username = input.username.trim()
   const password = input.password.trim()
@@ -33,7 +47,15 @@ export function createProfile(input: Credentials): AuthResult {
   return { ok: true, player: { name, username } }
 }
 
-export function matchProfile(username: string, password: string): AuthResult {
+export function matchProfile(
+  username: string,
+  password: string,
+): AuthResult | Promise<AuthResult> {
+  if (!localOnly) return matchRemoteProfile(username, password)
+  return matchLocalProfile(username, password)
+}
+
+function matchLocalProfile(username: string, password: string): AuthResult {
   const normalized = username.trim()
   const secret = password.trim()
   if (!normalized || !secret) {
@@ -68,6 +90,16 @@ export function writeSession(player: Player): void {
 export function clearSession(): void {
   localStorage.removeItem(SESSION_KEY)
 }
+
+export async function endSession(): Promise<void> {
+  if (localOnly) {
+    clearSession()
+    return
+  }
+  await endRemoteSession()
+}
+
+export { restorePlayer }
 
 function usernameTaken(username: string): boolean {
   const normalized = username.toLowerCase()

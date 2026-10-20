@@ -1,10 +1,5 @@
-import { useState } from 'react'
-import {
-  clearSession,
-  readSession,
-  writeSession,
-  type Player,
-} from './auth/profiles'
+import { useEffect, useRef, useState } from 'react'
+import { endSession, readSession, restorePlayer, type Player } from './auth/profiles'
 import { Board } from './components/Board'
 import { BuiltWord } from './components/BuiltWord'
 import { EndPanel } from './components/EndPanel'
@@ -13,20 +8,46 @@ import { HomeDashboard } from './components/HomeDashboard'
 import { LoginPage } from './components/LoginPage'
 import { StatusBar } from './components/StatusBar'
 import { WordForm } from './components/WordForm'
+import { answerInvite, createMatch, loadDailyBoard, saveResult } from './data/matches'
+import { shakeBoard } from './game/dice'
+import { findAllWords, scoreWord } from './game/words'
+import { useLobby, type Invite } from './hooks/useLobby'
 import { useRound, type AttemptFeedback } from './hooks/useRound'
 import './App.css'
 
-function App() {
-  const [player, setPlayer] = useState<Player | null>(() => readSession())
+const testing = import.meta.env.MODE === 'test'
 
-  function signIn(next: Player) {
-    writeSession(next)
-    setPlayer(next)
+function App() {
+  const [player, setPlayer] = useState<Player | null>(() => (testing ? readSession() : null))
+  const [authReady, setAuthReady] = useState(testing)
+
+  useEffect(() => {
+    if (testing) return
+    let cancel = false
+    void restorePlayer().then((next) => {
+      if (cancel) return
+      setPlayer(next)
+      setAuthReady(true)
+    })
+    return () => {
+      cancel = true
+    }
+  }, [])
+
+  async function signOut() {
+    await endSession()
+    setPlayer(null)
   }
 
-  function signOut() {
-    clearSession()
-    setPlayer(null)
+  if (!authReady) {
+    return (
+      <>
+        <Header />
+        <div className="screen">
+          <p className="home-lede">Loading…</p>
+        </div>
+      </>
+    )
   }
 
   if (!player) {
@@ -34,13 +55,13 @@ function App() {
       <>
         <Header />
         <div className="screen">
-          <LoginPage onSignedIn={signIn} />
+          <LoginPage onSignedIn={setPlayer} />
         </div>
       </>
     )
   }
 
-  return <PlayerGame player={player} onSignOut={signOut} />
+  return <PlayerGame player={player} onSignOut={() => void signOut()} />
 }
 
 function PlayerGame({
@@ -51,6 +72,77 @@ function PlayerGame({
   onSignOut: () => void
 }) {
   const round = useRound()
+  const lobby = useLobby(player.id)
+  const { setNotice, refresh } = lobby
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [matchId, setMatchId] = useState<string | null>(null)
+  const savedMatch = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (round.phase !== 'ended' || !matchId || !player.id) return
+    if (savedMatch.current === matchId) return
+    savedMatch.current = matchId
+    void saveResult({
+      gameId: matchId,
+      playerId: player.id,
+      score: round.score,
+      words: round.found,
+    }).catch((error: unknown) => {
+      setNotice(error instanceof Error ? error.message : 'Could not save the score.')
+    })
+  }, [matchId, player.id, round.found, round.phase, round.score, setNotice])
+
+  async function begin(source: 'shake' | 'daily') {
+    if (!player.id || !round.trie) {
+      round.startRound()
+      return
+    }
+    try {
+      const board = source === 'daily' ? await loadDailyBoard() : shakeBoard()
+      const possibleWords = findAllWords(board, round.trie).map((word) => ({
+        word,
+        points: scoreWord(word),
+      }))
+      const gameId = await createMatch({
+        hostId: player.id,
+        board,
+        possibleWords,
+        inviteIds: selectedIds,
+      })
+      setMatchId(gameId)
+      setSelectedIds([])
+      round.startRound(board)
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not start the game.')
+    }
+  }
+
+  async function accept(invite: Invite) {
+    if (!player.id) return
+    try {
+      await answerInvite(invite.gameId, player.id, 'accepted')
+      setMatchId(invite.gameId)
+      round.startRound(invite.board)
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not join the game.')
+    }
+  }
+
+  async function decline(invite: Invite) {
+    if (!player.id) return
+    try {
+      await answerInvite(invite.gameId, player.id, 'declined')
+      await refresh()
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not decline the invitation.')
+    }
+  }
+
+  function toggleFriend(id: string) {
+    setSelectedIds((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+    )
+  }
 
   if (round.phase === 'ended') {
     return (
@@ -61,7 +153,7 @@ function PlayerGame({
             score={round.score}
             found={round.found}
             missed={round.missed}
-            onPlayAgain={round.startRound}
+            onPlayAgain={() => void begin('shake')}
           />
         </div>
       </>
@@ -77,8 +169,16 @@ function PlayerGame({
             playerName={player.name}
             loading={round.phase === 'loading' && !round.loadError}
             loadError={round.loadError}
-            lastScore={round.lastScore}
-            onStart={round.startRound}
+            lastScore={round.lastScore ?? lobby.savedScore}
+            notice={lobby.notice}
+            friends={player.id ? lobby.friends : []}
+            invites={player.id ? lobby.invites : []}
+            selectedIds={selectedIds}
+            onStart={() => void begin('shake')}
+            onDaily={player.id ? () => void begin('daily') : undefined}
+            onToggleFriend={player.id ? toggleFriend : undefined}
+            onAccept={player.id ? (invite) => void accept(invite) : undefined}
+            onDecline={player.id ? (invite) => void decline(invite) : undefined}
           />
         </div>
       </>
@@ -92,7 +192,7 @@ function PlayerGame({
         <StatusBar
           secondsLeft={round.secondsLeft}
           score={round.score}
-          onShake={round.startRound}
+          onShake={() => void begin('shake')}
           shakeDisabled={false}
         />
 
@@ -112,10 +212,7 @@ function PlayerGame({
           />
         )}
 
-        <p
-          className={messageClass(round.feedback, round.message)}
-          role="status"
-        >
+        <p className={messageClass(round.feedback, round.message)} role="status">
           {round.feedback?.kind === 'new' ? (
             <span className="sr-only">{pointsStatus(round.feedback)}</span>
           ) : (

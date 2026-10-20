@@ -15,12 +15,11 @@ export function LoginPage({ onSignedIn }: Props) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const result =
-      mode === 'create'
-        ? createProfile({ name, username, password })
-        : matchProfile(username, password)
+    const result = await (mode === 'create'
+      ? createProfile({ name, username, password })
+      : matchProfile(username, password))
     if (!result.ok) {
       setError(result.error)
       return
@@ -41,8 +40,8 @@ export function LoginPage({ onSignedIn }: Props) {
       <h1>{creating ? 'Create account' : 'Sign in'}</h1>
       <p className="login-lede">
         {creating
-          ? 'Save a profile in this browser, then open your dashboard.'
-          : 'Use the profile saved in this browser to open your dashboard.'}
+          ? 'Create a profile, then open your dashboard.'
+          : 'Sign in with your username to open your dashboard.'}
       </p>
 
       <form className="login-form" onSubmit={onSubmit}>

@@ -7,7 +7,7 @@ import {
   type PointerEvent,
 } from 'react'
 import { shakeBoard, type Board } from '../game/dice'
-import { loadDictionary, type Dictionary } from '../game/dictionary'
+import { loadDictionary, type Dictionary, type Trie } from '../game/dictionary'
 import {
   judgeWord,
   ROUND_SECONDS,
@@ -55,6 +55,7 @@ export function useRound() {
   const [feedback, setFeedback] = useState<AttemptFeedback | null>(null)
   const [loadError, setLoadError] = useState(false)
   const [lastScore, setLastScore] = useState<number | null>(null)
+  const [trie, setTrie] = useState<Trie | null>(null)
 
   const dictRef = useRef<Dictionary | null>(null)
   const boardRef = useRef(board)
@@ -79,10 +80,10 @@ export function useRound() {
     setDraft('')
   }, [])
 
-  const startRound = useCallback(() => {
+  const startRound = useCallback((existing?: Board) => {
     if (!dictRef.current) return
     clearPath()
-    setBoard(shakeBoard())
+    setBoard(existing ?? shakeBoard())
     setFound([])
     setMissed([])
     setMessage('')
@@ -106,6 +107,7 @@ export function useRound() {
       .then((dictionary) => {
         if (cancel) return
         dictRef.current = dictionary
+        setTrie(dictionary.trie)
         setWords(dictionary.words)
         setPhase('ready')
       })
@@ -276,6 +278,7 @@ export function useRound() {
     feedback,
     loadError,
     lastScore,
+    trie,
     score: totalScore(found),
     traced: pathWord(board, path),
     startRound,

@@ -3,12 +3,32 @@ import { ROUND_SECONDS } from '../game/round'
 import { scoreWord } from '../game/words'
 import './HomeDashboard.css'
 
+export type DashFriend = {
+  id: string
+  name: string
+  username: string
+}
+
+export type DashInvite = {
+  gameId: string
+  hostName: string
+  board: string[][]
+}
+
 type Props = {
   playerName?: string
   loading: boolean
   loadError: boolean
   lastScore: number | null
+  notice?: string
+  friends?: readonly DashFriend[]
+  invites?: readonly DashInvite[]
+  selectedIds?: readonly string[]
   onStart: () => void
+  onDaily?: () => void
+  onToggleFriend?: (id: string) => void
+  onAccept?: (invite: DashInvite) => void
+  onDecline?: (invite: DashInvite) => void
 }
 
 const POINT_LENGTHS = [3, 4, 5, 6, 7, 8] as const
@@ -18,7 +38,15 @@ export function HomeDashboard({
   loading,
   loadError,
   lastScore,
+  notice = '',
+  friends = [],
+  invites = [],
+  selectedIds = [],
   onStart,
+  onDaily,
+  onToggleFriend,
+  onAccept,
+  onDecline,
 }: Props) {
   return (
     <main className="home">
@@ -43,10 +71,67 @@ export function HomeDashboard({
         {loading ? 'Loading words…' : 'Start game'}
       </button>
 
+      {onDaily && (
+        <button
+          type="button"
+          className="daily-game"
+          onClick={onDaily}
+          disabled={loading || loadError}
+        >
+          Today's board
+        </button>
+      )}
+
+      {notice && (
+        <p className="home-error" role="alert">
+          {notice}
+        </p>
+      )}
+
       {loadError && (
         <p className="home-error" role="alert">
           Could not load the word list.
         </p>
+      )}
+
+      {friends.length > 0 && onToggleFriend && (
+        <>
+          <h2>Play with</h2>
+          <ul className="friends">
+            {friends.map((friend) => (
+              <li key={friend.id}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(friend.id)}
+                    onChange={() => onToggleFriend(friend.id)}
+                  />
+                  <span>{friend.name}</span>
+                  <small>{friend.username}</small>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {invites.length > 0 && onAccept && onDecline && (
+        <section aria-live="polite">
+          <h2>Invitations</h2>
+          <ul className="invites">
+            {invites.map((invite) => (
+              <li key={invite.gameId}>
+                <p>{invite.hostName} invited you.</p>
+                <button type="button" onClick={() => onAccept(invite)}>
+                  Play
+                </button>
+                <button type="button" onClick={() => onDecline(invite)}>
+                  Decline
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {lastScore !== null && (

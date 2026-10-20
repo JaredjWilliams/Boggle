@@ -362,7 +362,7 @@ function linePoints() {
 // 16px horizontal and 12px vertical padding used to place the first tile.
 function mockTileGeometry() {
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
-    function rect() {
+    function rect(this: HTMLElement) {
       const element = this as HTMLElement
       if (element.classList.contains('grid')) return box(80, 40, 280, 280)
       const row = Number(element.dataset.row)

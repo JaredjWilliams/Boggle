@@ -216,7 +216,7 @@ describe('word result', () => {
     document.elementFromPoint = (x: number, y: number) => cells[`${x},${y}`] ?? null
     const rects = vi
       .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-      .mockImplementation(function tileRect() {
+      .mockImplementation(function tileRect(this: HTMLElement) {
         const element = this as HTMLElement
         if (element.classList.contains('grid')) return box(0, 0, 250, 250)
         const row = Number(element.dataset.row)
