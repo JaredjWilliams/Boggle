@@ -100,11 +100,6 @@
   font-size: 14px;
 }
 
-.summary-scroll .word-list li span:first-child {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
 .empty {
   margin: 0;
   padding: 4px 12px 0;

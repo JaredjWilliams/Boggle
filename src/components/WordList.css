@@ -9,6 +9,7 @@
 
 .word-list li {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
   gap: 12px;
   padding: 10px 0;
@@ -18,9 +19,20 @@
   letter-spacing: 0.03em;
 }
 
-.points {
+.word-list .word {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.word-list .word-points {
+  flex: none;
+  margin-left: auto;
   color: #6d6458;
   font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .word-list.flat {

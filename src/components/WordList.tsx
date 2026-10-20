@@ -11,8 +11,8 @@ export function WordList({ words, flat = false }: Props) {
     <ul className={flat ? 'word-list flat' : 'word-list'}>
       {words.map((item) => (
         <li key={item.word}>
-          <span>{item.word}</span>
-          <span className="points">{item.points}</span>
+          <span className="word">{item.word}</span>
+          <span className="word-points">{item.points}</span>
         </li>
       ))}
     </ul>
