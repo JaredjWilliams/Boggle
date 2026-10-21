@@ -5,10 +5,12 @@ import { BuiltWord } from './components/BuiltWord'
 import { EndPanel } from './components/EndPanel'
 import { Header } from './components/Header'
 import { HomeDashboard } from './components/HomeDashboard'
+import { PlayerStats } from './components/StatsScreen'
 import { LoginPage } from './components/LoginPage'
 import { StatusBar } from './components/StatusBar'
 import { WordForm } from './components/WordForm'
 import { answerInvite, createMatch, loadDailyBoard, saveResult } from './data/matches'
+import { clearSampleHistory, hasSampleHistory, seedSampleHistory } from './data/stats'
 import { shakeBoard } from './game/dice'
 import { findAllWords, scoreWord } from './game/words'
 import { useLobby, type Invite } from './hooks/useLobby'
@@ -76,7 +78,34 @@ function PlayerGame({
   const { setNotice, refresh } = lobby
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [matchId, setMatchId] = useState<string | null>(null)
+  const [view, setView] = useState<'home' | 'stats'>('home')
+  const [seeded, setSeeded] = useState(false)
+  const [seedReady, setSeedReady] = useState(false)
+  const [seeding, setSeeding] = useState(false)
+  const [seedNotice, setSeedNotice] = useState('')
+  const [seedFailed, setSeedFailed] = useState(false)
   const savedMatch = useRef<string | null>(null)
+  const seedTouched = useRef(false)
+
+  useEffect(() => {
+    if (!player.id) return
+    let cancel = false
+    void hasSampleHistory(player.id)
+      .then((present) => {
+        if (!cancel && !seedTouched.current) setSeeded(present)
+      })
+      .catch((error: unknown) => {
+        if (cancel) return
+        setSeedFailed(true)
+        setSeedNotice(error instanceof Error ? error.message : 'Could not check sample games.')
+      })
+      .finally(() => {
+        if (!cancel) setSeedReady(true)
+      })
+    return () => {
+      cancel = true
+    }
+  }, [player.id])
 
   useEffect(() => {
     if (round.phase !== 'ended' || !matchId || !player.id) return
@@ -138,6 +167,31 @@ function PlayerGame({
     }
   }
 
+  async function toggleSeed() {
+    if (!player.id || seeding || !seedReady) return
+    const next = !seeded
+    seedTouched.current = true
+    setSeeded(next)
+    setSeeding(true)
+    setSeedNotice('')
+    setSeedFailed(false)
+    try {
+      if (next) {
+        const count = await seedSampleHistory(player.id)
+        setSeedNotice(`Added ${count} sample games.`)
+      } else {
+        await clearSampleHistory(player.id)
+        setSeedNotice('Sample games removed.')
+      }
+    } catch (error) {
+      setSeeded(!next)
+      setSeedFailed(true)
+      setSeedNotice(error instanceof Error ? error.message : 'Could not update sample games.')
+    } finally {
+      setSeeding(false)
+    }
+  }
+
   function toggleFriend(id: string) {
     setSelectedIds((current) =>
       current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
@@ -160,6 +214,17 @@ function PlayerGame({
     )
   }
 
+  if (round.phase !== 'playing' && view === 'stats' && player.id) {
+    return (
+      <>
+        <Header onHome={() => setView('home')} onSignOut={onSignOut} />
+        <div className="screen">
+          <PlayerStats playerId={player.id} playerName={player.name} />
+        </div>
+      </>
+    )
+  }
+
   if (round.phase !== 'playing') {
     return (
       <>
@@ -176,6 +241,13 @@ function PlayerGame({
             selectedIds={selectedIds}
             onStart={() => void begin('shake')}
             onDaily={player.id ? () => void begin('daily') : undefined}
+            onOpenStats={player.id ? () => setView('stats') : undefined}
+            onToggleSeed={player.id ? () => void toggleSeed() : undefined}
+            seeded={seeded}
+            seedReady={seedReady}
+            seeding={seeding}
+            seedNotice={seedNotice}
+            seedFailed={seedFailed}
             onToggleFriend={player.id ? toggleFriend : undefined}
             onAccept={player.id ? (invite) => void accept(invite) : undefined}
             onDecline={player.id ? (invite) => void decline(invite) : undefined}

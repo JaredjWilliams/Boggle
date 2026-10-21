@@ -26,6 +26,13 @@ type Props = {
   selectedIds?: readonly string[]
   onStart: () => void
   onDaily?: () => void
+  onOpenStats?: () => void
+  onToggleSeed?: () => void
+  seeded?: boolean
+  seedReady?: boolean
+  seeding?: boolean
+  seedNotice?: string
+  seedFailed?: boolean
   onToggleFriend?: (id: string) => void
   onAccept?: (invite: DashInvite) => void
   onDecline?: (invite: DashInvite) => void
@@ -44,6 +51,13 @@ export function HomeDashboard({
   selectedIds = [],
   onStart,
   onDaily,
+  onOpenStats,
+  onToggleSeed,
+  seeded = false,
+  seedReady = true,
+  seeding = false,
+  seedNotice = '',
+  seedFailed = false,
   onToggleFriend,
   onAccept,
   onDecline,
@@ -80,6 +94,40 @@ export function HomeDashboard({
         >
           Today's board
         </button>
+      )}
+
+      {onOpenStats && (
+        <button type="button" className="stats-open" onClick={onOpenStats}>
+          Your stats
+          <span aria-hidden="true">→</span>
+        </button>
+      )}
+
+      {onToggleSeed && seedReady && (
+        <div className="seed-row">
+          <div className="seed-copy">
+            <strong id="sample-games-label">Sample games</strong>
+            <small id="sample-games-note">Practice matches on your stats.</small>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            className={seeded ? 'seed-switch is-on' : 'seed-switch'}
+            aria-checked={seeded}
+            aria-labelledby="sample-games-label"
+            aria-describedby="sample-games-note"
+            onClick={onToggleSeed}
+            disabled={seeding}
+          >
+            <span aria-hidden="true" />
+          </button>
+        </div>
+      )}
+
+      {seedNotice && (
+        <p className={seedFailed ? 'seed-note seed-note-error' : 'seed-note'} role="status">
+          {seedNotice}
+        </p>
       )}
 
       {notice && (

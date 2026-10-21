@@ -1,0 +1,273 @@
+.stats {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 28px 20px calc(28px + env(safe-area-inset-bottom));
+}
+
+.stats-player {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 18px;
+}
+
+.stats-player span,
+.stats h2 {
+  margin: 0;
+  color: #6d6458;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.stats-player strong {
+  font-family: Georgia, 'Palatino Linotype', Palatino, serif;
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.stats h1 {
+  margin: 0;
+  font-family: Georgia, 'Palatino Linotype', Palatino, serif;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.stats-lede,
+.stats-status {
+  margin: 12px 0 0;
+  color: #6d6458;
+  font-size: 16px;
+}
+
+.stats h2 {
+  margin-top: 26px;
+}
+
+.stats-alert {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--tile);
+}
+
+.stats-alert p {
+  margin: 0;
+  color: var(--bad);
+  font-weight: 700;
+}
+
+.stats-retry {
+  min-height: 44px;
+  margin-top: 12px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: white;
+  font: inherit;
+  font-weight: 700;
+}
+
+.filter {
+  display: flex;
+  gap: 8px;
+  margin: 10px -20px 0;
+  padding: 0 20px 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.filter::-webkit-scrollbar {
+  display: none;
+}
+
+.filter-chip {
+  flex: none;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--tile);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.filter-chip.is-selected {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.filter-chip:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.stat-card {
+  margin-top: 14px;
+  padding: 16px 14px 12px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--tile);
+}
+
+.stat-card h2 {
+  margin-top: 0;
+}
+
+.stat-figure {
+  margin: 4px 0 0;
+  font-family: Georgia, 'Palatino Linotype', Palatino, serif;
+  font-size: 40px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.stat-note,
+.chart-range {
+  margin: 6px 0 0;
+  color: #6d6458;
+  font-size: 14px;
+}
+
+.chart-block {
+  margin: 4px 0 0;
+}
+
+.chart,
+.pie {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.pie {
+  width: 148px;
+  margin: 0 auto;
+}
+
+.chart-label {
+  fill: #6d6458;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.chart-empty {
+  fill: #6d6458;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.chart-grid {
+  stroke: var(--line);
+  stroke-dasharray: 3 5;
+  stroke-width: 1;
+}
+
+.chart-axis {
+  stroke: #d3c6b4;
+  stroke-width: 1.5;
+}
+
+.trend-line {
+  stroke: var(--ink);
+  stroke-linecap: round;
+  stroke-width: 2.25;
+}
+
+.plot-halo {
+  fill: var(--accent);
+  opacity: 0.16;
+}
+
+.plot-dot {
+  fill: var(--accent);
+  stroke: var(--tile);
+  stroke-width: 1.5;
+}
+
+.pie-layout {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  gap: 8px 12px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+@media (max-width: 360px) {
+  .pie-layout {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .legend {
+    width: 100%;
+  }
+}
+
+.pie path {
+  stroke: var(--tile);
+  stroke-width: 1.5;
+}
+
+.pie-empty {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 14;
+  stroke-dasharray: 4 7;
+}
+
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  font-weight: 700;
+}
+
+.swatch {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border-radius: 999px;
+}
+
+.legend small {
+  margin-left: auto;
+  color: #6d6458;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

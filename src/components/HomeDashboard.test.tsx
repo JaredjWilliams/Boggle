@@ -56,6 +56,54 @@ describe('HomeDashboard', () => {
     expect(onStart).not.toHaveBeenCalled()
   })
 
+  it('opens stats and toggles sample games from the dashboard', async () => {
+    const onOpenStats = vi.fn()
+    const onToggleSeed = vi.fn()
+    const { rerender } = render(
+      <HomeDashboard {...props} onOpenStats={onOpenStats} onToggleSeed={onToggleSeed} seedReady={false} />,
+    )
+
+    expect(screen.queryByRole('switch', { name: 'Sample games' })).not.toBeInTheDocument()
+
+    rerender(
+      <HomeDashboard {...props} onOpenStats={onOpenStats} onToggleSeed={onToggleSeed} seedReady />,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Your stats' }))
+    const sample = screen.getByRole('switch', { name: 'Sample games' })
+    expect(sample).toHaveAttribute('aria-checked', 'false')
+    await userEvent.click(sample)
+
+    expect(onOpenStats).toHaveBeenCalledOnce()
+    expect(onToggleSeed).toHaveBeenCalledOnce()
+
+    rerender(
+      <HomeDashboard
+        {...props}
+        onToggleSeed={onToggleSeed}
+        seedReady
+        seeded
+        seeding
+        seedNotice="Added 18 sample games."
+      />,
+    )
+    const updating = screen.getByRole('switch', { name: 'Sample games' })
+    expect(updating).toBeDisabled()
+    expect(updating).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('status')).toHaveTextContent('Added 18 sample games.')
+
+    rerender(
+      <HomeDashboard
+        {...props}
+        onToggleSeed={onToggleSeed}
+        seedReady
+        seedFailed
+        seedNotice="Could not update sample games."
+      />,
+    )
+    expect(screen.getByRole('status')).toHaveClass('seed-note-error')
+  })
+
   it('shows a finished score, including zero', () => {
     const { rerender } = render(<HomeDashboard {...props} lastScore={0} />)
     expect(screen.getByText('Last score').closest('p')).toHaveTextContent(/^Last score0$/)

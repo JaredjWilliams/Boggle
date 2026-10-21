@@ -1,0 +1,96 @@
+import { describe, expect, it } from 'vitest'
+import { buildSampleHistory, SAMPLE_GAMES } from './sample'
+import {
+  axisMax,
+  compactNumber,
+  gamesAgainst,
+  headToHead,
+  linearTrend,
+  niceMax,
+  opponentNames,
+  trendNote,
+  winRate,
+  type GameStat,
+} from './series'
+
+const games: GameStat[] = [
+  {
+    id: 'a',
+    playedOn: '2026-10-01',
+    words: 4,
+    score: 1000,
+    opponents: [{ name: 'Mina Chen', score: 400 }],
+  },
+  {
+    id: 'b',
+    playedOn: '2026-10-08',
+    words: 8,
+    score: 2000,
+    opponents: [{ name: 'Jonah Park', score: 2400 }],
+  },
+  {
+    id: 'c',
+    playedOn: '2026-10-15',
+    words: 6,
+    score: 1500,
+    opponents: [{ name: 'Mina Chen', score: 1500 }],
+  },
+]
+
+describe('stats series', () => {
+  it('filters games to one player and lists opponents', () => {
+    expect(opponentNames(games)).toEqual(['Jonah Park', 'Mina Chen'])
+    expect(gamesAgainst(games, 'Mina Chen').map((game) => game.id)).toEqual(['a', 'c'])
+    expect(gamesAgainst(games, null)).toHaveLength(3)
+  })
+
+  it('counts wins, losses, and ties against everyone or one player', () => {
+    expect(headToHead(games, null)).toEqual({ wins: 1, losses: 1, ties: 1 })
+    expect(headToHead(games, 'Mina Chen')).toEqual({ wins: 1, losses: 0, ties: 1 })
+    expect(winRate(headToHead(games, 'Jonah Park'))).toBe(0)
+    expect(winRate({ wins: 0, losses: 0, ties: 0 })).toBeNull()
+  })
+
+  it('fits a line through dated scores', () => {
+    expect(linearTrend([0, 1, 2], [0, 2, 4])).toEqual({ slope: 2, intercept: 0 })
+    expect(linearTrend([3, 3], [4, 10])).toEqual({ slope: 0, intercept: 7 })
+    expect(linearTrend([1], [2])).toBeNull()
+    expect(niceMax(11200)).toBe(15000)
+    expect(axisMax(22)).toBe(30)
+    expect(axisMax(24)).toBe(30)
+    expect(compactNumber(15000)).toBe('15k')
+    expect(compactNumber(1500)).toBe('1.5k')
+  })
+
+  it('describes the weekly change', () => {
+    expect(
+      trendNote(
+        games.map((game) => ({ playedOn: game.playedOn, value: game.words })),
+        'word',
+      ),
+    ).toBe('Up about 1 word a week.')
+    expect(trendNote([{ playedOn: '2026-10-01', value: 4 }], 'word')).toBe(
+      'Play another game to see a trend.',
+    )
+    expect(trendNote([], 'point')).toBe('No games in this view.')
+  })
+
+  it('builds an 18-game sample with a mixed record', () => {
+    const rows = buildSampleHistory('player-1', new Date(2026, 9, 19))
+    expect(rows).toHaveLength(18)
+    expect(rows[0]).toMatchObject({ player_id: 'player-1', played_on: '2026-09-07', seeded: true })
+    expect(rows[17].played_on).toBe('2026-10-19')
+    expect(
+      headToHead(
+        SAMPLE_GAMES.map((game, index) => ({
+          id: String(index),
+          playedOn: rows[index].played_on,
+          words: game.words,
+          score: game.score,
+          opponents: [{ name: game.opponent, score: game.opponentScore }],
+        })),
+        null,
+      ),
+    ).toEqual({ wins: 11, losses: 5, ties: 2 })
+  })
+})

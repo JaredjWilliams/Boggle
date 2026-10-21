@@ -1,0 +1,172 @@
+export type OpponentResult = {
+  name: string
+  score: number
+}
+
+export type GameStat = {
+  id: string
+  playedOn: string
+  words: number
+  score: number
+  opponents: OpponentResult[]
+}
+
+export type HeadToHead = {
+  wins: number
+  losses: number
+  ties: number
+}
+
+export type Trend = {
+  slope: number
+  intercept: number
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+export function dayIndex(iso: string): number {
+  const [year, month, day] = iso.split('-').map(Number)
+  if (!year || !month || !day) return 0
+  return Math.round(Date.UTC(year, month - 1, day) / 86_400_000)
+}
+
+export function formatPlayedOn(iso: string): string {
+  const [year, month, day] = iso.split('-').map(Number)
+  if (!year || !month || !day) return iso
+  return `${MONTHS[month - 1]} ${day}`
+}
+
+export function dateRange(dates: readonly string[]): string {
+  if (dates.length === 0) return ''
+  const ordered = [...dates].sort()
+  const first = formatPlayedOn(ordered[0])
+  const last = formatPlayedOn(ordered[ordered.length - 1])
+  return first === last ? first : `${first} – ${last}`
+}
+
+export function opponentNames(games: readonly GameStat[]): string[] {
+  const names = new Set<string>()
+  for (const game of games) {
+    for (const opponent of game.opponents) names.add(opponent.name)
+  }
+  return [...names].sort((left, right) => left.localeCompare(right))
+}
+
+export function gamesAgainst(games: readonly GameStat[], opponent: string | null): GameStat[] {
+  if (!opponent) return [...games]
+  return games.filter((game) => game.opponents.some((item) => item.name === opponent))
+}
+
+export function totals(games: readonly GameStat[]): { words: number; score: number } {
+  return games.reduce(
+    (sum, game) => ({ words: sum.words + game.words, score: sum.score + game.score }),
+    { words: 0, score: 0 },
+  )
+}
+
+export function headToHead(games: readonly GameStat[], opponent: string | null): HeadToHead {
+  const record: HeadToHead = { wins: 0, losses: 0, ties: 0 }
+  for (const game of games) {
+    const rivals = opponent
+      ? game.opponents.filter((item) => item.name === opponent)
+      : game.opponents
+    for (const rival of rivals) {
+      if (game.score > rival.score) record.wins += 1
+      else if (game.score < rival.score) record.losses += 1
+      else record.ties += 1
+    }
+  }
+  return record
+}
+
+export function playedCount(record: HeadToHead): number {
+  return record.wins + record.losses + record.ties
+}
+
+export function winRate(record: HeadToHead): number | null {
+  const played = playedCount(record)
+  if (played === 0) return null
+  return record.wins / played
+}
+
+export function formatPercent(rate: number): string {
+  return `${Math.round(rate * 100)}%`
+}
+
+export function formatCount(value: number): string {
+  return value.toLocaleString('en-US')
+}
+
+export function linearTrend(xs: readonly number[], ys: readonly number[]): Trend | null {
+  const count = Math.min(xs.length, ys.length)
+  if (count < 2) return null
+  let sumX = 0
+  let sumY = 0
+  let sumXY = 0
+  let sumXX = 0
+  for (let index = 0; index < count; index += 1) {
+    sumX += xs[index]
+    sumY += ys[index]
+    sumXY += xs[index] * ys[index]
+    sumXX += xs[index] * xs[index]
+  }
+  const denominator = count * sumXX - sumX * sumX
+  if (denominator === 0) return { slope: 0, intercept: sumY / count }
+  const slope = (count * sumXY - sumX * sumY) / denominator
+  return { slope, intercept: (sumY - slope * sumX) / count }
+}
+
+export function trendNote(
+  points: readonly { playedOn: string; value: number }[],
+  noun: 'word' | 'point',
+): string {
+  if (points.length === 0) return 'No games in this view.'
+  if (points.length < 2) return 'Play another game to see a trend.'
+  const fit = linearTrend(
+    points.map((point) => dayIndex(point.playedOn)),
+    points.map((point) => point.value),
+  )
+  if (!fit) return 'Play another game to see a trend.'
+  const weekly = fit.slope * 7
+  const quiet = noun === 'word' ? 0.2 : 20
+  if (Math.abs(weekly) < quiet) return 'Holding steady across these dates.'
+  const direction = weekly > 0 ? 'Up' : 'Down'
+  return `${direction} about ${quantity(Math.abs(weekly), noun)} a week.`
+}
+
+export function niceMax(value: number): number {
+  if (value <= 0) return 4
+  const padded = value * 1.1
+  const power = 10 ** Math.floor(Math.log10(padded))
+  const fraction = padded / power
+  const steps = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]
+  const nice = steps.find((step) => fraction <= step) ?? 10
+  return nice * power
+}
+
+export function axisMax(value: number): number {
+  if (value <= 0) return 4
+  const half = Math.max(value * 1.08, value + 1) / 2
+  const power = 10 ** Math.floor(Math.log10(half))
+  const fraction = half / power
+  const steps = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]
+  const nice = steps.find((step) => fraction <= step) ?? 10
+  return nice * power * 2
+}
+
+export function compactNumber(value: number): string {
+  if (value === 0) return '0'
+  const absolute = Math.abs(value)
+  if (absolute < 1000) return String(Math.round(value))
+  const scaled = value / 1000
+  const digits = Math.abs(scaled) >= 10 ? 0 : 1
+  const rounded = Number(scaled.toFixed(digits))
+  return `${rounded}k`
+}
+
+function quantity(amount: number, noun: 'word' | 'point'): string {
+  const rounded = noun === 'point' ? Math.round(amount) : Math.round(amount * 10) / 10
+  const shown = noun === 'point' ? rounded.toLocaleString('en-US') : String(rounded)
+  const unit = shown === '1' ? noun : `${noun}s`
+  return `${shown} ${unit}`
+}
