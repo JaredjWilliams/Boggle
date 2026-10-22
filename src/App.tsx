@@ -322,10 +322,8 @@ function PlayerGame({
         {signedInHeader()}
         <div className="screen">
           <HomeDashboard
-            playerName={player.name}
             loading={round.phase === 'loading' && !round.loadError}
             loadError={round.loadError}
-            lastScore={round.lastScore ?? lobby.savedScore}
             notice={lobby.notice}
             starting={starting}
             onStart={() => void begin('shake')}

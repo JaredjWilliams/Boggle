@@ -354,9 +354,8 @@ describe('sign in', () => {
     await user.click(screen.getByRole('button', { name: 'Save profile' }))
 
     expect(await screen.findByRole('heading', { name: 'Find every word.' })).toBeInTheDocument()
-    expect(screen.getByText('Your dashboard').closest('p')).toHaveTextContent(
-      /^Your dashboardGrace Hopper$/,
-    )
+    expect(screen.queryByText('Your dashboard')).not.toBeInTheDocument()
+    expect(screen.queryByText('Grace Hopper')).not.toBeInTheDocument()
     expect(JSON.parse(localStorage.getItem('boggle.profiles') ?? '[]')).toEqual([
       { name: 'Grace Hopper', username: 'grace', password: 'cobol' },
     ])
@@ -457,11 +456,10 @@ describe('home dashboard', () => {
     await user.click(screen.getByRole('button', { name: 'Home' }))
 
     expect(screen.getByRole('heading', { name: 'Find every word.' })).toBeInTheDocument()
-    expect(screen.queryByText('Last score')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Turn' })).not.toBeInTheDocument()
   })
 
-  it('shows the finished score after returning home', async () => {
+  it('returns home after a finished round', async () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
     const user = userEvent.setup()
     render(<App />)
@@ -476,7 +474,8 @@ describe('home dashboard', () => {
 
     await user.click(screen.getByRole('button', { name: 'Home' }))
 
-    expect(screen.getByText('Last score').closest('p')).toHaveTextContent(/^Last score100$/)
+    expect(screen.getByRole('heading', { name: 'Find every word.' })).toBeInTheDocument()
+    expect(screen.queryByText('Last score')).not.toBeInTheDocument()
     expect(screen.queryByText("Time's up")).not.toBeInTheDocument()
     expect(vi.mocked(shakeBoard)).toHaveBeenCalledTimes(1)
   })

@@ -1,34 +1,26 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { SIDE } from '../game/dice'
-import { ROUND_SECONDS } from '../game/round'
-import { scoreWord } from '../game/words'
 import type { ActiveGame } from '../data/activeGames'
 import { HomeDashboard } from './HomeDashboard'
 
 const props = {
   loading: false,
   loadError: false,
-  lastScore: null,
   onStart: vi.fn(),
 }
 
 describe('HomeDashboard', () => {
-  it('shows the round and the points for each word length', () => {
+  it('opens on the ways to play', () => {
     render(<HomeDashboard {...props} />)
 
     expect(screen.getByRole('heading', { name: 'Find every word.' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Play solo' })).toBeEnabled()
+    expect(screen.queryByText('Your dashboard')).not.toBeInTheDocument()
+    expect(screen.queryByText('Grace Hopper')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Trace touching tiles/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Points' })).not.toBeInTheDocument()
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
-    expect(screen.getByText('Time').closest('div')).toHaveTextContent(formatRound(ROUND_SECONDS))
-    expect(screen.getByText('Board').closest('div')).toHaveTextContent(`${SIDE}×${SIDE}`)
-    expect(screen.getByText('Words').closest('div')).toHaveTextContent('3+')
-
-    expect(screen.getAllByRole('listitem').map((item) => item.getAttribute('aria-label'))).toEqual(
-      [3, 4, 5, 6, 7, 8].map(pointsName),
-    )
-    expect(screen.queryByText('Last score')).not.toBeInTheDocument()
   })
 
   it('starts a game from the dashboard', async () => {
@@ -84,22 +76,46 @@ describe('HomeDashboard', () => {
     expect(screen.queryByRole('switch', { name: 'Sample games' })).not.toBeInTheDocument()
   })
 
-  it('shows today\'s results under the daily board after it has been played', async () => {
-    const onDaily = vi.fn()
+  it('shows today\'s results under the daily board and above active games after it has been played', async () => {
     const onDailyResults = vi.fn()
+    const game = {
+      gameId: 'g-new',
+      opponentId: 'grace',
+      opponentName: 'Grace Hopper',
+      playedBack: false,
+      wins: 1,
+      losses: 0,
+    }
     const { rerender } = render(
-      <HomeDashboard {...props} onDaily={onDaily} onDailyResults={onDailyResults} />,
+      <HomeDashboard
+        {...props}
+        onDaily={vi.fn()}
+        onDailyResults={onDailyResults}
+        onOpenStats={vi.fn()}
+        games={[game]}
+      />,
     )
 
     expect(screen.queryByRole('button', { name: "Today's results" })).not.toBeInTheDocument()
 
     rerender(
-      <HomeDashboard {...props} onDaily={onDaily} onDailyResults={onDailyResults} dailyPlayed />,
+      <HomeDashboard
+        {...props}
+        onDaily={vi.fn()}
+        onDailyResults={onDailyResults}
+        onOpenStats={vi.fn()}
+        games={[game]}
+        dailyPlayed
+      />,
     )
 
     const board = screen.getByRole('button', { name: "Today's board" })
     const results = screen.getByRole('button', { name: "Today's results" })
+    const stats = screen.getByRole('button', { name: 'Your stats' })
+    const games = screen.getByRole('list', { name: 'Active games' })
     expect(board.compareDocumentPosition(results) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(results.compareDocumentPosition(stats) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(stats.compareDocumentPosition(games) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
     await userEvent.click(results)
     expect(onDailyResults).toHaveBeenCalledOnce()
@@ -123,9 +139,26 @@ describe('HomeDashboard', () => {
       losses: 3,
     }
     const onOpenGame = vi.fn()
-    render(<HomeDashboard {...props} games={[waiting, played]} onOpenGame={onOpenGame} />)
+    render(
+      <HomeDashboard
+        {...props}
+        games={[waiting, played]}
+        onOpenGame={onOpenGame}
+        onDaily={vi.fn()}
+        onDailyResults={vi.fn()}
+        onOpenStats={vi.fn()}
+        dailyPlayed
+      />,
+    )
 
+    const board = screen.getByRole('button', { name: "Today's board" })
+    const results = screen.getByRole('button', { name: "Today's results" })
+    const stats = screen.getByRole('button', { name: 'Your stats' })
     const games = screen.getByRole('list', { name: 'Active games' })
+    expect(board.compareDocumentPosition(results) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(results.compareDocumentPosition(stats) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(stats.compareDocumentPosition(games) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
     const buttons = within(games).getAllByRole('button')
     expect(buttons.map((button) => button.getAttribute('aria-label'))).toEqual([
       'Grace Hopper, 2 wins, 1 loss, waiting',
@@ -139,25 +172,4 @@ describe('HomeDashboard', () => {
     await userEvent.click(buttons[1])
     expect(onOpenGame).toHaveBeenCalledExactlyOnceWith(played)
   })
-
-  it('shows a finished score, including zero', () => {
-    const { rerender } = render(<HomeDashboard {...props} lastScore={0} />)
-    expect(screen.getByText('Last score').closest('p')).toHaveTextContent(/^Last score0$/)
-
-    rerender(<HomeDashboard {...props} lastScore={1400} />)
-    expect(screen.getByText('Last score').closest('p')).toHaveTextContent(/^Last score1400$/)
-  })
 })
-
-function formatRound(seconds: number): string {
-  const minutes = Math.floor(seconds / 60)
-  const rest = seconds % 60
-  return `${minutes}:${rest.toString().padStart(2, '0')}`
-}
-
-function pointsName(length: number): string {
-  const letters = length >= 8 ? '8 or more' : String(length)
-  const points = scoreWord('a'.repeat(length))
-  const shown = length >= 8 ? `${points}+` : String(points)
-  return `${letters} letters, ${shown} points`
-}

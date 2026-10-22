@@ -5,27 +5,6 @@
   padding: 28px 20px calc(24px + env(safe-area-inset-bottom));
 }
 
-.home-player {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin: 0 0 18px;
-}
-
-.home-player span {
-  color: #6d6458;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.home-player strong {
-  font-family: Georgia, 'Palatino Linotype', Palatino, serif;
-  font-size: 22px;
-  line-height: 1.1;
-}
-
 .home h1 {
   margin: 0;
   font-family: Georgia, 'Palatino Linotype', Palatino, serif;
@@ -179,6 +158,10 @@
   font-weight: 700;
 }
 
+.daily-game {
+  margin-top: 22px;
+}
+
 .stats-open,
 .daily-results-open {
   display: flex;
@@ -201,100 +184,11 @@
   font-weight: 700;
 }
 
-.last-score {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin: 22px 0 0;
-  padding: 14px 16px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--tile);
-}
-
-.last-score span {
-  color: #6d6458;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.last-score strong {
-  font-size: 40px;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-
-.home-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin: 22px 0 0;
-}
-
-.home-stats div {
-  padding: 12px 8px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--tile);
-  text-align: center;
-}
-
-.home-stats dt {
-  margin: 0;
-  color: #6d6458;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.home-stats dd {
-  margin: 4px 0 0;
-  font-size: 22px;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
-}
-
 .home h2 {
   margin: 28px 0 10px;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-}
-
-.points {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.points li {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 12px 4px;
-  border-radius: 12px;
-  background: var(--tile);
-  border: 1px solid var(--line);
-}
-
-.points .length {
-  color: #6d6458;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
-.points strong {
-  font-size: 18px;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
 }
 
