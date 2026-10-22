@@ -26,6 +26,8 @@ type Props = {
   selectedIds?: readonly string[]
   onStart: () => void
   onDaily?: () => void
+  dailyPlayed?: boolean
+  onDailyResults?: () => void
   onOpenStats?: () => void
   onToggleSeed?: () => void
   seeded?: boolean
@@ -51,6 +53,8 @@ export function HomeDashboard({
   selectedIds = [],
   onStart,
   onDaily,
+  dailyPlayed = false,
+  onDailyResults,
   onOpenStats,
   onToggleSeed,
   seeded = false,
@@ -93,6 +97,13 @@ export function HomeDashboard({
           disabled={loading || loadError}
         >
           Today's board
+        </button>
+      )}
+
+      {onDaily && dailyPlayed && onDailyResults && (
+        <button type="button" className="daily-results-open" onClick={onDailyResults}>
+          Today's results
+          <span aria-hidden="true">→</span>
         </button>
       )}
 

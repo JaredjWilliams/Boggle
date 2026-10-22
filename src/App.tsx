@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { endSession, readSession, restorePlayer, type Player } from './auth/profiles'
 import { Board } from './components/Board'
 import { BuiltWord } from './components/BuiltWord'
+import { DailyBoardResults } from './components/DailyResults'
 import { EndPanel } from './components/EndPanel'
 import { Header } from './components/Header'
 import { HomeDashboard } from './components/HomeDashboard'
@@ -9,7 +10,9 @@ import { PlayerStats } from './components/StatsScreen'
 import { LoginPage } from './components/LoginPage'
 import { StatusBar } from './components/StatusBar'
 import { WordForm } from './components/WordForm'
+import { hasPlayedDaily } from './data/daily'
 import { answerInvite, createMatch, loadDailyBoard, saveResult } from './data/matches'
+import { playedOn } from './data/play'
 import { clearSampleHistory, hasSampleHistory, seedSampleHistory } from './data/stats'
 import { shakeBoard } from './game/dice'
 import { findAllWords, scoreWord } from './game/words'
@@ -78,7 +81,8 @@ function PlayerGame({
   const { setNotice, refresh } = lobby
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [matchId, setMatchId] = useState<string | null>(null)
-  const [view, setView] = useState<'home' | 'stats'>('home')
+  const [view, setView] = useState<'home' | 'stats' | 'daily'>('home')
+  const [dailyPlayed, setDailyPlayed] = useState(false)
   const [seeded, setSeeded] = useState(false)
   const [seedReady, setSeedReady] = useState(false)
   const [seeding, setSeeding] = useState(false)
@@ -86,6 +90,23 @@ function PlayerGame({
   const [seedFailed, setSeedFailed] = useState(false)
   const savedMatch = useRef<string | null>(null)
   const seedTouched = useRef(false)
+
+  useEffect(() => {
+    if (!player.id) return
+    let cancel = false
+    void hasPlayedDaily(player.id)
+      .then((played) => {
+        if (!cancel && played) setDailyPlayed(true)
+      })
+      .catch((error: unknown) => {
+        if (!cancel) {
+          setNotice(error instanceof Error ? error.message : "Could not check today's board.")
+        }
+      })
+    return () => {
+      cancel = true
+    }
+  }, [player.id, setNotice])
 
   useEffect(() => {
     if (!player.id) return
@@ -111,14 +132,23 @@ function PlayerGame({
     if (round.phase !== 'ended' || !matchId || !player.id) return
     if (savedMatch.current === matchId) return
     savedMatch.current = matchId
+    const playerId = player.id
     void saveResult({
       gameId: matchId,
-      playerId: player.id,
+      playerId,
       score: round.score,
       words: round.found,
-    }).catch((error: unknown) => {
-      setNotice(error instanceof Error ? error.message : 'Could not save the score.')
     })
+      .then(async () => {
+        try {
+          if (await hasPlayedDaily(playerId)) setDailyPlayed(true)
+        } catch (error: unknown) {
+          setNotice(error instanceof Error ? error.message : "Could not check today's board.")
+        }
+      })
+      .catch((error: unknown) => {
+        setNotice(error instanceof Error ? error.message : 'Could not save the score.')
+      })
   }, [matchId, player.id, round.found, round.phase, round.score, setNotice])
 
   async function begin(source: 'shake' | 'daily') {
@@ -137,6 +167,7 @@ function PlayerGame({
         board,
         possibleWords,
         inviteIds: selectedIds,
+        dailyOn: source === 'daily' ? playedOn() : undefined,
       })
       setMatchId(gameId)
       setSelectedIds([])
@@ -214,6 +245,17 @@ function PlayerGame({
     )
   }
 
+  if (round.phase !== 'playing' && view === 'daily' && player.id) {
+    return (
+      <>
+        <Header onHome={() => setView('home')} onSignOut={onSignOut} />
+        <div className="screen">
+          <DailyBoardResults playerId={player.id} />
+        </div>
+      </>
+    )
+  }
+
   if (round.phase !== 'playing' && view === 'stats' && player.id) {
     return (
       <>
@@ -241,6 +283,8 @@ function PlayerGame({
             selectedIds={selectedIds}
             onStart={() => void begin('shake')}
             onDaily={player.id ? () => void begin('daily') : undefined}
+            dailyPlayed={dailyPlayed}
+            onDailyResults={player.id ? () => setView('daily') : undefined}
             onOpenStats={player.id ? () => setView('stats') : undefined}
             onToggleSeed={player.id ? () => void toggleSeed() : undefined}
             seeded={seeded}

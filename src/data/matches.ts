@@ -118,6 +118,7 @@ export async function createMatch(input: {
   board: Board
   possibleWords: ScoredWord[]
   inviteIds: readonly string[]
+  dailyOn?: string
 }): Promise<string> {
   const supabase = getSupabase()
   const created = await supabase
@@ -126,6 +127,7 @@ export async function createMatch(input: {
       board: input.board,
       possible_words: input.possibleWords,
       host_id: input.hostId,
+      daily_on: input.dailyOn ?? null,
     })
     .select('id')
     .single()

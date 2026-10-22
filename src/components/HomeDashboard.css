@@ -60,7 +60,8 @@
 }
 
 .daily-game,
-.stats-open {
+.stats-open,
+.daily-results-open {
   width: 100%;
   min-height: 52px;
   margin-top: 10px;
@@ -73,14 +74,16 @@
   font-weight: 700;
 }
 
-.stats-open {
+.stats-open,
+.daily-results-open {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
 }
 
-.stats-open span {
+.stats-open span,
+.daily-results-open span {
   color: var(--accent);
   font-size: 20px;
   line-height: 1;

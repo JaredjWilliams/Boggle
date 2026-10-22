@@ -104,6 +104,27 @@ describe('HomeDashboard', () => {
     expect(screen.getByRole('status')).toHaveClass('seed-note-error')
   })
 
+  it('shows today\'s results under the daily board after it has been played', async () => {
+    const onDaily = vi.fn()
+    const onDailyResults = vi.fn()
+    const { rerender } = render(
+      <HomeDashboard {...props} onDaily={onDaily} onDailyResults={onDailyResults} />,
+    )
+
+    expect(screen.queryByRole('button', { name: "Today's results" })).not.toBeInTheDocument()
+
+    rerender(
+      <HomeDashboard {...props} onDaily={onDaily} onDailyResults={onDailyResults} dailyPlayed />,
+    )
+
+    const board = screen.getByRole('button', { name: "Today's board" })
+    const results = screen.getByRole('button', { name: "Today's results" })
+    expect(board.compareDocumentPosition(results) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    await userEvent.click(results)
+    expect(onDailyResults).toHaveBeenCalledOnce()
+  })
+
   it('shows a finished score, including zero', () => {
     const { rerender } = render(<HomeDashboard {...props} lastScore={0} />)
     expect(screen.getByText('Last score').closest('p')).toHaveTextContent(/^Last score0$/)
