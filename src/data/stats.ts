@@ -1,6 +1,5 @@
 import { playedOn } from './play'
 import { getSupabase } from '../lib/supabase'
-import { buildSampleHistory } from '../stats/sample'
 import type { GameStat, OpponentResult } from '../stats/series'
 
 type HistoryRow = {
@@ -52,34 +51,6 @@ export async function loadPlayerStats(playerId: string): Promise<GameStat[]> {
     ...historyGames((history.data ?? []) as HistoryRow[]),
     ...resultGames(mineRows, (rivals.data ?? []) as OtherRow[]),
   ].sort((left, right) => left.playedOn.localeCompare(right.playedOn) || left.id.localeCompare(right.id))
-}
-
-export async function hasSampleHistory(playerId: string): Promise<boolean> {
-  const supabase = getSupabase()
-  const found = await supabase
-    .from('match_history')
-    .select('id', { count: 'exact', head: true })
-    .eq('player_id', playerId)
-    .eq('seeded', true)
-  if (found.error) throw new Error(found.error.message)
-  return (found.count ?? 0) > 0
-}
-
-export async function seedSampleHistory(playerId: string, today = new Date()): Promise<number> {
-  await clearSampleHistory(playerId)
-  const rows = buildSampleHistory(playerId, today)
-  const inserted = await getSupabase().from('match_history').insert(rows)
-  if (inserted.error) throw new Error(inserted.error.message)
-  return rows.length
-}
-
-export async function clearSampleHistory(playerId: string): Promise<void> {
-  const removed = await getSupabase()
-    .from('match_history')
-    .delete()
-    .eq('player_id', playerId)
-    .eq('seeded', true)
-  if (removed.error) throw new Error(removed.error.message)
 }
 
 export function historyGames(rows: readonly HistoryRow[]): GameStat[] {

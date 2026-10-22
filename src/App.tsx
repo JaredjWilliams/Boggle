@@ -14,7 +14,6 @@ import { WordForm } from './components/WordForm'
 import { hasPlayedDaily } from './data/daily'
 import { answerInvite, createMatch, loadDailyBoard, saveResult } from './data/matches'
 import { playedOn } from './data/play'
-import { clearSampleHistory, hasSampleHistory, seedSampleHistory } from './data/stats'
 import { shakeBoard } from './game/dice'
 import { findAllWords, scoreWord } from './game/words'
 import type { Rival } from './game/match'
@@ -87,13 +86,7 @@ function PlayerGame({
   const [showPotential, setShowPotential] = useState(false)
   const [view, setView] = useState<'home' | 'stats' | 'daily'>('home')
   const [dailyPlayed, setDailyPlayed] = useState(false)
-  const [seeded, setSeeded] = useState(false)
-  const [seedReady, setSeedReady] = useState(false)
-  const [seeding, setSeeding] = useState(false)
-  const [seedNotice, setSeedNotice] = useState('')
-  const [seedFailed, setSeedFailed] = useState(false)
   const savedMatch = useRef<string | null>(null)
-  const seedTouched = useRef(false)
 
   useEffect(() => {
     if (!player.id) return
@@ -111,26 +104,6 @@ function PlayerGame({
       cancel = true
     }
   }, [player.id, setNotice])
-
-  useEffect(() => {
-    if (!player.id) return
-    let cancel = false
-    void hasSampleHistory(player.id)
-      .then((present) => {
-        if (!cancel && !seedTouched.current) setSeeded(present)
-      })
-      .catch((error: unknown) => {
-        if (cancel) return
-        setSeedFailed(true)
-        setSeedNotice(error instanceof Error ? error.message : 'Could not check sample games.')
-      })
-      .finally(() => {
-        if (!cancel) setSeedReady(true)
-      })
-    return () => {
-      cancel = true
-    }
-  }, [player.id])
 
   useEffect(() => {
     if (round.phase !== 'ended' || !matchId || !player.id) return
@@ -214,31 +187,6 @@ function PlayerGame({
       await refresh()
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not decline the invitation.')
-    }
-  }
-
-  async function toggleSeed() {
-    if (!player.id || seeding || !seedReady) return
-    const next = !seeded
-    seedTouched.current = true
-    setSeeded(next)
-    setSeeding(true)
-    setSeedNotice('')
-    setSeedFailed(false)
-    try {
-      if (next) {
-        const count = await seedSampleHistory(player.id)
-        setSeedNotice(`Added ${count} sample games.`)
-      } else {
-        await clearSampleHistory(player.id)
-        setSeedNotice('Sample games removed.')
-      }
-    } catch (error) {
-      setSeeded(!next)
-      setSeedFailed(true)
-      setSeedNotice(error instanceof Error ? error.message : 'Could not update sample games.')
-    } finally {
-      setSeeding(false)
     }
   }
 
@@ -328,12 +276,6 @@ function PlayerGame({
             dailyPlayed={dailyPlayed}
             onDailyResults={player.id ? () => setView('daily') : undefined}
             onOpenStats={player.id ? () => setView('stats') : undefined}
-            onToggleSeed={player.id ? () => void toggleSeed() : undefined}
-            seeded={seeded}
-            seedReady={seedReady}
-            seeding={seeding}
-            seedNotice={seedNotice}
-            seedFailed={seedFailed}
             onToggleFriend={player.id ? toggleFriend : undefined}
             onAccept={player.id ? (invite) => void accept(invite) : undefined}
             onDecline={player.id ? (invite) => void decline(invite) : undefined}

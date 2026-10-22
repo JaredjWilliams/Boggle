@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { buildSampleHistory, SAMPLE_GAMES } from './sample'
 import {
   axisMax,
   compactNumber,
@@ -73,24 +72,5 @@ describe('stats series', () => {
       'Play another game to see a trend.',
     )
     expect(trendNote([], 'point')).toBe('No games in this view.')
-  })
-
-  it('builds an 18-game sample with a mixed record', () => {
-    const rows = buildSampleHistory('player-1', new Date(2026, 9, 19))
-    expect(rows).toHaveLength(18)
-    expect(rows[0]).toMatchObject({ player_id: 'player-1', played_on: '2026-09-07', seeded: true })
-    expect(rows[17].played_on).toBe('2026-10-19')
-    expect(
-      headToHead(
-        SAMPLE_GAMES.map((game, index) => ({
-          id: String(index),
-          playedOn: rows[index].played_on,
-          words: game.words,
-          score: game.score,
-          opponents: [{ name: game.opponent, score: game.opponentScore }],
-        })),
-        null,
-      ),
-    ).toEqual({ wins: 11, losses: 5, ties: 2 })
   })
 })

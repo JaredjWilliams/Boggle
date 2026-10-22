@@ -35,7 +35,7 @@ describe('stats rows', () => {
     ])
   })
 
-  it('keeps a seeded game when the opponent name is present', () => {
+  it('keeps a history game when the opponent name is present', () => {
     expect(
       historyGames([
         {
