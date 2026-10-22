@@ -1,7 +1,13 @@
 import type { Board } from '../game/dice'
 import { shakeBoard } from '../game/dice'
 import type { ScoredWord } from '../game/round'
+import { compareWords } from '../game/words'
 import { getSupabase } from '../lib/supabase'
+import {
+  assembleActiveGames,
+  type ActiveGame,
+  type HeadScore,
+} from './activeGames'
 import { playedOn } from './play'
 
 export type Friend = {
@@ -20,7 +26,14 @@ export type Invite = {
 export type Lobby = {
   friends: Friend[]
   invites: Invite[]
+  games: ActiveGame[]
   lastScore: number | null
+}
+
+export type SavedRound = {
+  score: number | null
+  words: ScoredWord[] | null
+  missed: ScoredWord[]
 }
 
 type GameSeat = {
@@ -33,9 +46,32 @@ function oneGame(seat: GameSeat): { board: Board; host_id: string } | null {
   return Array.isArray(seat.games) ? (seat.games[0] ?? null) : seat.games
 }
 
+type ScoreListRow = {
+  game_id?: string
+  score: number
+  games: { created_at?: string } | { created_at?: string }[] | null
+}
+
+type AcceptedRow = {
+  game_id: string
+  games: { created_at?: string } | { created_at?: string }[] | null
+}
+
+type RivalScoreRow = {
+  game_id: string
+  player_id: string
+  score: number
+}
+
+type OpponentSeatRow = {
+  game_id: string
+  player_id: string
+  status: string | null
+}
+
 export async function loadLobby(playerId: string): Promise<Lobby> {
   const supabase = getSupabase()
-  const [profiles, seats, scores] = await Promise.all([
+  const [profiles, seats, scores, accepted] = await Promise.all([
     supabase.from('profiles').select('id, name, username').neq('id', playerId),
     supabase
       .from('game_players')
@@ -44,22 +80,37 @@ export async function loadLobby(playerId: string): Promise<Lobby> {
       .eq('status', 'invited'),
     supabase
       .from('results')
-      .select('score, games(created_at)')
+      .select('game_id, score, games(created_at)')
       .eq('player_id', playerId),
+    supabase
+      .from('game_players')
+      .select('game_id, games(created_at)')
+      .eq('player_id', playerId)
+      .eq('status', 'accepted'),
   ])
 
   if (profiles.error) throw new Error(profiles.error.message)
   if (seats.error) throw new Error(seats.error.message)
   if (scores.error) throw new Error(scores.error.message)
+  if (accepted.error) throw new Error(accepted.error.message)
+
+  const friends = (profiles.data ?? []) as Friend[]
+  const scoreRows = (scores.data ?? []) as ScoreListRow[]
+  const viewerScores = scoreRows.flatMap((row) =>
+    row.game_id ? [{ gameId: row.game_id, playerId, score: row.score }] : [],
+  )
 
   const seatRows = (seats.data ?? []) as GameSeat[]
   const hostIds = seatRows.flatMap((seat) => {
     const game = oneGame(seat)
     return game ? [game.host_id] : []
   })
-  const hosts = hostIds.length
-    ? await supabase.from('profiles').select('id, name').in('id', hostIds)
-    : { data: [], error: null }
+  const [hosts, games] = await Promise.all([
+    hostIds.length
+      ? supabase.from('profiles').select('id, name').in('id', hostIds)
+      : Promise.resolve({ data: [], error: null }),
+    loadActiveGames(playerId, (accepted.data ?? []) as AcceptedRow[], viewerScores, friends),
+  ])
   if (hosts.error) throw new Error(hosts.error.message)
   const hostNames = new Map((hosts.data ?? []).map((host) => [host.id, host.name]))
 
@@ -76,19 +127,66 @@ export async function loadLobby(playerId: string): Promise<Lobby> {
     ]
   })
 
-  const ranked = (scores.data ?? [])
+  const ranked = scoreRows
     .map((row) => {
       const game = Array.isArray(row.games) ? row.games[0] : row.games
       const created = game && typeof game === 'object' ? game.created_at : null
-      return { score: row.score as number, created: created ? Date.parse(created) : 0 }
+      return { score: row.score, created: created ? Date.parse(created) : 0 }
     })
     .sort((left, right) => right.created - left.created)
 
   return {
-    friends: (profiles.data ?? []) as Friend[],
+    friends,
     invites,
+    games,
     lastScore: ranked[0]?.score ?? null,
   }
+}
+
+async function loadActiveGames(
+  playerId: string,
+  accepted: readonly AcceptedRow[],
+  viewerScores: readonly HeadScore[],
+  names: readonly { id: string; name?: string | null }[],
+): Promise<ActiveGame[]> {
+  if (accepted.length === 0) return []
+  const supabase = getSupabase()
+  const activeIds = accepted.map((row) => row.game_id)
+  const scoreIds = [...new Set([...activeIds, ...viewerScores.map((row) => row.gameId)])]
+  const [seats, rivals] = await Promise.all([
+    supabase.from('game_players').select('game_id, player_id, status').in('game_id', activeIds),
+    supabase
+      .from('results')
+      .select('game_id, player_id, score')
+      .in('game_id', scoreIds)
+      .neq('player_id', playerId),
+  ])
+  if (seats.error) throw new Error(seats.error.message)
+  if (rivals.error) throw new Error(rivals.error.message)
+
+  const created = new Map(accepted.map((row) => [row.game_id, joinedCreatedAt(row.games)]))
+  const seatRows = ((seats.data ?? []) as OpponentSeatRow[]).map((seat) => ({
+    gameId: seat.game_id,
+    playerId: seat.player_id,
+    status: seat.status ?? '',
+    createdAt: created.get(seat.game_id) ?? '',
+  }))
+  const scores = [
+    ...viewerScores,
+    ...((rivals.data ?? []) as RivalScoreRow[]).map((row) => ({
+      gameId: row.game_id,
+      playerId: row.player_id,
+      score: row.score,
+    })),
+  ]
+  return assembleActiveGames(playerId, seatRows, scores, names)
+}
+
+function joinedCreatedAt(
+  games: { created_at?: string } | { created_at?: string }[] | null,
+): string {
+  const game = Array.isArray(games) ? games[0] : games
+  return game?.created_at ?? ''
 }
 
 export async function loadDailyBoard(): Promise<Board> {
@@ -260,6 +358,38 @@ export function watchMatchResults(gameId: string, onChange: () => void): () => v
     .subscribe()
   return () => {
     void supabase.removeChannel(channel)
+  }
+}
+
+export function unplayedWords(
+  possible: readonly ScoredWord[],
+  found: readonly ScoredWord[],
+): ScoredWord[] {
+  const have = new Set(found.map((item) => item.word))
+  return possible
+    .filter((item) => item.word.trim() && !have.has(item.word))
+    .sort((left, right) => compareWords(left.word, right.word))
+}
+
+export async function loadSavedRound(gameId: string, playerId: string): Promise<SavedRound> {
+  const supabase = getSupabase()
+  const [game, result] = await Promise.all([
+    supabase.from('games').select('possible_words').eq('id', gameId).maybeSingle(),
+    supabase
+      .from('results')
+      .select('score, words')
+      .eq('game_id', gameId)
+      .eq('player_id', playerId)
+      .maybeSingle(),
+  ])
+  if (game.error) throw new Error(game.error.message)
+  if (result.error) throw new Error(result.error.message)
+
+  const found = result.data ? scoredWords(result.data.words) : null
+  return {
+    score: result.data ? (result.data.score as number) : null,
+    words: found,
+    missed: unplayedWords(scoredWords(game.data?.possible_words), found ?? []),
   }
 }
 

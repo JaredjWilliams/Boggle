@@ -6,6 +6,10 @@
   min-height: 0;
 }
 
+.match-loading {
+  padding: 28px 20px;
+}
+
 .match-top,
 .potential-top {
   display: flex;

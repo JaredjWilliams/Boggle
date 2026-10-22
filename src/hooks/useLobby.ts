@@ -1,36 +1,41 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { loadLobby, type Friend, type Invite, type Lobby } from '../data/matches'
+import type { ActiveGame } from '../data/activeGames'
 import { getSupabase } from '../lib/supabase'
 
-const EMPTY: Lobby = { friends: [], invites: [], lastScore: null }
+const EMPTY: Lobby = { friends: [], invites: [], games: [], lastScore: null }
+
+export const LOBBY_REFRESH_MS = 3000
 
 export function useLobby(playerId: string | undefined) {
   const [lobby, setLobby] = useState<Lobby>(EMPTY)
   const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(false)
+  const request = useRef(0)
+  const playerRef = useRef(playerId)
+  playerRef.current = playerId
 
   const refresh = useCallback(async () => {
-    if (!playerId) return
-    setLobby(await loadLobby(playerId))
-  }, [playerId])
+    const id = playerRef.current
+    if (!id) return
+    const ticket = ++request.current
+    try {
+      const next = await loadLobby(id)
+      if (request.current !== ticket || playerRef.current !== id) return
+      setLobby(next)
+    } catch (error: unknown) {
+      if (request.current !== ticket || playerRef.current !== id) return
+      setNotice(error instanceof Error ? error.message : 'Could not load games.')
+    }
+  }, [])
 
   useEffect(() => {
     if (!playerId) return
     let cancel = false
     setLoading(true)
-
-    void loadLobby(playerId)
-      .then((next) => {
-        if (!cancel) setLobby(next)
-      })
-      .catch((error: unknown) => {
-        if (!cancel) {
-          setNotice(error instanceof Error ? error.message : 'Could not load games.')
-        }
-      })
-      .finally(() => {
-        if (!cancel) setLoading(false)
-      })
+    void refresh().finally(() => {
+      if (!cancel) setLoading(false)
+    })
 
     const channel = getSupabase()
       .channel(`invites-${playerId}`)
@@ -43,22 +48,40 @@ export function useLobby(playerId: string | undefined) {
           filter: `player_id=eq.${playerId}`,
         },
         () => {
-          void loadLobby(playerId).then((next) => {
-            if (!cancel) setLobby(next)
-          })
+          void refresh()
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'results' },
+        () => {
+          void refresh()
         },
       )
       .subscribe()
 
     return () => {
       cancel = true
+      request.current += 1
       void getSupabase().removeChannel(channel)
     }
-  }, [playerId])
+  }, [playerId, refresh])
+
+  const waiting = lobby.games.some((game) => !game.playedBack)
+
+  useEffect(() => {
+    if (!playerId || !waiting) return
+    // A missed results event still needs to flip the card to "played back".
+    const timer = window.setInterval(() => {
+      void refresh()
+    }, LOBBY_REFRESH_MS)
+    return () => window.clearInterval(timer)
+  }, [playerId, waiting, refresh])
 
   return {
     friends: lobby.friends,
     invites: lobby.invites,
+    games: lobby.games,
     savedScore: lobby.lastScore,
     notice,
     setNotice,
@@ -67,4 +90,4 @@ export function useLobby(playerId: string | undefined) {
   }
 }
 
-export type { Friend, Invite }
+export type { ActiveGame, Friend, Invite }

@@ -1,9 +1,10 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { SIDE } from '../game/dice'
 import { ROUND_SECONDS } from '../game/round'
 import { scoreWord } from '../game/words'
+import type { ActiveGame } from '../data/activeGames'
 import { HomeDashboard } from './HomeDashboard'
 
 const props = {
@@ -102,6 +103,41 @@ describe('HomeDashboard', () => {
 
     await userEvent.click(results)
     expect(onDailyResults).toHaveBeenCalledOnce()
+  })
+
+  it('lists active games with the record and opens the one you choose', async () => {
+    const waiting: ActiveGame = {
+      gameId: 'g-new',
+      opponentId: 'grace',
+      opponentName: 'Grace Hopper',
+      playedBack: false,
+      wins: 2,
+      losses: 1,
+    }
+    const played: ActiveGame = {
+      gameId: 'g-old',
+      opponentId: 'mina',
+      opponentName: 'Mina Chen',
+      playedBack: true,
+      wins: 0,
+      losses: 3,
+    }
+    const onOpenGame = vi.fn()
+    render(<HomeDashboard {...props} games={[waiting, played]} onOpenGame={onOpenGame} />)
+
+    const games = screen.getByRole('list', { name: 'Active games' })
+    const buttons = within(games).getAllByRole('button')
+    expect(buttons.map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Grace Hopper, 2 wins, 1 loss, waiting',
+      'Mina Chen, 0 wins, 3 losses, played back',
+    ])
+    expect(buttons[0]).toHaveTextContent('Waiting')
+    expect(buttons[0]).toHaveTextContent('2–1')
+    expect(buttons[1]).toHaveTextContent('Played back')
+    expect(buttons[1]).toHaveTextContent('0–3')
+
+    await userEvent.click(buttons[1])
+    expect(onOpenGame).toHaveBeenCalledExactlyOnceWith(played)
   })
 
   it('shows a finished score, including zero', () => {

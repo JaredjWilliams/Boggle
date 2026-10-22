@@ -1,15 +1,17 @@
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { MatchResults, MatchReview, PotentialWords } from './MatchResults'
+import { MatchResults, MatchReview, PotentialWords, SavedMatch } from './MatchResults'
 
 const mocks = vi.hoisted(() => ({
   loadMatchPlayers: vi.fn(),
+  loadSavedRound: vi.fn(),
   watchMatchResults: vi.fn<(gameId: string, onChange: () => void) => () => void>(() => () => {}),
 }))
 
 vi.mock('../data/matches', () => ({
   loadMatchPlayers: mocks.loadMatchPlayers,
+  loadSavedRound: mocks.loadSavedRound,
   watchMatchResults: mocks.watchMatchResults,
 }))
 
@@ -162,8 +164,40 @@ describe('MatchReview', () => {
 
   beforeEach(() => {
     mocks.loadMatchPlayers.mockReset()
+    mocks.loadSavedRound.mockReset()
     mocks.watchMatchResults.mockReset()
     mocks.watchMatchResults.mockReturnValue(() => {})
+  })
+
+  it('opens a saved game on the results screen', async () => {
+    mocks.loadSavedRound.mockResolvedValue({
+      score: 200,
+      words: [{ word: 'cat', points: 100 }],
+      missed: [{ word: 'eat', points: 100 }],
+    })
+    mocks.loadMatchPlayers.mockResolvedValue([
+      {
+        playerId: 'grace',
+        name: 'Grace Hopper',
+        score: 500,
+        words: [{ word: 'cats', points: 400 }],
+      },
+    ])
+
+    render(
+      <SavedMatch
+        gameId="game-1"
+        viewerId="ada"
+        viewerName="Ada Lovelace"
+        rival={{ id: 'grace', name: 'Grace Hopper' }}
+        onPlayAgain={vi.fn()}
+      />,
+    )
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Grace Hopper wins' })).toBeInTheDocument()
+    expect(score(column('Ada Lovelace'))).toBe('200')
+    expect(items(column('Ada Lovelace'))).toEqual([{ word: 'cat', points: '100' }])
+    expect(items(column('Grace Hopper'))).toEqual([{ word: 'cats', points: '400' }])
   })
 
   it('keeps your words and fills in the opponent when their result arrives', async () => {

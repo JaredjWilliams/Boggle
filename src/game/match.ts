@@ -20,8 +20,8 @@ export type Rival = {
 export type ViewerResult = {
   id: string
   name: string
-  score: number
-  words: readonly ScoredWord[]
+  score: number | null
+  words: readonly ScoredWord[] | null
 }
 
 export type MatchOutcome =
@@ -76,7 +76,7 @@ export function presentMatch(
       name: viewer.name.trim() || 'You',
       you: true,
       score: viewer.score,
-      words: rankedWords(viewer.words),
+      words: viewer.words ? rankedWords(viewer.words) : null,
     },
     ...others,
   ]

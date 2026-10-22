@@ -5,7 +5,7 @@ import { BuiltWord } from './components/BuiltWord'
 import { DailyBoardResults } from './components/DailyResults'
 import { EndPanel } from './components/EndPanel'
 import { FriendsScreen } from './components/FriendsScreen'
-import { MatchReview } from './components/MatchResults'
+import { MatchReview, SavedMatch } from './components/MatchResults'
 import { Header } from './components/Header'
 import { HomeDashboard } from './components/HomeDashboard'
 import { PlayerStats } from './components/StatsScreen'
@@ -18,7 +18,7 @@ import { playedOn } from './data/play'
 import { shakeBoard } from './game/dice'
 import { findAllWords, scoreWord } from './game/words'
 import type { Rival } from './game/match'
-import { useLobby, type Invite } from './hooks/useLobby'
+import { useLobby, type ActiveGame, type Invite } from './hooks/useLobby'
 import { useRound, type AttemptFeedback } from './hooks/useRound'
 import './App.css'
 
@@ -85,6 +85,7 @@ function PlayerGame({
   const [rivals, setRivals] = useState<Rival[]>([])
   const [showPotential, setShowPotential] = useState(false)
   const [view, setView] = useState<'home' | 'stats' | 'daily' | 'friends'>('home')
+  const [openGame, setOpenGame] = useState<ActiveGame | null>(null)
   const [starting, setStarting] = useState(false)
   const startingRef = useRef(false)
   const [dailyPlayed, setDailyPlayed] = useState(false)
@@ -131,14 +132,17 @@ function PlayerGame({
   }, [matchId, player.id, round.found, round.phase, round.score, setNotice])
 
   function leaveRound() {
+    setOpenGame(null)
     setRivals([])
     setShowPotential(false)
     setView('home')
     round.goHome()
+    void refresh()
   }
 
   async function begin(source: 'shake' | 'daily', inviteIds: readonly string[] = []) {
     if (startingRef.current) return
+    setOpenGame(null)
     if (!player.id || !round.trie) {
       setRivals([])
       setShowPotential(false)
@@ -166,6 +170,7 @@ function PlayerGame({
       setRivals(invited)
       setShowPotential(false)
       setMatchId(gameId)
+      void refresh()
       round.startRound(board)
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not start the game.')
@@ -179,6 +184,7 @@ function PlayerGame({
     if (!player.id) return
     try {
       await answerInvite(invite.gameId, player.id, 'accepted')
+      void refresh()
       setRivals([{ id: invite.hostId, name: invite.hostName }])
       setShowPotential(false)
       setMatchId(invite.gameId)
@@ -251,6 +257,26 @@ function PlayerGame({
     )
   }
 
+  if (round.phase !== 'playing' && openGame && player.id) {
+    return (
+      <>
+        {signedInHeader(() => setOpenGame(null), false)}
+        <div className="screen">
+          <SavedMatch
+            gameId={openGame.gameId}
+            viewerId={player.id}
+            viewerName={player.name}
+            rival={{ id: openGame.opponentId, name: openGame.opponentName }}
+            onPlayAgain={() => {
+              setOpenGame(null)
+              void begin('shake')
+            }}
+          />
+        </div>
+      </>
+    )
+  }
+
   if (round.phase !== 'playing' && view === 'daily' && player.id) {
     return (
       <>
@@ -308,6 +334,8 @@ function PlayerGame({
             dailyPlayed={dailyPlayed}
             onDailyResults={player.id ? () => setView('daily') : undefined}
             onOpenStats={player.id ? () => setView('stats') : undefined}
+            games={lobby.games}
+            onOpenGame={setOpenGame}
           />
         </div>
       </>

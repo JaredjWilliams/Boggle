@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { loadMatchPlayers, watchMatchResults, type MatchPlayerRow } from '../data/matches'
+import {
+  loadMatchPlayers,
+  loadSavedRound,
+  watchMatchResults,
+  type MatchPlayerRow,
+  type SavedRound,
+} from '../data/matches'
 import {
   boardWords,
   matchOutcome,
@@ -18,14 +24,82 @@ type ReviewProps = {
   gameId: string
   viewerId: string
   viewerName: string
-  score: number
-  words: ScoredWord[]
+  score: number | null
+  words: readonly ScoredWord[] | null
   missed: ScoredWord[]
   rivals: readonly Rival[]
   showingPotential: boolean
   onShowPotential: () => void
   onBack: () => void
   onPlayAgain: () => void
+}
+
+type SavedProps = {
+  gameId: string
+  viewerId: string
+  viewerName: string
+  rival: Rival
+  onPlayAgain: () => void
+}
+
+export function SavedMatch({ gameId, viewerId, viewerName, rival, onPlayAgain }: SavedProps) {
+  const [round, setRound] = useState<SavedRound | null>(null)
+  const [notice, setNotice] = useState('')
+  const [showingPotential, setShowingPotential] = useState(false)
+  const request = useRef(0)
+
+  const reload = useCallback(async () => {
+    const id = ++request.current
+    try {
+      const next = await loadSavedRound(gameId, viewerId)
+      if (request.current !== id) return
+      setRound(next)
+      setNotice('')
+    } catch (error: unknown) {
+      if (request.current !== id) return
+      setNotice(error instanceof Error ? error.message : 'Could not load the results.')
+    }
+  }, [gameId, viewerId])
+
+  useEffect(() => {
+    void reload()
+    return () => {
+      request.current += 1
+    }
+  }, [reload])
+
+  if (!round) {
+    return (
+      <section className="match match-loading">
+        {notice ? (
+          <div className="match-alert" role="alert">
+            <p>{notice}</p>
+            <button type="button" className="match-retry" onClick={() => void reload()}>
+              Try again
+            </button>
+          </div>
+        ) : (
+          <p className="match-kicker">Loading results…</p>
+        )}
+      </section>
+    )
+  }
+
+  return (
+    <MatchReview
+      gameId={gameId}
+      viewerId={viewerId}
+      viewerName={viewerName}
+      score={round.score}
+      words={round.words}
+      missed={round.missed}
+      rivals={[rival]}
+      showingPotential={showingPotential}
+      onShowPotential={() => setShowingPotential(true)}
+      onBack={() => setShowingPotential(false)}
+      onPlayAgain={onPlayAgain}
+    />
+  )
 }
 
 export function MatchReview({
@@ -101,11 +175,18 @@ export function MatchReview({
 
   const opponents = players.filter((player) => !player.you)
   if (remote && remote.length > 0 && opponents.length === 0) {
-    return <EndPanel score={score} found={words} missed={missed} onPlayAgain={onPlayAgain} />
+    return (
+      <EndPanel
+        score={score ?? 0}
+        found={words ? [...words] : []}
+        missed={missed}
+        onPlayAgain={onPlayAgain}
+      />
+    )
   }
 
   if (showingPotential) {
-    return <PotentialWords words={boardWords(words, missed)} onBack={onBack} />
+    return <PotentialWords words={boardWords(words ?? [], missed)} onBack={onBack} />
   }
 
   return (

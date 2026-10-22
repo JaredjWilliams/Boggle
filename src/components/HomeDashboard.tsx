@@ -1,3 +1,4 @@
+import { activeGameLabel, formatRecord, type ActiveGame } from '../data/activeGames'
 import { SIDE } from '../game/dice'
 import { ROUND_SECONDS } from '../game/round'
 import { scoreWord } from '../game/words'
@@ -16,6 +17,8 @@ type Props = {
   dailyPlayed?: boolean
   onDailyResults?: () => void
   onOpenStats?: () => void
+  games?: readonly ActiveGame[]
+  onOpenGame?: (game: ActiveGame) => void
 }
 
 const POINT_LENGTHS = [3, 4, 5, 6, 7, 8] as const
@@ -33,6 +36,8 @@ export function HomeDashboard({
   dailyPlayed = false,
   onDailyResults,
   onOpenStats,
+  games = [],
+  onOpenGame,
 }: Props) {
   const unavailable = loading || loadError || starting
   return (
@@ -64,6 +69,38 @@ export function HomeDashboard({
           </button>
         )}
       </div>
+
+      {games.length > 0 && (
+        <>
+          <h2 id="active-games-heading">Active games</h2>
+          <ul className="active-games" aria-labelledby="active-games-heading">
+            {games.map((game) => (
+              <li key={`${game.gameId}:${game.opponentId}`}>
+                <button
+                  type="button"
+                  className="active-game"
+                  aria-label={activeGameLabel(game)}
+                  onClick={() => onOpenGame?.(game)}
+                >
+                  <span className="active-game-top">
+                    <span className="active-game-name">{game.opponentName}</span>
+                    <span className={game.playedBack ? 'active-game-status is-back' : 'active-game-status'}>
+                      {game.playedBack ? 'Played back' : 'Waiting'}
+                    </span>
+                  </span>
+                  <span className="active-game-record">
+                    <span>Wins–losses</span>
+                    <strong>{formatRecord(game.wins, game.losses)}</strong>
+                    <span className="active-game-open" aria-hidden="true">
+                      →
+                    </span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
 
       {onDaily && (
         <button
