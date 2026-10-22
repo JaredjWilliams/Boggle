@@ -55,11 +55,6 @@ vi.mock('../lib/supabase', () => ({
   getSupabase: () => ({ from: supabase.from }),
 }))
 
-const board = [
-  ['A', 'M', 'E'],
-  ['Y', 'A', 'T'],
-]
-
 function queue(table: string, result: QueryResult) {
   const list = supabase.queues.get(table) ?? []
   list.push(result)
@@ -197,39 +192,28 @@ describe('daily standings', () => {
 })
 
 describe('daily board lookup', () => {
-  it('reports a finished play when the result used today’s board', async () => {
-    queue('daily_boards', { data: { board }, error: null })
+  it('reports a finished play when the result is stamped with that day', async () => {
     queue('results', { data: [{ player_id: 'ada' }], error: null })
 
     await expect(hasPlayedDaily('ada', '2026-10-21')).resolves.toBe(true)
 
-    expect(queryFor('daily_boards')).toMatchObject({
-      select: 'board',
-      filters: [{ column: 'played_on', value: '2026-10-21' }],
-    })
     expect(queryFor('results')).toMatchObject({
-      select: 'player_id, games!inner(board)',
+      select: 'player_id, games!inner(daily_on)',
       filters: [
         { column: 'player_id', value: 'ada' },
-        { column: 'games.board', value: board },
+        { column: 'games.daily_on', value: '2026-10-21' },
       ],
       limited: true,
     })
   })
 
-  it('is false when today’s board or the player’s result is missing', async () => {
-    queue('daily_boards', { data: null, error: null })
-    await expect(hasPlayedDaily('ada', '2026-10-21')).resolves.toBe(false)
-    expect(supabase.calls.map((call) => call.table)).toEqual(['daily_boards'])
-
-    supabase.calls.length = 0
-    queue('daily_boards', { data: { board }, error: null })
+  it('is false when the player has no result for that day', async () => {
     queue('results', { data: [], error: null })
     await expect(hasPlayedDaily('ada', '2026-10-21')).resolves.toBe(false)
+    expect(supabase.calls.map((call) => call.table)).toEqual(['results'])
   })
 
-  it('loads every finished score for the shared board', async () => {
-    queue('daily_boards', { data: { board }, error: null })
+  it('loads every finished score for that day', async () => {
     queue('results', {
       data: [
         {
@@ -270,23 +254,22 @@ describe('daily board lookup', () => {
       },
     ])
     expect(queryFor('results')).toMatchObject({
-      select: 'player_id, score, words, profiles(name), games!inner(created_at, board)',
-      filters: [{ column: 'games.board', value: board }],
+      select: 'player_id, score, words, profiles(name), games!inner(created_at, daily_on)',
+      filters: [{ column: 'games.daily_on', value: '2026-10-21' }],
     })
   })
 
-  it('returns no standings when today’s board has not been saved', async () => {
-    queue('daily_boards', { data: null, error: null })
+  it('returns no standings when nobody has finished that day', async () => {
+    queue('results', { data: [], error: null })
 
     await expect(loadDailyStandings('2026-10-21')).resolves.toEqual([])
-    expect(supabase.calls.map((call) => call.table)).toEqual(['daily_boards'])
+    expect(supabase.calls.map((call) => call.table)).toEqual(['results'])
   })
 
   it('reports the database error', async () => {
-    queue('daily_boards', { data: null, error: { message: 'board unavailable' } })
-    await expect(hasPlayedDaily('ada', '2026-10-21')).rejects.toThrow('board unavailable')
+    queue('results', { data: null, error: { message: 'results unavailable' } })
+    await expect(hasPlayedDaily('ada', '2026-10-21')).rejects.toThrow('results unavailable')
 
-    queue('daily_boards', { data: { board }, error: null })
     queue('results', { data: null, error: { message: 'results unavailable' } })
     await expect(loadDailyStandings('2026-10-21')).rejects.toThrow('results unavailable')
   })

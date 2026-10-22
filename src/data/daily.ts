@@ -1,4 +1,3 @@
-import type { Board } from '../game/dice'
 import type { ScoredWord } from '../game/round'
 import { compareWords } from '../game/words'
 import { getSupabase } from '../lib/supabase'
@@ -21,38 +20,24 @@ type DailyRow = {
 }
 
 const STANDING_COLUMNS =
-  'player_id, score, words, profiles(name), games!inner(created_at, board)'
-
-async function dailyBoard(day: string): Promise<Board | null> {
-  const found = await getSupabase()
-    .from('daily_boards')
-    .select('board')
-    .eq('played_on', day)
-    .maybeSingle()
-  if (found.error) throw new Error(found.error.message)
-  return (found.data?.board as Board | undefined) ?? null
-}
+  'player_id, score, words, profiles(name), games!inner(created_at, daily_on)'
 
 export async function hasPlayedDaily(playerId: string, day = playedOn()): Promise<boolean> {
-  const board = await dailyBoard(day)
-  if (!board) return false
   const found = await getSupabase()
     .from('results')
-    .select('player_id, games!inner(board)')
+    .select('player_id, games!inner(daily_on)')
     .eq('player_id', playerId)
-    .eq('games.board', board)
+    .eq('games.daily_on', day)
     .limit(1)
   if (found.error) throw new Error(found.error.message)
   return (found.data ?? []).length > 0
 }
 
 export async function loadDailyStandings(day = playedOn()): Promise<DailyStanding[]> {
-  const board = await dailyBoard(day)
-  if (!board) return []
   const found = await getSupabase()
     .from('results')
     .select(STANDING_COLUMNS)
-    .eq('games.board', board)
+    .eq('games.daily_on', day)
   if (found.error) throw new Error(found.error.message)
   return dailyStandings((found.data ?? []) as unknown as DailyRow[])
 }
