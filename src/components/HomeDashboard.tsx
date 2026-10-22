@@ -58,7 +58,7 @@ export function HomeDashboard({
   const finishedCount = games.filter((game) => game.playedBack).length
   const showGames = inProgress.length > 0 || invites.length > 0 || finished.length > 0
   const [picked, setPicked] = useState<GameTab | null>(null)
-  const tab = picked ?? defaultGameTab(inProgress, invites, finished)
+  const tab = picked ?? defaultGameTab(inProgress, invites)
   const unavailable = loading || loadError || starting
 
   return (
@@ -297,11 +297,7 @@ function TabName({ label }: { label: string }) {
   )
 }
 
-function defaultGameTab(
-  active: readonly ActiveGame[],
-  invites: readonly Invite[],
-  completed: readonly ActiveGame[],
-): GameTab {
+function defaultGameTab(active: readonly ActiveGame[], invites: readonly Invite[]): GameTab {
   if (active.length > 0) return 'active'
   if (invites.length > 0) return 'invited'
   return 'completed'
