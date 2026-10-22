@@ -308,8 +308,8 @@ function PlayerGame({
         <StatusBar
           secondsLeft={round.secondsLeft}
           score={round.score}
-          onShake={() => void begin('shake')}
-          shakeDisabled={false}
+          onTurn={round.turnBoard}
+          turnDisabled={false}
         />
 
         <BuiltWord traced={round.traced} feedback={round.feedback} />

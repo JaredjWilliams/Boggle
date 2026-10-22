@@ -30,7 +30,7 @@
   line-height: 1;
 }
 
-.shake {
+.turn {
   margin-left: auto;
   min-height: 44px;
   padding: 0 18px;
@@ -42,6 +42,6 @@
   font-weight: 700;
 }
 
-.shake:disabled {
+.turn:disabled {
   opacity: 0.45;
 }

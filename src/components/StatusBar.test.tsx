@@ -1,11 +1,11 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { StatusBar } from './StatusBar'
 
 const props = {
   secondsLeft: 90,
-  onShake: vi.fn(),
-  shakeDisabled: false,
+  onTurn: vi.fn(),
+  turnDisabled: false,
 }
 
 describe('StatusBar score', () => {
@@ -83,6 +83,29 @@ describe('StatusBar score', () => {
     view.rerender(<StatusBar {...props} score={400} />)
 
     expect(scoreText()).toBe('Score400')
+  })
+})
+
+describe('Turn', () => {
+  it('asks to turn the board and reports the click', () => {
+    const onTurn = vi.fn()
+    render(<StatusBar {...props} score={40} onTurn={onTurn} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Turn' }))
+
+    expect(onTurn).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('button', { name: 'Shake' })).not.toBeInTheDocument()
+    expect(scoreText()).toBe('Score40')
+  })
+
+  it('ignores a click while turning is disabled', () => {
+    const onTurn = vi.fn()
+    render(<StatusBar {...props} score={40} onTurn={onTurn} turnDisabled />)
+
+    const turn = screen.getByRole('button', { name: 'Turn' })
+    expect(turn).toBeDisabled()
+    fireEvent.click(turn)
+    expect(onTurn).not.toHaveBeenCalled()
   })
 })
 

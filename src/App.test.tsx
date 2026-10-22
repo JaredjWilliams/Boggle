@@ -94,7 +94,7 @@ describe('end of round', () => {
 
     expect(screen.getByText("Time's up")).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Shake' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Turn' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'C' })).not.toBeInTheDocument()
     expect(vi.mocked(shakeBoard)).toHaveBeenCalledTimes(1)
 
@@ -383,6 +383,7 @@ describe('home dashboard', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.clearAllMocks()
+    vi.unstubAllGlobals()
   })
 
   it('deals a board only after Start game', async () => {
@@ -425,7 +426,7 @@ describe('home dashboard', () => {
 
     expect(screen.getByRole('heading', { name: 'Find every word.' })).toBeInTheDocument()
     expect(screen.queryByText('Last score')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Shake' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Turn' })).not.toBeInTheDocument()
   })
 
   it('shows the finished score after returning home', async () => {
@@ -447,7 +448,59 @@ describe('home dashboard', () => {
     expect(screen.queryByText("Time's up")).not.toBeInTheDocument()
     expect(vi.mocked(shakeBoard)).toHaveBeenCalledTimes(1)
   })
+
+  it('turns the board without reshuffling or resetting the score', async () => {
+    vi.stubGlobal(
+      'matchMedia',
+      (query: string) => ({
+        matches: query === '(prefers-reduced-motion: reduce)',
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }),
+    )
+    const user = userEvent.setup()
+    render(<App />)
+    await leaveHome()
+    const input = await screen.findByRole('textbox', { name: 'Type a word' })
+    await user.type(input, 'cat')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+
+    expect(screen.getByText('Score').closest('p')).toHaveTextContent(/^Score100$/)
+    expect(letters()).toEqual([
+      'C', 'A', 'T', 'S', 'X',
+      'R', 'E', 'N', 'O', 'P',
+      'D', 'I', 'L', 'M', 'B',
+      'F', 'G', 'H', 'J', 'K',
+      'U', 'V', 'W', 'Y', 'Q',
+    ])
+    const time = screen.getByText('Time').closest('p')?.textContent
+
+    await user.click(screen.getByRole('button', { name: 'Turn' }))
+
+    expect(letters()).toEqual([
+      'U', 'F', 'D', 'R', 'C',
+      'V', 'G', 'I', 'E', 'A',
+      'W', 'H', 'L', 'N', 'T',
+      'Y', 'J', 'M', 'O', 'S',
+      'Q', 'K', 'B', 'P', 'X',
+    ])
+    expect(screen.getByText('Score').closest('p')).toHaveTextContent(/^Score100$/)
+    expect(screen.getByText('Time').closest('p')).toHaveTextContent(time ?? '')
+    expect(screen.getByText('3:00')).toBeInTheDocument()
+    expect(vi.mocked(shakeBoard)).toHaveBeenCalledTimes(1)
+
+    await user.type(screen.getByRole('textbox', { name: 'Type a word' }), 'car')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+    expect(screen.getByText('Score').closest('p')).toHaveTextContent(/^Score200$/)
+  })
 })
+
+function letters(): string[] {
+  return [...document.querySelectorAll('.tile')].map(
+    (tile) => tile.getAttribute('data-letter') ?? '',
+  )
+}
 
 function items(section: HTMLElement) {
   return within(section)

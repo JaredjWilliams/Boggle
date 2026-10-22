@@ -5,8 +5,8 @@ import './StatusBar.css'
 type Props = {
   secondsLeft: number
   score: number
-  onShake: () => void
-  shakeDisabled: boolean
+  onTurn: () => void
+  turnDisabled: boolean
 }
 
 function formatTime(seconds: number): string {
@@ -50,8 +50,8 @@ function useCountingScore(target: number): number {
 export function StatusBar({
   secondsLeft,
   score,
-  onShake,
-  shakeDisabled,
+  onTurn,
+  turnDisabled,
 }: Props) {
   const shownScore = useCountingScore(score)
 
@@ -67,11 +67,11 @@ export function StatusBar({
       </p>
       <button
         type="button"
-        className="shake"
-        onClick={onShake}
-        disabled={shakeDisabled}
+        className="turn"
+        onClick={onTurn}
+        disabled={turnDisabled}
       >
-        Shake
+        Turn
       </button>
     </div>
   )

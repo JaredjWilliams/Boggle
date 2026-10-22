@@ -6,7 +6,7 @@ import {
   useState,
   type PointerEvent,
 } from 'react'
-import { shakeBoard, type Board } from '../game/dice'
+import { shakeBoard, turnBoard as rotateBoard, type Board } from '../game/dice'
 import { loadDictionary, type Dictionary, type Trie } from '../game/dictionary'
 import {
   judgeWord,
@@ -100,6 +100,30 @@ export function useRound() {
     setFeedback(null)
     setPhase('ready')
   }, [clearPath])
+
+  const turnBoard = useCallback(() => {
+    if (phaseRef.current !== 'playing') return
+    const current = boardRef.current
+    const size = current.length
+    if (size === 0) return
+
+    const next = rotateBoard(current)
+    boardRef.current = next
+    setBoard(next)
+
+    const turnCell = (cell: Cell): Cell => ({
+      row: cell.col,
+      col: size - 1 - cell.row,
+    })
+    const turned = pathRef.current.map(turnCell)
+    pathRef.current = turned
+    setPath(turned)
+    const gesture = gestureRef.current
+    if (gesture) {
+      gestureRef.current = { ...gesture, path: gesture.path.map(turnCell) }
+    }
+    setDrag(null)
+  }, [])
 
   useEffect(() => {
     let cancel = false
@@ -283,6 +307,7 @@ export function useRound() {
     traced: pathWord(board, path),
     startRound,
     goHome,
+    turnBoard,
     onPointerDown,
     onPointerMove,
     onPointerUp,

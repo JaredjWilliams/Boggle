@@ -52,3 +52,11 @@ export function shakeBoard(): Board {
     faces.slice(row * SIDE, (row + 1) * SIDE),
   )
 }
+
+// Each letter moves one quarter-turn clockwise and stays upright.
+export function turnBoard(board: Board): Board {
+  const size = board.length
+  return Array.from({ length: size }, (_, row) =>
+    Array.from({ length: size }, (_, col) => board[size - 1 - col][row]),
+  )
+}

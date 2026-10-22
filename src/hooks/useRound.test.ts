@@ -27,7 +27,7 @@ vi.mock('../game/dictionary', async () => {
   )
   return {
     ...actual,
-    loadDictionary: () => Promise.resolve(actual.dictionaryFromText('cat\n')),
+    loadDictionary: () => Promise.resolve(actual.dictionaryFromText('cat\ncar\n')),
   }
 })
 
@@ -49,6 +49,14 @@ describe('home', () => {
     await waitFor(() => expect(round.result.current.phase).toBe('ready'))
     expect(shakeBoard).not.toHaveBeenCalled()
     expect(round.result.current.lastScore).toBeNull()
+
+    act(() => {
+      round.result.current.turnBoard()
+    })
+    expect(round.result.current.phase).toBe('ready')
+    expect(round.result.current.board).toEqual([])
+    expect(round.result.current.score).toBe(0)
+    expect(shakeBoard).not.toHaveBeenCalled()
 
     act(() => {
       round.result.current.startRound()
@@ -90,6 +98,58 @@ describe('home', () => {
     })
     expect(round.result.current.phase).toBe('ready')
     expect(round.result.current.lastScore).toBe(100)
+  })
+
+  it('turns the board without resetting the score or the clock', async () => {
+    const round = renderHook(() => useRound())
+    await waitFor(() => expect(round.result.current.phase).toBe('ready'))
+
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    act(() => {
+      round.result.current.startRound()
+    })
+    act(() => {
+      round.result.current.onDraftChange('cat')
+    })
+    act(() => {
+      round.result.current.onSubmit()
+    })
+    expect(round.result.current.score).toBe(100)
+
+    act(() => {
+      round.result.current.onDraftChange('ca')
+    })
+    expect(cellKeys(round.result.current.highlight)).toEqual(['0,0', '0,1'])
+
+    await act(async () => {
+      vi.advanceTimersByTime(5_000)
+    })
+
+    act(() => {
+      round.result.current.turnBoard()
+    })
+
+    expect(round.result.current.board).toEqual([
+      ['U', 'F', 'D', 'R', 'C'],
+      ['V', 'G', 'I', 'E', 'A'],
+      ['W', 'H', 'L', 'N', 'T'],
+      ['Y', 'J', 'M', 'O', 'S'],
+      ['Q', 'K', 'B', 'P', 'X'],
+    ])
+    expect(round.result.current.score).toBe(100)
+    expect(round.result.current.found).toEqual([{ word: 'cat', points: 100 }])
+    expect(round.result.current.secondsLeft).toBe(ROUND_SECONDS - 5)
+    expect(round.result.current.phase).toBe('playing')
+    expect(cellKeys(round.result.current.highlight)).toEqual(['0,4', '1,4'])
+    expect(shakeBoard).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      round.result.current.onDraftChange('car')
+    })
+    act(() => {
+      round.result.current.onSubmit()
+    })
+    expect(round.result.current.score).toBe(200)
   })
 })
 
@@ -191,6 +251,62 @@ describe('useRound drag', () => {
     expect(round.result.current.drag).toBeNull()
     expect(round.result.current.path).toEqual([])
     expect(round.result.current.draft).toBe('c')
+  })
+
+  it('carries a traced word around with the letters', async () => {
+    const round = await startPlaying()
+    hitAt(0, 0)
+    act(() => {
+      round.result.current.onPointerDown(pointer(10, 10))
+    })
+    hitAt(0, 1)
+    act(() => {
+      round.result.current.onPointerMove(pointer(20, 10))
+    })
+    expect(round.result.current.traced).toBe('ca')
+
+    act(() => {
+      round.result.current.turnBoard()
+    })
+
+    expect(round.result.current.path).toEqual([
+      { row: 0, col: 4 },
+      { row: 1, col: 4 },
+    ])
+    expect(round.result.current.traced).toBe('ca')
+    expect(round.result.current.drag).toBeNull()
+    expect(round.result.current.score).toBe(0)
+    expect(shakeBoard).toHaveBeenCalledTimes(1)
+  })
+
+  it('scores a word traced before the board turns', async () => {
+    const round = await startPlaying()
+    hitAt(0, 0)
+    act(() => {
+      round.result.current.onPointerDown(pointer(10, 10))
+    })
+    hitAt(0, 1)
+    act(() => {
+      round.result.current.onPointerMove(pointer(20, 10))
+    })
+    hitAt(0, 2)
+    act(() => {
+      round.result.current.onPointerMove(pointer(30, 10))
+    })
+    expect(round.result.current.traced).toBe('cat')
+
+    act(() => {
+      round.result.current.turnBoard()
+    })
+    act(() => {
+      round.result.current.onPointerUp(pointer(30, 10))
+    })
+
+    expect(round.result.current.score).toBe(100)
+    expect(round.result.current.found).toEqual([{ word: 'cat', points: 100 }])
+    expect(round.result.current.board[0]).toEqual(['U', 'F', 'D', 'R', 'C'])
+    expect(round.result.current.phase).toBe('playing')
+    expect(shakeBoard).toHaveBeenCalledTimes(1)
   })
 
   it('lights every typed route until the word is in the dictionary', async () => {
