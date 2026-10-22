@@ -12,6 +12,7 @@ export type Friend = {
 
 export type Invite = {
   gameId: string
+  hostId: string
   hostName: string
   board: Board
 }
@@ -68,6 +69,7 @@ export async function loadLobby(playerId: string): Promise<Lobby> {
     return [
       {
         gameId: seat.game_id,
+        hostId: game.host_id,
         hostName: hostNames.get(game.host_id) ?? 'A player',
         board: game.board,
       },
@@ -170,6 +172,106 @@ export async function answerInvite(
     .eq('game_id', gameId)
     .eq('player_id', playerId)
   if (result.error) throw new Error(result.error.message)
+}
+
+export type MatchPlayerRow = {
+  playerId: string
+  name: string
+  score: number | null
+  words: ScoredWord[] | null
+}
+
+type SeatRow = {
+  player_id: string
+  status: string
+}
+
+type ResultRow = {
+  player_id: string
+  score: number
+  words: unknown
+}
+
+type NameRow = {
+  id: string
+  name?: string
+}
+
+export function assembleMatchPlayers(
+  seats: readonly SeatRow[],
+  results: readonly ResultRow[],
+  profiles: readonly NameRow[],
+): MatchPlayerRow[] {
+  const names = new Map(profiles.map((profile) => [profile.id, profile.name?.trim() || 'A player']))
+  const rows = new Map<string, MatchPlayerRow>()
+
+  for (const seat of seats) {
+    if (seat.status === 'declined') continue
+    rows.set(seat.player_id, {
+      playerId: seat.player_id,
+      name: names.get(seat.player_id) || 'A player',
+      score: null,
+      words: null,
+    })
+  }
+
+  for (const result of results) {
+    rows.set(result.player_id, {
+      playerId: result.player_id,
+      name: names.get(result.player_id) || rows.get(result.player_id)?.name || 'A player',
+      score: result.score,
+      words: scoredWords(result.words),
+    })
+  }
+
+  return [...rows.values()]
+}
+
+export async function loadMatchPlayers(gameId: string): Promise<MatchPlayerRow[]> {
+  const supabase = getSupabase()
+  const [seats, results] = await Promise.all([
+    supabase.from('game_players').select('player_id, status').eq('game_id', gameId),
+    supabase.from('results').select('player_id, score, words').eq('game_id', gameId),
+  ])
+  if (seats.error) throw new Error(seats.error.message)
+  if (results.error) throw new Error(results.error.message)
+
+  const seatRows = (seats.data ?? []) as SeatRow[]
+  const resultRows = (results.data ?? []) as ResultRow[]
+  const ids = [...new Set([...seatRows.map((seat) => seat.player_id), ...resultRows.map((row) => row.player_id)])]
+  const profiles = ids.length
+    ? await supabase.from('profiles').select('id, name').in('id', ids)
+    : { data: [], error: null }
+  if (profiles.error) throw new Error(profiles.error.message)
+  return assembleMatchPlayers(seatRows, resultRows, (profiles.data ?? []) as NameRow[])
+}
+
+export function watchMatchResults(gameId: string, onChange: () => void): () => void {
+  const supabase = getSupabase()
+  const channel = supabase
+    .channel(`results-${gameId}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'results', filter: `game_id=eq.${gameId}` },
+      () => {
+        onChange()
+      },
+    )
+    .subscribe()
+  return () => {
+    void supabase.removeChannel(channel)
+  }
+}
+
+function scoredWords(value: unknown): ScoredWord[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item) => {
+    if (!item || typeof item !== 'object') return []
+    const record = item as { word?: unknown; points?: unknown }
+    if (typeof record.word !== 'string' || !record.word.trim()) return []
+    const points = typeof record.points === 'number' ? record.points : 0
+    return [{ word: record.word, points }]
+  })
 }
 
 export async function saveResult(input: {

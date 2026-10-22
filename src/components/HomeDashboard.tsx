@@ -11,6 +11,7 @@ export type DashFriend = {
 
 export type DashInvite = {
   gameId: string
+  hostId: string
   hostName: string
   board: string[][]
 }

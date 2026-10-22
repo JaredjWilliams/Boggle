@@ -4,6 +4,7 @@ import { Board } from './components/Board'
 import { BuiltWord } from './components/BuiltWord'
 import { DailyBoardResults } from './components/DailyResults'
 import { EndPanel } from './components/EndPanel'
+import { MatchReview } from './components/MatchResults'
 import { Header } from './components/Header'
 import { HomeDashboard } from './components/HomeDashboard'
 import { PlayerStats } from './components/StatsScreen'
@@ -16,6 +17,7 @@ import { playedOn } from './data/play'
 import { clearSampleHistory, hasSampleHistory, seedSampleHistory } from './data/stats'
 import { shakeBoard } from './game/dice'
 import { findAllWords, scoreWord } from './game/words'
+import type { Rival } from './game/match'
 import { useLobby, type Invite } from './hooks/useLobby'
 import { useRound, type AttemptFeedback } from './hooks/useRound'
 import './App.css'
@@ -81,6 +83,8 @@ function PlayerGame({
   const { setNotice, refresh } = lobby
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [matchId, setMatchId] = useState<string | null>(null)
+  const [rivals, setRivals] = useState<Rival[]>([])
+  const [showPotential, setShowPotential] = useState(false)
   const [view, setView] = useState<'home' | 'stats' | 'daily'>('home')
   const [dailyPlayed, setDailyPlayed] = useState(false)
   const [seeded, setSeeded] = useState(false)
@@ -151,12 +155,23 @@ function PlayerGame({
       })
   }, [matchId, player.id, round.found, round.phase, round.score, setNotice])
 
+  function leaveRound() {
+    setRivals([])
+    setShowPotential(false)
+    round.goHome()
+  }
+
   async function begin(source: 'shake' | 'daily') {
     if (!player.id || !round.trie) {
+      setRivals([])
+      setShowPotential(false)
       round.startRound()
       return
     }
     try {
+      const invited = lobby.friends
+        .filter((friend) => selectedIds.includes(friend.id))
+        .map((friend) => ({ id: friend.id, name: friend.name }))
       const board = source === 'daily' ? await loadDailyBoard() : shakeBoard()
       const possibleWords = findAllWords(board, round.trie).map((word) => ({
         word,
@@ -169,6 +184,8 @@ function PlayerGame({
         inviteIds: selectedIds,
         dailyOn: source === 'daily' ? playedOn() : undefined,
       })
+      setRivals(invited)
+      setShowPotential(false)
       setMatchId(gameId)
       setSelectedIds([])
       round.startRound(board)
@@ -181,6 +198,8 @@ function PlayerGame({
     if (!player.id) return
     try {
       await answerInvite(invite.gameId, player.id, 'accepted')
+      setRivals([{ id: invite.hostId, name: invite.hostName }])
+      setShowPotential(false)
       setMatchId(invite.gameId)
       round.startRound(invite.board)
     } catch (error) {
@@ -229,10 +248,33 @@ function PlayerGame({
     )
   }
 
+  if (round.phase === 'ended' && rivals.length > 0 && matchId && player.id) {
+    return (
+      <>
+        <Header onHome={leaveRound} />
+        <div className="screen">
+          <MatchReview
+            gameId={matchId}
+            viewerId={player.id}
+            viewerName={player.name}
+            score={round.score}
+            words={round.found}
+            missed={round.missed}
+            rivals={rivals}
+            showingPotential={showPotential}
+            onShowPotential={() => setShowPotential(true)}
+            onBack={() => setShowPotential(false)}
+            onPlayAgain={() => void begin('shake')}
+          />
+        </div>
+      </>
+    )
+  }
+
   if (round.phase === 'ended') {
     return (
       <>
-        <Header onHome={round.goHome} />
+        <Header onHome={leaveRound} />
         <div className="screen">
           <EndPanel
             score={round.score}
@@ -303,7 +345,7 @@ function PlayerGame({
 
   return (
     <>
-      <Header onHome={round.goHome} />
+      <Header onHome={leaveRound} />
       <div className="screen">
         <StatusBar
           secondsLeft={round.secondsLeft}
