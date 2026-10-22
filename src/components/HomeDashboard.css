@@ -54,6 +54,11 @@
   opacity: 0.45;
 }
 
+.daily-game.is-played:disabled {
+  opacity: 1;
+  color: #6d6458;
+}
+
 .active-games {
   display: flex;
   flex-direction: column;

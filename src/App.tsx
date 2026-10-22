@@ -90,6 +90,7 @@ function PlayerGame({
   const startingRef = useRef(false)
   const [dailyPlayed, setDailyPlayed] = useState(false)
   const savedMatch = useRef<string | null>(null)
+  const dailyRound = useRef(false)
 
   useEffect(() => {
     if (!player.id) return
@@ -113,19 +114,14 @@ function PlayerGame({
     if (savedMatch.current === matchId) return
     savedMatch.current = matchId
     const playerId = player.id
+    const wasDaily = dailyRound.current
+    if (wasDaily) setDailyPlayed(true)
     void saveResult({
       gameId: matchId,
       playerId,
       score: round.score,
       words: round.found,
     })
-      .then(async () => {
-        try {
-          if (await hasPlayedDaily(playerId)) setDailyPlayed(true)
-        } catch (error: unknown) {
-          setNotice(error instanceof Error ? error.message : "Could not check today's board.")
-        }
-      })
       .catch((error: unknown) => {
         setNotice(error instanceof Error ? error.message : 'Could not save the score.')
       })
@@ -142,8 +138,10 @@ function PlayerGame({
 
   async function begin(source: 'shake' | 'daily', inviteIds: readonly string[] = []) {
     if (startingRef.current) return
+    if (source === 'daily' && dailyPlayed) return
     setOpenGame(null)
     if (!player.id || !round.trie) {
+      if (source === 'daily') return
       setRivals([])
       setShowPotential(false)
       round.startRound()
@@ -152,6 +150,10 @@ function PlayerGame({
     startingRef.current = true
     setStarting(true)
     try {
+      if (source === 'daily' && (await hasPlayedDaily(player.id))) {
+        setDailyPlayed(true)
+        return
+      }
       const invited = lobby.friends
         .filter((friend) => inviteIds.includes(friend.id))
         .map((friend) => ({ id: friend.id, name: friend.name }))
@@ -170,6 +172,7 @@ function PlayerGame({
       setRivals(invited)
       setShowPotential(false)
       setMatchId(gameId)
+      dailyRound.current = source === 'daily'
       void refresh()
       round.startRound(board)
     } catch (error) {

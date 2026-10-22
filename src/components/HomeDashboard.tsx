@@ -84,11 +84,11 @@ export function HomeDashboard({
       {onDaily && (
         <button
           type="button"
-          className="daily-game"
+          className={dailyPlayed ? 'daily-game is-played' : 'daily-game'}
           onClick={onDaily}
-          disabled={unavailable}
+          disabled={unavailable || dailyPlayed}
         >
-          Today's board
+          {dailyPlayed ? 'Played today' : "Today's board"}
         </button>
       )}
 

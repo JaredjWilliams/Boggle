@@ -111,16 +111,34 @@ describe('HomeDashboard', () => {
       />,
     )
 
-    const board = screen.getByRole('button', { name: "Today's board" })
+    const board = screen.getByRole('button', { name: 'Played today' })
     const results = screen.getByRole('button', { name: "Today's results" })
     const stats = screen.getByRole('button', { name: 'Your stats' })
     const games = screen.getByRole('list', { name: 'Active games' })
+    expect(board).toBeDisabled()
     expect(board.compareDocumentPosition(results) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(results.compareDocumentPosition(stats) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(stats.compareDocumentPosition(games) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
     await userEvent.click(results)
     expect(onDailyResults).toHaveBeenCalledOnce()
+  })
+
+  it('starts today\'s board only before it has been played', async () => {
+    const onDaily = vi.fn()
+    const { rerender } = render(
+      <HomeDashboard {...props} onDaily={onDaily} onDailyResults={vi.fn()} />,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: "Today's board" }))
+    expect(onDaily).toHaveBeenCalledOnce()
+
+    rerender(<HomeDashboard {...props} onDaily={onDaily} onDailyResults={vi.fn()} dailyPlayed />)
+
+    const played = screen.getByRole('button', { name: 'Played today' })
+    expect(played).toBeDisabled()
+    await userEvent.click(played)
+    expect(onDaily).toHaveBeenCalledOnce()
   })
 
   it('lists active games with the record and opens the one you choose', async () => {
@@ -153,7 +171,7 @@ describe('HomeDashboard', () => {
       />,
     )
 
-    const board = screen.getByRole('button', { name: "Today's board" })
+    const board = screen.getByRole('button', { name: 'Played today' })
     const results = screen.getByRole('button', { name: "Today's results" })
     const stats = screen.getByRole('button', { name: 'Your stats' })
     const games = screen.getByRole('list', { name: 'Active games' })
