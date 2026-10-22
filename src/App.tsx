@@ -4,6 +4,7 @@ import { Board } from './components/Board'
 import { BuiltWord } from './components/BuiltWord'
 import { DailyBoardResults } from './components/DailyResults'
 import { EndPanel } from './components/EndPanel'
+import { FriendsScreen } from './components/FriendsScreen'
 import { MatchReview } from './components/MatchResults'
 import { Header } from './components/Header'
 import { HomeDashboard } from './components/HomeDashboard'
@@ -80,11 +81,12 @@ function PlayerGame({
   const round = useRound()
   const lobby = useLobby(player.id)
   const { setNotice, refresh } = lobby
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [matchId, setMatchId] = useState<string | null>(null)
   const [rivals, setRivals] = useState<Rival[]>([])
   const [showPotential, setShowPotential] = useState(false)
-  const [view, setView] = useState<'home' | 'stats' | 'daily'>('home')
+  const [view, setView] = useState<'home' | 'stats' | 'daily' | 'friends'>('home')
+  const [starting, setStarting] = useState(false)
+  const startingRef = useRef(false)
   const [dailyPlayed, setDailyPlayed] = useState(false)
   const savedMatch = useRef<string | null>(null)
 
@@ -131,19 +133,23 @@ function PlayerGame({
   function leaveRound() {
     setRivals([])
     setShowPotential(false)
+    setView('home')
     round.goHome()
   }
 
-  async function begin(source: 'shake' | 'daily') {
+  async function begin(source: 'shake' | 'daily', inviteIds: readonly string[] = []) {
+    if (startingRef.current) return
     if (!player.id || !round.trie) {
       setRivals([])
       setShowPotential(false)
       round.startRound()
       return
     }
+    startingRef.current = true
+    setStarting(true)
     try {
       const invited = lobby.friends
-        .filter((friend) => selectedIds.includes(friend.id))
+        .filter((friend) => inviteIds.includes(friend.id))
         .map((friend) => ({ id: friend.id, name: friend.name }))
       const board = source === 'daily' ? await loadDailyBoard() : shakeBoard()
       const possibleWords = findAllWords(board, round.trie).map((word) => ({
@@ -154,16 +160,18 @@ function PlayerGame({
         hostId: player.id,
         board,
         possibleWords,
-        inviteIds: selectedIds,
+        inviteIds,
         dailyOn: source === 'daily' ? playedOn() : undefined,
       })
       setRivals(invited)
       setShowPotential(false)
       setMatchId(gameId)
-      setSelectedIds([])
       round.startRound(board)
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not start the game.')
+    } finally {
+      startingRef.current = false
+      setStarting(false)
     }
   }
 
@@ -190,16 +198,24 @@ function PlayerGame({
     }
   }
 
-  function toggleFriend(id: string) {
-    setSelectedIds((current) =>
-      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+  function signedInHeader(onHome?: () => void, includeSignOut = true) {
+    return (
+      <Header
+        onHome={onHome}
+        onSignOut={includeSignOut ? onSignOut : undefined}
+        invites={lobby.invites}
+        onAcceptInvite={(invite) => void accept(invite)}
+        onDeclineInvite={(invite) => void decline(invite)}
+      />
     )
   }
+
+  const wordsUnavailable = round.phase === 'loading' || round.loadError
 
   if (round.phase === 'ended' && rivals.length > 0 && matchId && player.id) {
     return (
       <>
-        <Header onHome={leaveRound} />
+        {signedInHeader(leaveRound, false)}
         <div className="screen">
           <MatchReview
             gameId={matchId}
@@ -222,7 +238,7 @@ function PlayerGame({
   if (round.phase === 'ended') {
     return (
       <>
-        <Header onHome={leaveRound} />
+        {signedInHeader(leaveRound, false)}
         <div className="screen">
           <EndPanel
             score={round.score}
@@ -238,7 +254,7 @@ function PlayerGame({
   if (round.phase !== 'playing' && view === 'daily' && player.id) {
     return (
       <>
-        <Header onHome={() => setView('home')} onSignOut={onSignOut} />
+        {signedInHeader(() => setView('home'))}
         <div className="screen">
           <DailyBoardResults playerId={player.id} />
         </div>
@@ -249,9 +265,26 @@ function PlayerGame({
   if (round.phase !== 'playing' && view === 'stats' && player.id) {
     return (
       <>
-        <Header onHome={() => setView('home')} onSignOut={onSignOut} />
+        {signedInHeader(() => setView('home'))}
         <div className="screen">
           <PlayerStats playerId={player.id} playerName={player.name} />
+        </div>
+      </>
+    )
+  }
+
+  if (round.phase !== 'playing' && view === 'friends') {
+    return (
+      <>
+        {signedInHeader(() => setView('home'))}
+        <div className="screen">
+          <FriendsScreen
+            friends={player.id ? lobby.friends : []}
+            loading={Boolean(player.id) && lobby.loading}
+            disabled={wordsUnavailable || starting}
+            notice={lobby.notice || (round.loadError ? 'Could not load the word list.' : '')}
+            onStartWith={(friend) => void begin('shake', [friend.id])}
+          />
         </div>
       </>
     )
@@ -260,7 +293,7 @@ function PlayerGame({
   if (round.phase !== 'playing') {
     return (
       <>
-        <Header onSignOut={onSignOut} />
+        {signedInHeader()}
         <div className="screen">
           <HomeDashboard
             playerName={player.name}
@@ -268,17 +301,13 @@ function PlayerGame({
             loadError={round.loadError}
             lastScore={round.lastScore ?? lobby.savedScore}
             notice={lobby.notice}
-            friends={player.id ? lobby.friends : []}
-            invites={player.id ? lobby.invites : []}
-            selectedIds={selectedIds}
+            starting={starting}
             onStart={() => void begin('shake')}
+            onPlayWithFriends={() => setView('friends')}
             onDaily={player.id ? () => void begin('daily') : undefined}
             dailyPlayed={dailyPlayed}
             onDailyResults={player.id ? () => setView('daily') : undefined}
             onOpenStats={player.id ? () => setView('stats') : undefined}
-            onToggleFriend={player.id ? toggleFriend : undefined}
-            onAccept={player.id ? (invite) => void accept(invite) : undefined}
-            onDecline={player.id ? (invite) => void decline(invite) : undefined}
           />
         </div>
       </>
@@ -287,7 +316,7 @@ function PlayerGame({
 
   return (
     <>
-      <Header onHome={leaveRound} />
+      {signedInHeader(leaveRound, false)}
       <div className="screen">
         <StatusBar
           secondsLeft={round.secondsLeft}

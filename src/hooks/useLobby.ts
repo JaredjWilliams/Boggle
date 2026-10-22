@@ -7,6 +7,7 @@ const EMPTY: Lobby = { friends: [], invites: [], lastScore: null }
 export function useLobby(playerId: string | undefined) {
   const [lobby, setLobby] = useState<Lobby>(EMPTY)
   const [notice, setNotice] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const refresh = useCallback(async () => {
     if (!playerId) return
@@ -16,6 +17,7 @@ export function useLobby(playerId: string | undefined) {
   useEffect(() => {
     if (!playerId) return
     let cancel = false
+    setLoading(true)
 
     void loadLobby(playerId)
       .then((next) => {
@@ -25,6 +27,9 @@ export function useLobby(playerId: string | undefined) {
         if (!cancel) {
           setNotice(error instanceof Error ? error.message : 'Could not load games.')
         }
+      })
+      .finally(() => {
+        if (!cancel) setLoading(false)
       })
 
     const channel = getSupabase()
@@ -58,6 +63,7 @@ export function useLobby(playerId: string | undefined) {
     notice,
     setNotice,
     refresh,
+    loading,
   }
 }
 

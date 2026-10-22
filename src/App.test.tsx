@@ -320,7 +320,7 @@ function box(left: number, top: number, width: number, height: number): DOMRect 
 }
 
 async function leaveHome() {
-  const start = await screen.findByRole('button', { name: 'Start game' })
+  const start = await screen.findByRole('button', { name: 'Play solo' })
   await waitFor(() => expect(start).toBeEnabled())
   await userEvent.click(start)
 }
@@ -370,7 +370,7 @@ describe('sign in', () => {
     await user.click(await screen.findByRole('button', { name: 'Sign out' }))
 
     expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Start game' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Play solo' })).not.toBeInTheDocument()
     expect(JSON.parse(localStorage.getItem('boggle.session') ?? 'null')).toBeNull()
   })
 })
@@ -386,7 +386,39 @@ describe('home dashboard', () => {
     vi.unstubAllGlobals()
   })
 
-  it('deals a board only after Start game', async () => {
+  it('opens friends from home and keeps the player list off the dashboard', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    expect(screen.queryByRole('heading', { name: 'Play with a friend.' })).not.toBeInTheDocument()
+    const friends = await screen.findByRole('button', { name: 'Play with friends' })
+    await waitFor(() => expect(friends).toBeEnabled())
+    await user.click(friends)
+
+    expect(screen.getByRole('heading', { name: 'Play with a friend.' })).toBeInTheDocument()
+    expect(screen.getByText('No other players yet.')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Find every word.' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Home' }))
+    expect(screen.getByRole('heading', { name: 'Find every word.' })).toBeInTheDocument()
+  })
+
+  it('opens invitations from the header', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(await screen.findByRole('button', { name: 'Invitations' }))
+
+    expect(screen.getByRole('dialog', { name: 'Invitations' })).toHaveTextContent(
+      'No invitations right now.',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Close invitations' }))
+    expect(screen.queryByRole('dialog', { name: 'Invitations' })).not.toBeInTheDocument()
+  })
+
+  it('deals a board only after Play solo', async () => {
     render(<App />)
 
     expect(screen.getByRole('heading', { name: 'Find every word.' })).toBeInTheDocument()
@@ -405,7 +437,7 @@ describe('home dashboard', () => {
   it('does not run the clock on the dashboard', async () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
     render(<App />)
-    expect(await screen.findByRole('button', { name: 'Start game' })).toBeEnabled()
+    expect(await screen.findByRole('button', { name: 'Play solo' })).toBeEnabled()
 
     await act(async () => {
       vi.advanceTimersByTime(ROUND_SECONDS * 1000)

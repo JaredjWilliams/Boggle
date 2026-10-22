@@ -1,4 +1,12 @@
+.app-bar {
+  position: relative;
+  z-index: 3;
+  flex: none;
+}
+
 .app-header {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -21,19 +29,144 @@
 
 .header-actions {
   display: flex;
+  align-items: center;
   gap: 8px;
   margin-left: auto;
 }
 
-.header-home {
+.header-home,
+.header-bell {
   flex: none;
   white-space: nowrap;
   min-height: 44px;
-  padding: 0 14px;
   border: 1px solid var(--cream);
   border-radius: 999px;
   background: transparent;
   color: var(--cream);
   font: inherit;
   font-weight: 700;
+}
+
+.header-home {
+  padding: 0 14px;
+}
+
+.header-bell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  padding: 0;
+}
+
+.header-bell svg {
+  width: 22px;
+  height: 22px;
+}
+
+.header-bell:focus-visible {
+  outline: 2px solid var(--cream);
+  outline-offset: 2px;
+}
+
+.header-bell-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+.invite-backdrop {
+  position: fixed;
+  z-index: 1;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.invite-pop {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% - 8px);
+  right: 12px;
+  left: 12px;
+  max-height: min(360px, 60svh);
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--tile);
+  color: var(--ink);
+  box-shadow: 0 12px 32px rgb(27 40 56 / 18%);
+}
+
+.invite-pop:focus {
+  outline: none;
+}
+
+.invite-pop h2 {
+  margin: 0 0 10px;
+  color: #6d6458;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.invite-pop > p {
+  margin: 0;
+  color: #6d6458;
+}
+
+.invite-pop ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.invite-pop li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--cream);
+}
+
+.invite-pop li p {
+  flex: 1 1 120px;
+  margin: 0;
+  font-weight: 700;
+}
+
+.invite-pop li button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--tile);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+}
+
+.invite-pop li button:first-of-type {
+  border: 0;
+  background: var(--accent);
+  color: white;
 }

@@ -1,0 +1,84 @@
+.friends-screen {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 28px 20px calc(24px + env(safe-area-inset-bottom));
+}
+
+.friends-screen h1 {
+  margin: 0;
+  font-family: Georgia, 'Palatino Linotype', Palatino, serif;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.friends-lede,
+.friends-status {
+  margin: 12px 0 0;
+  color: #6d6458;
+  font-size: 16px;
+}
+
+.friends-error {
+  margin: 12px 0 0;
+  color: var(--bad);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.friend-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.friend-list button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--tile);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+
+.friend-list button:disabled {
+  opacity: 0.45;
+}
+
+.friend-list button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.friend-id {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.friend-name {
+  font-weight: 700;
+}
+
+.friend-id small {
+  color: #6d6458;
+}
+
+.friend-list strong {
+  flex: none;
+  color: var(--accent);
+  font-size: 16px;
+}

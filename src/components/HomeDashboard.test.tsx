@@ -18,7 +18,8 @@ describe('HomeDashboard', () => {
     render(<HomeDashboard {...props} />)
 
     expect(screen.getByRole('heading', { name: 'Find every word.' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Start game' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Play solo' })).toBeEnabled()
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
     expect(screen.getByText('Time').closest('div')).toHaveTextContent(formatRound(ROUND_SECONDS))
     expect(screen.getByText('Board').closest('div')).toHaveTextContent(`${SIDE}×${SIDE}`)
     expect(screen.getByText('Words').closest('div')).toHaveTextContent('3+')
@@ -33,26 +34,42 @@ describe('HomeDashboard', () => {
     const onStart = vi.fn()
     render(<HomeDashboard {...props} onStart={onStart} />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Start game' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Play solo' }))
 
     expect(onStart).toHaveBeenCalledOnce()
   })
 
+  it('opens friends without listing players on the dashboard', async () => {
+    const onStart = vi.fn()
+    const onPlayWithFriends = vi.fn()
+    render(<HomeDashboard {...props} onStart={onStart} onPlayWithFriends={onPlayWithFriends} />)
+
+    expect(screen.queryByRole('heading', { name: 'Play with' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Play with friends' }))
+
+    expect(onPlayWithFriends).toHaveBeenCalledOnce()
+    expect(onStart).not.toHaveBeenCalled()
+  })
+
   it('waits while the word list loads', () => {
-    render(<HomeDashboard {...props} loading />)
+    render(<HomeDashboard {...props} loading onPlayWithFriends={vi.fn()} />)
 
     expect(screen.getByRole('button', { name: 'Loading words…' })).toBeDisabled()
-    expect(screen.queryByRole('button', { name: 'Start game' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Play with friends' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Play solo' })).not.toBeInTheDocument()
   })
 
   it('explains when the word list cannot load', async () => {
     const onStart = vi.fn()
-    render(<HomeDashboard {...props} loadError onStart={onStart} />)
+    render(<HomeDashboard {...props} loadError onStart={onStart} onPlayWithFriends={vi.fn()} />)
 
     expect(screen.getByRole('alert')).toHaveTextContent('Could not load the word list.')
-    expect(screen.getByRole('button', { name: 'Start game' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Play solo' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Play with friends' })).toBeDisabled()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Start game' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Play solo' }))
     expect(onStart).not.toHaveBeenCalled()
   })
 

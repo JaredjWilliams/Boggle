@@ -41,20 +41,36 @@
   font-size: 16px;
 }
 
-.start-game {
+.play-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.start-game,
+.friends-game {
   width: 100%;
   min-height: 52px;
-  margin-top: 22px;
   border: 0;
   border-radius: 14px;
-  background: var(--accent);
-  color: white;
   font: inherit;
   font-size: 18px;
   font-weight: 700;
 }
 
+.start-game {
+  background: var(--accent);
+  color: white;
+}
+
+.friends-game {
+  background: var(--ink);
+  color: var(--cream);
+}
+
 .start-game:disabled,
+.friends-game:disabled,
 .daily-game:disabled {
   opacity: 0.45;
 }
@@ -87,65 +103,6 @@
   color: var(--accent);
   font-size: 20px;
   line-height: 1;
-}
-
-.friends,
-.invites {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.friends label,
-.invites li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 44px;
-  padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--tile);
-}
-
-.friends input {
-  width: 20px;
-  height: 20px;
-  accent-color: var(--accent);
-}
-
-.friends span,
-.invites p {
-  margin: 0;
-  font-weight: 700;
-}
-
-.friends small {
-  color: #6d6458;
-}
-
-.invites li {
-  justify-content: space-between;
-}
-
-.invites button {
-  min-height: 44px;
-  padding: 0 14px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--cream);
-  color: var(--ink);
-  font: inherit;
-  font-weight: 700;
-}
-
-.invites button:first-of-type {
-  border: 0;
-  background: var(--accent);
-  color: white;
 }
 
 .home-error {

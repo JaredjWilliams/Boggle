@@ -3,36 +3,19 @@ import { ROUND_SECONDS } from '../game/round'
 import { scoreWord } from '../game/words'
 import './HomeDashboard.css'
 
-export type DashFriend = {
-  id: string
-  name: string
-  username: string
-}
-
-export type DashInvite = {
-  gameId: string
-  hostId: string
-  hostName: string
-  board: string[][]
-}
-
 type Props = {
   playerName?: string
   loading: boolean
   loadError: boolean
   lastScore: number | null
   notice?: string
-  friends?: readonly DashFriend[]
-  invites?: readonly DashInvite[]
-  selectedIds?: readonly string[]
+  starting?: boolean
   onStart: () => void
+  onPlayWithFriends?: () => void
   onDaily?: () => void
   dailyPlayed?: boolean
   onDailyResults?: () => void
   onOpenStats?: () => void
-  onToggleFriend?: (id: string) => void
-  onAccept?: (invite: DashInvite) => void
-  onDecline?: (invite: DashInvite) => void
 }
 
 const POINT_LENGTHS = [3, 4, 5, 6, 7, 8] as const
@@ -43,18 +26,15 @@ export function HomeDashboard({
   loadError,
   lastScore,
   notice = '',
-  friends = [],
-  invites = [],
-  selectedIds = [],
+  starting = false,
   onStart,
+  onPlayWithFriends,
   onDaily,
   dailyPlayed = false,
   onDailyResults,
   onOpenStats,
-  onToggleFriend,
-  onAccept,
-  onDecline,
 }: Props) {
+  const unavailable = loading || loadError || starting
   return (
     <main className="home">
       {playerName && (
@@ -69,21 +49,28 @@ export function HomeDashboard({
         Qu counts as two letters.
       </p>
 
-      <button
-        type="button"
-        className="start-game"
-        onClick={onStart}
-        disabled={loading || loadError}
-      >
-        {loading ? 'Loading words…' : 'Start game'}
-      </button>
+      <div className="play-choices">
+        <button type="button" className="start-game" onClick={onStart} disabled={unavailable}>
+          {loading ? 'Loading words…' : 'Play solo'}
+        </button>
+        {onPlayWithFriends && (
+          <button
+            type="button"
+            className="friends-game"
+            onClick={onPlayWithFriends}
+            disabled={unavailable}
+          >
+            Play with friends
+          </button>
+        )}
+      </div>
 
       {onDaily && (
         <button
           type="button"
           className="daily-game"
           onClick={onDaily}
-          disabled={loading || loadError}
+          disabled={unavailable}
         >
           Today's board
         </button>
@@ -113,46 +100,6 @@ export function HomeDashboard({
         <p className="home-error" role="alert">
           Could not load the word list.
         </p>
-      )}
-
-      {friends.length > 0 && onToggleFriend && (
-        <>
-          <h2>Play with</h2>
-          <ul className="friends">
-            {friends.map((friend) => (
-              <li key={friend.id}>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(friend.id)}
-                    onChange={() => onToggleFriend(friend.id)}
-                  />
-                  <span>{friend.name}</span>
-                  <small>{friend.username}</small>
-                </label>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-
-      {invites.length > 0 && onAccept && onDecline && (
-        <section aria-live="polite">
-          <h2>Invitations</h2>
-          <ul className="invites">
-            {invites.map((invite) => (
-              <li key={invite.gameId}>
-                <p>{invite.hostName} invited you.</p>
-                <button type="button" onClick={() => onAccept(invite)}>
-                  Play
-                </button>
-                <button type="button" onClick={() => onDecline(invite)}>
-                  Decline
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
       )}
 
       {lastScore !== null && (
