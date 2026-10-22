@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  averages,
   axisMax,
   compactNumber,
+  formatAverage,
   gamesAgainst,
   headToHead,
   linearTrend,
@@ -41,6 +43,13 @@ describe('stats series', () => {
     expect(opponentNames(games)).toEqual(['Jonah Park', 'Mina Chen'])
     expect(gamesAgainst(games, 'Mina Chen').map((game) => game.id)).toEqual(['a', 'c'])
     expect(gamesAgainst(games, null)).toHaveLength(3)
+  })
+
+  it('averages words and points across the games in view', () => {
+    expect(averages(games)).toEqual({ words: 6, score: 1500 })
+    expect(averages([])).toEqual({ words: null, score: null })
+    expect(formatAverage(5.25)).toBe('5.3')
+    expect(formatAverage(1500)).toBe('1,500')
   })
 
   it('counts wins, losses, and ties against everyone or one player', () => {

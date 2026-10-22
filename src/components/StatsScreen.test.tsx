@@ -42,14 +42,14 @@ describe('StatsScreen', () => {
     expect(screen.getByRole('heading', { name: 'Every game, plotted.' })).toBeInTheDocument()
     expect(screen.getByText('Ada Lovelace')).toBeInTheDocument()
 
-    const words = section('Words found')
-    expect(words).toHaveTextContent('18')
+    const words = section('Words a game')
+    expect(figure('Words a game')).toHaveTextContent('6')
     expect(words).toHaveTextContent('Up about 1 word a week.')
     expect(within(words).getByRole('img', { name: 'Words found on each date' })).toBeInTheDocument()
     expect(within(words).getAllByTestId('trend-line')).toHaveLength(1)
 
-    const score = section('Total score')
-    expect(score).toHaveTextContent('4,500')
+    const score = section('Points a game')
+    expect(figure('Points a game')).toHaveTextContent('1,500')
     expect(score).toHaveTextContent('Up about 250 points a week.')
     expect(within(score).getAllByTestId('trend-line')).toHaveLength(1)
 
@@ -65,15 +65,15 @@ describe('StatsScreen', () => {
 
     await userEvent.click(screen.getByRole('radio', { name: 'Mina Chen' }))
 
-    expect(section('Words found')).toHaveTextContent('10')
-    expect(section('Total score')).toHaveTextContent('2,500')
+    expect(figure('Words a game')).toHaveTextContent('5')
+    expect(figure('Points a game')).toHaveTextContent('1,250')
     expect(section('Win rate')).toHaveTextContent('50%')
     expect(section('Win rate')).toHaveTextContent('Wins')
     expect(screen.getByRole('img', { name: 'Win rate. 1 wins, 0 losses, 1 ties.' })).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('radio', { name: 'Jonah Park' }))
 
-    expect(section('Words found')).toHaveTextContent('Play another game to see a trend.')
+    expect(section('Words a game')).toHaveTextContent('Play another game to see a trend.')
     expect(screen.queryAllByTestId('trend-line')).toHaveLength(0)
     expect(section('Win rate')).toHaveTextContent('0%')
   })
@@ -103,7 +103,7 @@ describe('StatsScreen', () => {
       />,
     )
 
-    expect(section('Words found')).toHaveTextContent('21')
+    expect(figure('Words a game')).toHaveTextContent('5.3')
     expect(section('Win rate')).toHaveTextContent('1 solo game stays on the words and score charts.')
   })
 })
@@ -113,4 +113,10 @@ function section(name: string): HTMLElement {
   const card = heading.closest('section')
   if (!(card instanceof HTMLElement)) throw new Error(`Missing section for ${name}`)
   return card
+}
+
+function figure(name: string): HTMLElement {
+  const value = section(name).querySelector('.stat-figure')
+  if (!(value instanceof HTMLElement)) throw new Error(`Missing figure for ${name}`)
+  return value
 }

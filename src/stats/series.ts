@@ -57,11 +57,15 @@ export function gamesAgainst(games: readonly GameStat[], opponent: string | null
   return games.filter((game) => game.opponents.some((item) => item.name === opponent))
 }
 
-export function totals(games: readonly GameStat[]): { words: number; score: number } {
-  return games.reduce(
-    (sum, game) => ({ words: sum.words + game.words, score: sum.score + game.score }),
-    { words: 0, score: 0 },
-  )
+export function averages(games: readonly GameStat[]): { words: number | null; score: number | null } {
+  if (games.length === 0) return { words: null, score: null }
+  let words = 0
+  let score = 0
+  for (const game of games) {
+    words += game.words
+    score += game.score
+  }
+  return { words: words / games.length, score: score / games.length }
 }
 
 export function headToHead(games: readonly GameStat[], opponent: string | null): HeadToHead {
@@ -95,6 +99,10 @@ export function formatPercent(rate: number): string {
 
 export function formatCount(value: number): string {
   return value.toLocaleString('en-US')
+}
+
+export function formatAverage(value: number): string {
+  return value.toLocaleString('en-US', { maximumFractionDigits: 1 })
 }
 
 export function linearTrend(xs: readonly number[], ys: readonly number[]): Trend | null {

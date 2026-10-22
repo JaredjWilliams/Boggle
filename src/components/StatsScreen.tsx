@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { loadPlayerStats } from '../data/stats'
 import {
-  formatCount,
+  averages,
+  formatAverage,
   formatPercent,
   gamesAgainst,
   headToHead,
   opponentNames,
   playedCount,
-  totals,
   trendNote,
   winRate,
   type GameStat,
@@ -69,7 +69,7 @@ export function StatsScreen({ playerName, games, loading, notice, onRetry }: Pro
 
   const visible = useMemo(() => gamesAgainst(games, opponent), [games, opponent])
   const record = headToHead(visible, opponent)
-  const summary = totals(visible)
+  const summary = averages(visible)
   const rate = winRate(record)
   const solos = opponent ? 0 : visible.filter((game) => game.opponents.length === 0).length
   const wordPoints = visible.map((game) => ({ id: game.id, playedOn: game.playedOn, value: game.words }))
@@ -128,15 +128,15 @@ export function StatsScreen({ playerName, games, loading, notice, onRetry }: Pro
           </div>
 
           <section className="stat-card" aria-labelledby="words-heading">
-            <h2 id="words-heading">Words found</h2>
-            <p className="stat-figure">{formatCount(summary.words)}</p>
+            <h2 id="words-heading">Words a game</h2>
+            <p className="stat-figure">{summary.words === null ? '—' : formatAverage(summary.words)}</p>
             <p className="stat-note">{trendNote(wordPoints, 'word')}</p>
             <ScatterPlot label="Words found on each date" points={wordPoints} valueName="words" />
           </section>
 
           <section className="stat-card" aria-labelledby="score-heading">
-            <h2 id="score-heading">Total score</h2>
-            <p className="stat-figure">{formatCount(summary.score)}</p>
+            <h2 id="score-heading">Points a game</h2>
+            <p className="stat-figure">{summary.score === null ? '—' : formatAverage(summary.score)}</p>
             <p className="stat-note">{trendNote(scorePoints, 'point')}</p>
             <ScatterPlot label="Score on each date" points={scorePoints} valueName="points" />
           </section>
