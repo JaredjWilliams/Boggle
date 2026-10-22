@@ -45,6 +45,20 @@ export function activeGameLabel(game: ActiveGame): string {
   return `${game.opponentName}, ${recordPhrase(game.wins, game.losses)}, ${status}`
 }
 
+export const COMPLETED_GAME_LIMIT = 10
+
+export function selectActiveGames(games: readonly ActiveGame[]): ActiveGame[] {
+  return games.filter((game) => !game.playedBack)
+}
+
+/** Keeps incoming order and returns at most `limit` finished games. */
+export function selectCompletedGames(
+  games: readonly ActiveGame[],
+  limit = COMPLETED_GAME_LIMIT,
+): ActiveGame[] {
+  return games.filter((game) => game.playedBack).slice(0, limit)
+}
+
 export function assembleActiveGames(
   viewerId: string,
   seats: readonly ActiveSeat[],

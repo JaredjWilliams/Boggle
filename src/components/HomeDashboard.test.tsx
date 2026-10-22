@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { ActiveGame } from '../data/activeGames'
+import type { Invite } from '../data/matches'
 import { HomeDashboard } from './HomeDashboard'
 
 const props = {
@@ -21,6 +22,7 @@ describe('HomeDashboard', () => {
     expect(screen.queryByText(/Trace touching tiles/)).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Points' })).not.toBeInTheDocument()
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+    expect(screen.queryByRole('tablist', { name: 'Games' })).not.toBeInTheDocument()
   })
 
   it('starts a game from the dashboard', async () => {
@@ -162,14 +164,82 @@ describe('HomeDashboard', () => {
     const buttons = within(games).getAllByRole('button')
     expect(buttons.map((button) => button.getAttribute('aria-label'))).toEqual([
       'Grace Hopper, 2 wins, 1 loss, waiting',
-      'Mina Chen, 0 wins, 3 losses, played back',
     ])
     expect(buttons[0]).toHaveTextContent('Waiting')
     expect(buttons[0]).toHaveTextContent('2–1')
-    expect(buttons[1]).toHaveTextContent('Played back')
-    expect(buttons[1]).toHaveTextContent('0–3')
+    expect(within(games).queryByText('Mina Chen')).not.toBeInTheDocument()
 
-    await userEvent.click(buttons[1])
+    await userEvent.click(screen.getByRole('tab', { name: 'Completed games' }))
+
+    const finished = screen.getByRole('list', { name: 'Completed games' })
+    const finishedButtons = within(finished).getAllByRole('button')
+    expect(finishedButtons.map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Mina Chen, 0 wins, 3 losses, played back',
+    ])
+    expect(finishedButtons[0]).toHaveTextContent('0–3')
+    expect(finishedButtons[0]).not.toHaveTextContent('Played back')
+
+    await userEvent.click(finishedButtons[0])
     expect(onOpenGame).toHaveBeenCalledExactlyOnceWith(played)
+  })
+
+  it('lists invitations and plays or declines the one you choose', async () => {
+    const invite: Invite = {
+      gameId: 'game-1',
+      hostId: 'grace',
+      hostName: 'Grace Hopper',
+      board: [
+        ['C', 'A'],
+        ['T', 'S'],
+      ],
+    }
+    const onAcceptInvite = vi.fn()
+    const onDeclineInvite = vi.fn()
+    render(
+      <HomeDashboard
+        {...props}
+        invites={[invite]}
+        onAcceptInvite={onAcceptInvite}
+        onDeclineInvite={onDeclineInvite}
+      />,
+    )
+
+    expect(screen.getByRole('tab', { name: 'Invited games', selected: true })).toBeInTheDocument()
+    const invited = screen.getByRole('list', { name: 'Invited games' })
+    expect(within(invited).getByText('Grace Hopper invited you.')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Play with Grace Hopper' }))
+    expect(onAcceptInvite).toHaveBeenCalledExactlyOnceWith(invite)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Decline invitation from Grace Hopper' }))
+    expect(onDeclineInvite).toHaveBeenCalledExactlyOnceWith(invite)
+  })
+
+  it('shows only the ten most recent completed games', async () => {
+    const games = Array.from({ length: 11 }, (_, index) => ({
+      gameId: `done-${index}`,
+      opponentId: `player-${index}`,
+      opponentName: index === 0 ? 'Newest Player' : index === 10 ? 'Oldest Player' : `Player ${index}`,
+      playedBack: true,
+      wins: 1,
+      losses: 0,
+    }))
+    const onOpenGame = vi.fn()
+    render(<HomeDashboard {...props} games={games} onOpenGame={onOpenGame} />)
+
+    expect(screen.getByRole('tab', { name: 'Completed games', selected: true })).toBeInTheDocument()
+    expect(screen.getByText('Last 10 games.')).toBeInTheDocument()
+
+    const finished = screen.getByRole('list', { name: 'Completed games' })
+    const buttons = within(finished).getAllByRole('button')
+    expect(buttons).toHaveLength(10)
+    expect(buttons[0]).toHaveTextContent('Newest Player')
+    expect(screen.queryByText('Oldest Player')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Active games' }))
+    expect(screen.getByText('No games in progress.')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Invited games' }))
+    expect(screen.getByText('No invitations right now.')).toBeInTheDocument()
   })
 })

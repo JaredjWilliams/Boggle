@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { activeGameLabel, assembleActiveGames, formatRecord, type ActiveSeat, type HeadScore } from './activeGames'
+import {
+  activeGameLabel,
+  assembleActiveGames,
+  formatRecord,
+  selectActiveGames,
+  selectCompletedGames,
+  type ActiveGame,
+  type ActiveSeat,
+  type HeadScore,
+} from './activeGames'
 
 const names = [
   { id: 'grace', name: ' Grace Hopper ' },
@@ -105,6 +114,41 @@ describe('assembleActiveGames', () => {
     ).toBe('Grace Hopper, 0 wins, 1 loss, waiting')
   })
 })
+
+describe('selectActiveGames', () => {
+  it('keeps games still waiting and the ten newest finished games', () => {
+    const games: ActiveGame[] = [
+      game('g0', 'Newest', true),
+      game('g1', 'Waiting', false),
+      ...Array.from({ length: 10 }, (_, index) => game(`g${index + 2}`, `Player ${index + 2}`, true)),
+    ]
+
+    expect(selectActiveGames(games).map((item) => item.gameId)).toEqual(['g1'])
+    expect(selectCompletedGames(games).map((item) => item.gameId)).toEqual([
+      'g0',
+      'g2',
+      'g3',
+      'g4',
+      'g5',
+      'g6',
+      'g7',
+      'g8',
+      'g9',
+      'g10',
+    ])
+  })
+})
+
+function game(gameId: string, opponentName: string, playedBack: boolean): ActiveGame {
+  return {
+    gameId,
+    opponentId: 'grace',
+    opponentName,
+    playedBack,
+    wins: 1,
+    losses: 0,
+  }
+}
 
 function seat(gameId: string, playerId: string, status: string, createdAt: string): ActiveSeat {
   return { gameId, playerId, status, createdAt }

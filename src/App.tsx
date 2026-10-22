@@ -333,7 +333,10 @@ function PlayerGame({
             onDailyResults={player.id ? () => setView('daily') : undefined}
             onOpenStats={player.id ? () => setView('stats') : undefined}
             games={lobby.games}
+            invites={lobby.invites}
             onOpenGame={setOpenGame}
+            onAcceptInvite={(invite) => void accept(invite)}
+            onDeclineInvite={(invite) => void decline(invite)}
           />
         </div>
       </>
