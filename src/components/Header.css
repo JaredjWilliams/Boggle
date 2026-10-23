@@ -123,6 +123,10 @@
   text-transform: uppercase;
 }
 
+.invite-pop h2 + ul + h2 {
+  margin-top: 16px;
+}
+
 .invite-pop > p {
   margin: 0;
   color: #6d6458;

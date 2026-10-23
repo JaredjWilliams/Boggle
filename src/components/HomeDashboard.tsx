@@ -2,7 +2,9 @@ import { useState, type KeyboardEvent } from 'react'
 import {
   activeGameLabel,
   COMPLETED_GAME_LIMIT,
+  completedGameKey,
   formatRecord,
+  playedBackNotices,
   selectActiveGames,
   selectCompletedGames,
   type ActiveGame,
@@ -30,6 +32,7 @@ type Props = {
   onDailyResults?: () => void
   onOpenStats?: () => void
   games?: readonly ActiveGame[]
+  readKeys?: ReadonlySet<string>
   onOpenGame?: (game: ActiveGame) => void
   invites?: readonly Invite[]
   onAcceptInvite?: (invite: Invite) => void
@@ -48,6 +51,7 @@ export function HomeDashboard({
   onDailyResults,
   onOpenStats,
   games = [],
+  readKeys,
   onOpenGame,
   invites = [],
   onAcceptInvite,
@@ -56,6 +60,8 @@ export function HomeDashboard({
   const inProgress = selectActiveGames(games)
   const finished = selectCompletedGames(games)
   const finishedCount = games.filter((game) => game.playedBack).length
+  const unread = readKeys ? playedBackNotices(games, readKeys) : []
+  const unreadKeys = new Set(unread.map(completedGameKey))
   const showGames = inProgress.length > 0 || invites.length > 0 || finished.length > 0
   const [picked, setPicked] = useState<GameTab | null>(null)
   const tab = picked ?? defaultGameTab(inProgress, invites)
@@ -114,22 +120,25 @@ export function HomeDashboard({
             aria-label="Games"
             onKeyDown={(event) => onTabKey(event, tab, setPicked)}
           >
-            {TABS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                id={tabButtonId(item.id)}
-                className="game-tab"
-                role="tab"
-                aria-selected={tab === item.id}
-                aria-controls={tabPanelId(item.id)}
-                aria-label={item.label}
-                tabIndex={tab === item.id ? 0 : -1}
-                onClick={() => setPicked(item.id)}
-              >
-                <TabName label={item.label} />
-              </button>
-            ))}
+            {TABS.map((item) => {
+              const badge = item.id === 'completed' ? unread.length : 0
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  id={tabButtonId(item.id)}
+                  className="game-tab"
+                  role="tab"
+                  aria-selected={tab === item.id}
+                  aria-controls={tabPanelId(item.id)}
+                  aria-label={badge > 0 ? `${item.label}, ${badge} new` : item.label}
+                  tabIndex={tab === item.id ? 0 : -1}
+                  onClick={() => setPicked(item.id)}
+                >
+                  <TabName label={item.label} badge={badge} />
+                </button>
+              )
+            })}
           </div>
 
           <div
@@ -177,6 +186,7 @@ export function HomeDashboard({
               games={finished}
               empty="No finished games yet."
               showStatus={false}
+              unreadKeys={unreadKeys}
               onOpenGame={onOpenGame}
             />
           </div>
@@ -203,44 +213,50 @@ function GameList({
   games,
   empty,
   showStatus,
+  unreadKeys,
   onOpenGame,
 }: {
   label: string
   games: readonly ActiveGame[]
   empty: string
   showStatus: boolean
+  unreadKeys?: ReadonlySet<string>
   onOpenGame?: (game: ActiveGame) => void
 }) {
   if (games.length === 0) return <p className="game-empty">{empty}</p>
 
   return (
     <ul className="active-games" aria-label={label}>
-      {games.map((game) => (
-        <li key={`${game.gameId}:${game.opponentId}`}>
-          <button
-            type="button"
-            className="active-game"
-            aria-label={activeGameLabel(game)}
-            onClick={() => onOpenGame?.(game)}
-          >
-            <span className="active-game-top">
-              <span className="active-game-name">{game.opponentName}</span>
-              {showStatus && (
-                <span className={game.playedBack ? 'active-game-status is-back' : 'active-game-status'}>
-                  {game.playedBack ? 'Played back' : 'Waiting'}
-                </span>
-              )}
-            </span>
-            <span className="active-game-record">
-              <span>Wins–losses</span>
-              <strong>{formatRecord(game.wins, game.losses)}</strong>
-              <span className="active-game-open" aria-hidden="true">
-                →
+      {games.map((game) => {
+        const unread = unreadKeys?.has(completedGameKey(game)) ?? false
+        return (
+          <li key={`${game.gameId}:${game.opponentId}`}>
+            <button
+              type="button"
+              className="active-game"
+              aria-label={unread ? `${activeGameLabel(game)}, new` : activeGameLabel(game)}
+              onClick={() => onOpenGame?.(game)}
+            >
+              <span className="active-game-top">
+                <span className="active-game-name">{game.opponentName}</span>
+                {unread && <span className="active-game-status is-new">New</span>}
+                {showStatus && (
+                  <span className={game.playedBack ? 'active-game-status is-back' : 'active-game-status'}>
+                    {game.playedBack ? 'Played back' : 'Waiting'}
+                  </span>
+                )}
               </span>
-            </span>
-          </button>
-        </li>
-      ))}
+              <span className="active-game-record">
+                <span>Wins–losses</span>
+                <strong>{formatRecord(game.wins, game.losses)}</strong>
+                <span className="active-game-open" aria-hidden="true">
+                  →
+                </span>
+              </span>
+            </button>
+          </li>
+        )
+      })}
     </ul>
   )
 }
@@ -285,14 +301,23 @@ function InvitedList({
   )
 }
 
-function TabName({ label }: { label: string }) {
+function TabName({ label, badge = 0 }: { label: string; badge?: number }) {
   const space = label.indexOf(' ')
   const title = space === -1 ? label : label.slice(0, space)
   const detail = space === -1 ? '' : label.slice(space + 1)
   return (
     <span className="game-tab-label">
       <span className="game-tab-title">{title}</span>
-      {detail ? <span className="game-tab-detail">{detail}</span> : null}
+      {detail ? (
+        <span className="game-tab-detail">
+          {detail}
+          {badge > 0 && (
+            <span className="game-tab-badge" aria-hidden="true">
+              {badge > 9 ? '9+' : badge}
+            </span>
+          )}
+        </span>
+      ) : null}
     </span>
   )
 }

@@ -119,6 +119,11 @@
   color: white;
 }
 
+.active-game-status.is-new {
+  background: var(--accent);
+  color: white;
+}
+
 .active-game-record {
   display: flex;
   align-items: baseline;
@@ -246,10 +251,28 @@
 }
 
 .game-tab-detail {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.game-tab-badge {
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 16px;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
 }
 
 .game-panel {

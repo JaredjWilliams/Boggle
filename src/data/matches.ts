@@ -54,7 +54,7 @@ type ScoreListRow = {
 
 type AcceptedRow = {
   game_id: string
-  games: { created_at?: string } | { created_at?: string }[] | null
+  games: { created_at?: string; host_id?: string } | { created_at?: string; host_id?: string }[] | null
 }
 
 type RivalScoreRow = {
@@ -84,7 +84,7 @@ export async function loadLobby(playerId: string): Promise<Lobby> {
       .eq('player_id', playerId),
     supabase
       .from('game_players')
-      .select('game_id, games(created_at)')
+      .select('game_id, games(created_at, host_id)')
       .eq('player_id', playerId)
       .eq('status', 'accepted'),
   ])
@@ -164,12 +164,13 @@ async function loadActiveGames(
   if (seats.error) throw new Error(seats.error.message)
   if (rivals.error) throw new Error(rivals.error.message)
 
-  const created = new Map(accepted.map((row) => [row.game_id, joinedCreatedAt(row.games)]))
+  const gamesById = new Map(accepted.map((row) => [row.game_id, joinedGame(row.games)]))
   const seatRows = ((seats.data ?? []) as OpponentSeatRow[]).map((seat) => ({
     gameId: seat.game_id,
     playerId: seat.player_id,
     status: seat.status ?? '',
-    createdAt: created.get(seat.game_id) ?? '',
+    createdAt: gamesById.get(seat.game_id)?.createdAt ?? '',
+    hostId: gamesById.get(seat.game_id)?.hostId ?? '',
   }))
   const scores = [
     ...viewerScores,
@@ -182,11 +183,11 @@ async function loadActiveGames(
   return assembleActiveGames(playerId, seatRows, scores, names)
 }
 
-function joinedCreatedAt(
-  games: { created_at?: string } | { created_at?: string }[] | null,
-): string {
+function joinedGame(
+  games: { created_at?: string; host_id?: string } | { created_at?: string; host_id?: string }[] | null,
+): { createdAt: string; hostId: string } {
   const game = Array.isArray(games) ? games[0] : games
-  return game?.created_at ?? ''
+  return { createdAt: game?.created_at ?? '', hostId: game?.host_id ?? '' }
 }
 
 export async function loadDailyBoard(): Promise<Board> {

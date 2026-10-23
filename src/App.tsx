@@ -12,8 +12,10 @@ import { PlayerStats } from './components/StatsScreen'
 import { LoginPage } from './components/LoginPage'
 import { StatusBar } from './components/StatusBar'
 import { WordForm } from './components/WordForm'
+import { completedGameKey, playedBackNotices } from './data/activeGames'
 import { hasPlayedDaily } from './data/daily'
 import { answerInvite, createMatch, loadDailyBoard, saveResult } from './data/matches'
+import { loadReadGames, saveReadGames } from './data/readGames'
 import { playedOn } from './data/play'
 import { shakeBoard } from './game/dice'
 import { findAllWords, scoreWord } from './game/words'
@@ -89,8 +91,29 @@ function PlayerGame({
   const [starting, setStarting] = useState(false)
   const startingRef = useRef(false)
   const [dailyPlayed, setDailyPlayed] = useState(false)
+  const [readKeys, setReadKeys] = useState<ReadonlySet<string>>(() =>
+    player.id ? loadReadGames(player.id) : new Set(),
+  )
   const savedMatch = useRef<string | null>(null)
   const dailyRound = useRef(false)
+  const notices = playedBackNotices(lobby.games, readKeys)
+
+  function markCompletedRead(game: ActiveGame) {
+    if (!game.playedBack || !game.hosted) return
+    const key = completedGameKey(game)
+    setReadKeys((current) => {
+      if (current.has(key)) return current
+      const next = new Set(current)
+      next.add(key)
+      if (player.id) saveReadGames(player.id, next)
+      return next
+    })
+  }
+
+  function openSavedGame(game: ActiveGame) {
+    markCompletedRead(game)
+    setOpenGame(game)
+  }
 
   useEffect(() => {
     if (!player.id) return
@@ -213,8 +236,10 @@ function PlayerGame({
         onHome={onHome}
         onSignOut={includeSignOut ? onSignOut : undefined}
         invites={lobby.invites}
+        playedBack={notices}
         onAcceptInvite={(invite) => void accept(invite)}
         onDeclineInvite={(invite) => void decline(invite)}
+        onOpenPlayedBack={openSavedGame}
       />
     )
   }
@@ -336,8 +361,9 @@ function PlayerGame({
             onDailyResults={player.id ? () => setView('daily') : undefined}
             onOpenStats={player.id ? () => setView('stats') : undefined}
             games={lobby.games}
+            readKeys={readKeys}
             invites={lobby.invites}
-            onOpenGame={setOpenGame}
+            onOpenGame={openSavedGame}
             onAcceptInvite={(invite) => void accept(invite)}
             onDeclineInvite={(invite) => void decline(invite)}
           />

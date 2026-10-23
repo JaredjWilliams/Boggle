@@ -407,14 +407,14 @@ describe('home dashboard', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(await screen.findByRole('button', { name: 'Invitations' }))
+    await user.click(await screen.findByRole('button', { name: 'Notifications' }))
 
-    expect(screen.getByRole('dialog', { name: 'Invitations' })).toHaveTextContent(
-      'No invitations right now.',
+    expect(screen.getByRole('dialog', { name: 'Notifications' })).toHaveTextContent(
+      'No notifications right now.',
     )
 
-    await user.click(screen.getByRole('button', { name: 'Close invitations' }))
-    expect(screen.queryByRole('dialog', { name: 'Invitations' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Close notifications' }))
+    expect(screen.queryByRole('dialog', { name: 'Notifications' })).not.toBeInTheDocument()
   })
 
   it('deals a board only after Play solo', async () => {

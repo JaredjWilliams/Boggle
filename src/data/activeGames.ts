@@ -3,6 +3,8 @@ export type ActiveGame = {
   opponentId: string
   opponentName: string
   playedBack: boolean
+  /** The viewer invited this opponent. */
+  hosted: boolean
   wins: number
   losses: number
 }
@@ -12,6 +14,7 @@ export type ActiveSeat = {
   playerId: string
   status: string
   createdAt: string
+  hostId?: string
 }
 
 export type HeadScore = {
@@ -59,6 +62,20 @@ export function selectCompletedGames(
   return games.filter((game) => game.playedBack).slice(0, limit)
 }
 
+export function completedGameKey(game: Pick<ActiveGame, 'gameId' | 'opponentId'>): string {
+  return `${game.gameId}:${game.opponentId}`
+}
+
+/** Completed games the viewer invited and has not opened yet. */
+export function playedBackNotices(
+  games: readonly ActiveGame[],
+  readKeys: ReadonlySet<string>,
+): ActiveGame[] {
+  return selectCompletedGames(games).filter(
+    (game) => game.hosted && !readKeys.has(completedGameKey(game)),
+  )
+}
+
 export function assembleActiveGames(
   viewerId: string,
   seats: readonly ActiveSeat[],
@@ -89,6 +106,7 @@ export function assembleActiveGames(
         playedBack: scores.some(
           (score) => score.gameId === gameId && score.playerId === opponent.playerId,
         ),
+        hosted: viewer.hostId === viewerId,
         wins: record.wins,
         losses: record.losses,
         createdAt: viewer.createdAt,

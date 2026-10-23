@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { completedGameKey, type ActiveGame } from '../data/activeGames'
 import type { Invite } from '../data/matches'
 import './Header.css'
 
@@ -6,20 +7,29 @@ type Props = {
   onHome?: () => void
   onSignOut?: () => void
   invites?: readonly Invite[]
+  playedBack?: readonly ActiveGame[]
   onAcceptInvite?: (invite: Invite) => void
   onDeclineInvite?: (invite: Invite) => void
+  onOpenPlayedBack?: (game: ActiveGame) => void
 }
 
 export function Header({
   onHome,
   onSignOut,
   invites,
+  playedBack,
   onAcceptInvite,
   onDeclineInvite,
+  onOpenPlayedBack,
 }: Props) {
   const [open, setOpen] = useState(false)
   const panelRef = useRef<HTMLElement>(null)
-  const showInvites = invites !== undefined && onAcceptInvite && onDeclineInvite
+  const incoming = invites ?? []
+  const finished = playedBack ?? []
+  const showInvites = invites !== undefined && Boolean(onAcceptInvite) && Boolean(onDeclineInvite)
+  const showPlayedBack = playedBack !== undefined && Boolean(onOpenPlayedBack)
+  const showNotifications = showInvites || showPlayedBack
+  const noticeCount = (showInvites ? incoming.length : 0) + (showPlayedBack ? finished.length : 0)
 
   useEffect(() => {
     if (!open) return
@@ -36,21 +46,21 @@ export function Header({
       <header className="app-header">
         <GridIcon />
         <Wordmark />
-        {(showInvites || onHome || onSignOut) && (
+        {(showNotifications || onHome || onSignOut) && (
           <div className="header-actions">
-            {showInvites && (
+            {showNotifications && (
               <button
                 type="button"
                 className="header-bell"
                 aria-expanded={open}
                 aria-haspopup="dialog"
-                aria-label={inviteLabel(invites.length)}
+                aria-label={notificationLabel(noticeCount)}
                 onClick={() => setOpen((current) => !current)}
               >
                 <BellIcon />
-                {invites.length > 0 && (
+                {noticeCount > 0 && (
                   <span className="header-bell-count" aria-hidden="true">
-                    {invites.length > 9 ? '9+' : invites.length}
+                    {noticeCount > 9 ? '9+' : noticeCount}
                   </span>
                 )}
               </button>
@@ -68,53 +78,81 @@ export function Header({
           </div>
         )}
       </header>
-      {open && showInvites && (
+      {open && showNotifications && (
         <section
           ref={panelRef}
           className="invite-pop"
           role="dialog"
-          aria-label="Invitations"
+          aria-label="Notifications"
           tabIndex={-1}
         >
-          <h2>Invitations</h2>
-          {invites.length === 0 ? (
-            <p>No invitations right now.</p>
+          {noticeCount === 0 ? (
+            <p>No notifications right now.</p>
           ) : (
-            <ul>
-              {invites.map((invite) => (
-                <li key={invite.gameId}>
-                  <p>{invite.hostName} invited you.</p>
-                  <button
-                    type="button"
-                    aria-label={`Play with ${invite.hostName}`}
-                    onClick={() => {
-                      setOpen(false)
-                      onAcceptInvite(invite)
-                    }}
-                  >
-                    Play
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`Decline invitation from ${invite.hostName}`}
-                    onClick={() => {
-                      setOpen(false)
-                      onDeclineInvite(invite)
-                    }}
-                  >
-                    Decline
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <>
+              {showInvites && incoming.length > 0 && onAcceptInvite && onDeclineInvite && (
+                <>
+                  <h2>Invitations</h2>
+                  <ul>
+                    {incoming.map((invite) => (
+                      <li key={invite.gameId}>
+                        <p>{invite.hostName} invited you.</p>
+                        <button
+                          type="button"
+                          aria-label={`Play with ${invite.hostName}`}
+                          onClick={() => {
+                            setOpen(false)
+                            onAcceptInvite(invite)
+                          }}
+                        >
+                          Play
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Decline invitation from ${invite.hostName}`}
+                          onClick={() => {
+                            setOpen(false)
+                            onDeclineInvite(invite)
+                          }}
+                        >
+                          Decline
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              {showPlayedBack && finished.length > 0 && onOpenPlayedBack && (
+                <>
+                  <h2>Played back</h2>
+                  <ul>
+                    {finished.map((game) => (
+                      <li key={completedGameKey(game)}>
+                        <p>{game.opponentName} played you back.</p>
+                        <button
+                          type="button"
+                          aria-label={`View game with ${game.opponentName}`}
+                          onClick={() => {
+                            setOpen(false)
+                            onOpenPlayedBack(game)
+                          }}
+                        >
+                          View
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </>
           )}
         </section>
       )}
-      {open && showInvites && (
+      {open && showNotifications && (
         <button
           type="button"
           className="invite-backdrop"
-          aria-label="Close invitations"
+          aria-label="Close notifications"
           onClick={() => setOpen(false)}
         />
       )}
@@ -122,9 +160,9 @@ export function Header({
   )
 }
 
-function inviteLabel(count: number): string {
-  if (count === 0) return 'Invitations'
-  return `Invitations, ${count} waiting`
+function notificationLabel(count: number): string {
+  if (count === 0) return 'Notifications'
+  return `Notifications, ${count} new`
 }
 
 function GridIcon() {

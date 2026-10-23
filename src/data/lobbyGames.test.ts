@@ -61,7 +61,7 @@ function answer(query: Query): { data: unknown; error: { message: string } | nul
   }
   if (query.table === 'game_players' && has(query, 'eq', 'status', 'accepted')) {
     return {
-      data: [{ game_id: 'g1', games: { created_at: '2026-10-22T18:00:00.000Z' } }],
+      data: [{ game_id: 'g1', games: { created_at: '2026-10-22T18:00:00.000Z', host_id: 'ada' } }],
       error: null,
     }
   }
@@ -115,6 +115,7 @@ describe('loadLobby active games', () => {
           opponentId: 'grace',
           opponentName: 'Grace Hopper',
           playedBack: true,
+          hosted: true,
           wins: 2,
           losses: 0,
         },

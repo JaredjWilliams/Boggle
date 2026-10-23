@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import type { ActiveGame } from '../data/activeGames'
+import { completedGameKey, type ActiveGame } from '../data/activeGames'
 import type { Invite } from '../data/matches'
 import { HomeDashboard } from './HomeDashboard'
 
@@ -85,6 +85,7 @@ describe('HomeDashboard', () => {
       opponentId: 'grace',
       opponentName: 'Grace Hopper',
       playedBack: false,
+      hosted: false,
       wins: 1,
       losses: 0,
     }
@@ -147,6 +148,7 @@ describe('HomeDashboard', () => {
       opponentId: 'grace',
       opponentName: 'Grace Hopper',
       playedBack: false,
+      hosted: false,
       wins: 2,
       losses: 1,
     }
@@ -155,6 +157,7 @@ describe('HomeDashboard', () => {
       opponentId: 'mina',
       opponentName: 'Mina Chen',
       playedBack: true,
+      hosted: false,
       wins: 0,
       losses: 3,
     }
@@ -239,6 +242,7 @@ describe('HomeDashboard', () => {
       opponentId: `player-${index}`,
       opponentName: index === 0 ? 'Newest Player' : index === 10 ? 'Oldest Player' : `Player ${index}`,
       playedBack: true,
+      hosted: false,
       wins: 1,
       losses: 0,
     }))
@@ -259,5 +263,68 @@ describe('HomeDashboard', () => {
 
     await userEvent.click(screen.getByRole('tab', { name: 'Invited games' }))
     expect(screen.getByText('No invitations right now.')).toBeInTheDocument()
+  })
+
+  it('badges each unread game you invited and clears one after it is opened', async () => {
+    const first: ActiveGame = {
+      gameId: 'g1',
+      opponentId: 'grace',
+      opponentName: 'Grace Hopper',
+      playedBack: true,
+      hosted: true,
+      wins: 1,
+      losses: 0,
+    }
+    const second: ActiveGame = {
+      gameId: 'g2',
+      opponentId: 'mina',
+      opponentName: 'Mina Chen',
+      playedBack: true,
+      hosted: true,
+      wins: 0,
+      losses: 1,
+    }
+    const joined: ActiveGame = {
+      gameId: 'g3',
+      opponentId: 'ada',
+      opponentName: 'Ada Lovelace',
+      playedBack: true,
+      hosted: false,
+      wins: 2,
+      losses: 0,
+    }
+    const onOpenGame = vi.fn()
+    const { rerender } = render(
+      <HomeDashboard
+        {...props}
+        games={[first, second, joined]}
+        readKeys={new Set()}
+        onOpenGame={onOpenGame}
+      />,
+    )
+
+    const tab = screen.getByRole('tab', { name: 'Completed games, 2 new' })
+    expect(tab).toHaveTextContent('2')
+
+    await userEvent.click(tab)
+    const finished = screen.getByRole('list', { name: 'Completed games' })
+    expect(within(finished).getByRole('button', { name: /Grace Hopper/ })).toHaveTextContent('New')
+    expect(within(finished).getByRole('button', { name: /Ada Lovelace/ })).not.toHaveTextContent('New')
+
+    await userEvent.click(within(finished).getByRole('button', { name: /Grace Hopper/ }))
+    expect(onOpenGame).toHaveBeenCalledExactlyOnceWith(first)
+
+    rerender(
+      <HomeDashboard
+        {...props}
+        games={[first, second, joined]}
+        readKeys={new Set([completedGameKey(first)])}
+        onOpenGame={onOpenGame}
+      />,
+    )
+
+    expect(screen.getByRole('tab', { name: 'Completed games, 1 new' })).toHaveTextContent('1')
+    expect(screen.getByRole('button', { name: /Grace Hopper/ })).not.toHaveTextContent('New')
+    expect(screen.getByRole('button', { name: /Mina Chen/ })).toHaveTextContent('New')
   })
 })

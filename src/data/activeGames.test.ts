@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   activeGameLabel,
   assembleActiveGames,
+  completedGameKey,
   formatRecord,
+  playedBackNotices,
   selectActiveGames,
   selectCompletedGames,
   type ActiveGame,
@@ -43,6 +45,7 @@ describe('assembleActiveGames', () => {
         opponentId: 'grace',
         opponentName: 'Grace Hopper',
         playedBack: false,
+        hosted: false,
         wins: 1,
         losses: 1,
       },
@@ -51,6 +54,7 @@ describe('assembleActiveGames', () => {
         opponentId: 'grace',
         opponentName: 'Grace Hopper',
         playedBack: true,
+        hosted: false,
         wins: 1,
         losses: 1,
       },
@@ -76,6 +80,7 @@ describe('assembleActiveGames', () => {
         opponentId: 'mina',
         opponentName: 'A player',
         playedBack: false,
+        hosted: false,
         wins: 0,
         losses: 1,
       },
@@ -84,6 +89,7 @@ describe('assembleActiveGames', () => {
         opponentId: 'grace',
         opponentName: 'Grace Hopper',
         playedBack: true,
+        hosted: false,
         wins: 1,
         losses: 0,
       },
@@ -98,6 +104,7 @@ describe('assembleActiveGames', () => {
         opponentId: 'grace',
         opponentName: 'Grace Hopper',
         playedBack: true,
+        hosted: true,
         wins: 1,
         losses: 0,
       }),
@@ -108,6 +115,7 @@ describe('assembleActiveGames', () => {
         opponentId: 'grace',
         opponentName: 'Grace Hopper',
         playedBack: false,
+        hosted: true,
         wins: 0,
         losses: 1,
       }),
@@ -139,17 +147,55 @@ describe('selectActiveGames', () => {
   })
 })
 
-function game(gameId: string, opponentName: string, playedBack: boolean): ActiveGame {
+describe('playedBackNotices', () => {
+  it('notifies the inviter once for each unread game the other player finished', () => {
+    const seats: ActiveSeat[] = [
+      seat('g1', 'ada', 'accepted', '2026-10-22T18:00:00.000Z', 'ada'),
+      seat('g1', 'grace', 'accepted', '2026-10-22T18:00:00.000Z', 'ada'),
+      seat('g2', 'ada', 'accepted', '2026-10-21T18:00:00.000Z', 'grace'),
+      seat('g2', 'grace', 'accepted', '2026-10-21T18:00:00.000Z', 'grace'),
+      seat('g3', 'ada', 'accepted', '2026-10-20T18:00:00.000Z', 'ada'),
+      seat('g3', 'mina', 'invited', '2026-10-20T18:00:00.000Z', 'ada'),
+    ]
+    const scores: HeadScore[] = [
+      { gameId: 'g1', playerId: 'grace', score: 10 },
+      { gameId: 'g2', playerId: 'ada', score: 4 },
+      { gameId: 'g2', playerId: 'grace', score: 10 },
+    ]
+
+    const games = assembleActiveGames('ada', seats, scores, names)
+
+    expect(games.map((game) => ({ gameId: game.gameId, playedBack: game.playedBack, hosted: game.hosted }))).toEqual([
+      { gameId: 'g1', playedBack: true, hosted: true },
+      { gameId: 'g2', playedBack: true, hosted: false },
+      { gameId: 'g3', playedBack: false, hosted: true },
+    ])
+    expect(selectActiveGames(games).map((game) => game.gameId)).toEqual(['g3'])
+    expect(playedBackNotices(games, new Set()).map((game) => game.gameId)).toEqual(['g1'])
+
+    const read = new Set([completedGameKey(games[0])])
+    expect(playedBackNotices(games, read)).toEqual([])
+  })
+})
+
+function game(gameId: string, opponentName: string, playedBack: boolean, hosted = false): ActiveGame {
   return {
     gameId,
     opponentId: 'grace',
     opponentName,
     playedBack,
+    hosted,
     wins: 1,
     losses: 0,
   }
 }
 
-function seat(gameId: string, playerId: string, status: string, createdAt: string): ActiveSeat {
-  return { gameId, playerId, status, createdAt }
+function seat(
+  gameId: string,
+  playerId: string,
+  status: string,
+  createdAt: string,
+  hostId = '',
+): ActiveSeat {
+  return { gameId, playerId, status, createdAt, hostId }
 }

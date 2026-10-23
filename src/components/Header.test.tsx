@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import type { ActiveGame } from '../data/activeGames'
 import type { Invite } from '../data/matches'
 import { Header } from './Header'
 
@@ -18,19 +19,19 @@ describe('Header invitations', () => {
   it('hides the notification icon until invitations are available', () => {
     render(<Header onSignOut={vi.fn()} />)
 
-    expect(screen.queryByRole('button', { name: 'Invitations' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Notifications' })).not.toBeInTheDocument()
   })
 
   it('shows an empty invitation list from the bell', async () => {
     const user = userEvent.setup()
     render(<Header invites={[]} onAcceptInvite={vi.fn()} onDeclineInvite={vi.fn()} />)
 
-    expect(screen.queryByRole('dialog', { name: 'Invitations' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Notifications' })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Invitations' }))
+    await user.click(screen.getByRole('button', { name: 'Notifications' }))
 
-    expect(screen.getByRole('dialog', { name: 'Invitations' })).toHaveTextContent(
-      'No invitations right now.',
+    expect(screen.getByRole('dialog', { name: 'Notifications' })).toHaveTextContent(
+      'No notifications right now.',
     )
   })
 
@@ -46,17 +47,17 @@ describe('Header invitations', () => {
       />,
     )
 
-    const bell = screen.getByRole('button', { name: 'Invitations, 1 waiting' })
+    const bell = screen.getByRole('button', { name: 'Notifications, 1 new' })
     expect(bell).toHaveTextContent('1')
 
     await user.click(bell)
-    expect(screen.getByRole('dialog', { name: 'Invitations' })).toHaveTextContent(
+    expect(screen.getByRole('dialog', { name: 'Notifications' })).toHaveTextContent(
       'Grace Hopper invited you.',
     )
 
     await user.click(screen.getByRole('button', { name: 'Play with Grace Hopper' }))
     expect(onAcceptInvite).toHaveBeenCalledExactlyOnceWith(invite)
-    expect(screen.queryByRole('dialog', { name: 'Invitations' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Notifications' })).not.toBeInTheDocument()
 
     rerender(
       <Header
@@ -65,9 +66,44 @@ describe('Header invitations', () => {
         onDeclineInvite={onDeclineInvite}
       />,
     )
-    await user.click(screen.getByRole('button', { name: 'Invitations, 1 waiting' }))
+    await user.click(screen.getByRole('button', { name: 'Notifications, 1 new' }))
     await user.click(screen.getByRole('button', { name: 'Decline invitation from Grace Hopper' }))
 
     expect(onDeclineInvite).toHaveBeenCalledExactlyOnceWith(invite)
+  })
+
+  it('counts a played-back game and opens it from the bell', async () => {
+    const user = userEvent.setup()
+    const onOpenPlayedBack = vi.fn()
+    const played: ActiveGame = {
+      gameId: 'g-old',
+      opponentId: 'mina',
+      opponentName: 'Mina Chen',
+      playedBack: true,
+      hosted: true,
+      wins: 1,
+      losses: 0,
+    }
+    render(
+      <Header
+        invites={[invite]}
+        onAcceptInvite={vi.fn()}
+        onDeclineInvite={vi.fn()}
+        playedBack={[played]}
+        onOpenPlayedBack={onOpenPlayedBack}
+      />,
+    )
+
+    const bell = screen.getByRole('button', { name: 'Notifications, 2 new' })
+    expect(bell).toHaveTextContent('2')
+
+    await user.click(bell)
+    const dialog = screen.getByRole('dialog', { name: 'Notifications' })
+    expect(dialog).toHaveTextContent('Grace Hopper invited you.')
+    expect(dialog).toHaveTextContent('Mina Chen played you back.')
+
+    await user.click(screen.getByRole('button', { name: 'View game with Mina Chen' }))
+    expect(onOpenPlayedBack).toHaveBeenCalledExactlyOnceWith(played)
+    expect(screen.queryByRole('dialog', { name: 'Notifications' })).not.toBeInTheDocument()
   })
 })
