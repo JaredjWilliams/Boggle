@@ -34,6 +34,12 @@ export function rankedWords(words: readonly ScoredWord[]): ScoredWord[] {
   return [...words].sort((left, right) => compareWords(left.word, right.word))
 }
 
+export function longestWord(words: readonly ScoredWord[]): string {
+  const named = words.filter((item) => item.word.trim())
+  if (named.length === 0) return ''
+  return rankedWords(named)[0].word
+}
+
 export function boardWords(
   found: readonly ScoredWord[],
   missed: readonly ScoredWord[],

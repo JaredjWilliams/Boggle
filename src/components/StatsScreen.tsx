@@ -6,6 +6,8 @@ import {
   formatPercent,
   gamesAgainst,
   headToHead,
+  longestFound,
+  longestFoundNote,
   opponentNames,
   playedCount,
   trendNote,
@@ -72,6 +74,7 @@ export function StatsScreen({ playerName, games, loading, notice, onRetry }: Pro
   const summary = averages(visible)
   const rate = winRate(record)
   const solos = opponent ? 0 : visible.filter((game) => game.opponents.length === 0).length
+  const bestWord = longestFound(visible)
   const wordPoints = visible.map((game) => ({ id: game.id, playedOn: game.playedOn, value: game.words }))
   const scorePoints = visible.map((game) => ({ id: game.id, playedOn: game.playedOn, value: game.score }))
 
@@ -134,6 +137,14 @@ export function StatsScreen({ playerName, games, loading, notice, onRetry }: Pro
             <ScatterPlot label="Words found on each date" points={wordPoints} valueName="words" />
           </section>
 
+          <section className="stat-card" aria-labelledby="longest-heading">
+            <h2 id="longest-heading">Longest word</h2>
+            <p className={bestWord ? 'stat-figure stat-word' : 'stat-figure'}>
+              {bestWord ? bestWord.longest : '—'}
+            </p>
+            <p className="stat-note">{longestFoundNote(visible)}</p>
+          </section>
+
           <section className="stat-card" aria-labelledby="score-heading">
             <h2 id="score-heading">Points a game</h2>
             <p className="stat-figure">{summary.score === null ? '—' : formatAverage(summary.score)}</p>
@@ -162,5 +173,5 @@ function recordNote(
     played === 0 ? 'No head-to-head games yet.' : `${played} games with another player.`
   if (solos === 0) return result
   const soloLabel = solos === 1 ? '1 solo game stays' : `${solos} solo games stay`
-  return `${result} ${soloLabel} on the words and score charts.`
+  return `${result} ${soloLabel} on the words, score, and longest-word cards.`
 }

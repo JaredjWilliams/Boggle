@@ -10,6 +10,7 @@ const games: GameStat[] = [
     playedOn: '2026-10-01',
     words: 4,
     score: 1000,
+    longest: 'star',
     opponents: [{ name: 'Mina Chen', score: 400 }],
   },
   {
@@ -17,6 +18,7 @@ const games: GameStat[] = [
     playedOn: '2026-10-08',
     words: 8,
     score: 2000,
+    longest: 'quartz',
     opponents: [{ name: 'Jonah Park', score: 2400 }],
   },
   {
@@ -24,6 +26,7 @@ const games: GameStat[] = [
     playedOn: '2026-10-15',
     words: 6,
     score: 1500,
+    longest: 'cats',
     opponents: [{ name: 'Mina Chen', score: 1500 }],
   },
 ]
@@ -48,6 +51,9 @@ describe('StatsScreen', () => {
     expect(within(words).getByRole('img', { name: 'Words found on each date' })).toBeInTheDocument()
     expect(within(words).getAllByTestId('trend-line')).toHaveLength(1)
 
+    expect(figure('Longest word')).toHaveTextContent('quartz')
+    expect(section('Longest word')).toHaveTextContent('6 letters, found Oct 8 against Jonah Park.')
+
     const score = section('Points a game')
     expect(figure('Points a game')).toHaveTextContent('1,500')
     expect(score).toHaveTextContent('Up about 250 points a week.')
@@ -66,6 +72,8 @@ describe('StatsScreen', () => {
     await userEvent.click(screen.getByRole('radio', { name: 'Mina Chen' }))
 
     expect(figure('Words a game')).toHaveTextContent('5')
+    expect(figure('Longest word')).toHaveTextContent('cats')
+    expect(section('Longest word')).toHaveTextContent('4 letters, found Oct 15 against Mina Chen.')
     expect(figure('Points a game')).toHaveTextContent('1,250')
     expect(section('Win rate')).toHaveTextContent('50%')
     expect(section('Win rate')).toHaveTextContent('Wins')
@@ -83,6 +91,8 @@ describe('StatsScreen', () => {
     const { rerender } = render(<StatsScreen {...props} games={[]} />)
 
     expect(screen.getAllByText('No games yet')).toHaveLength(2)
+    expect(figure('Longest word')).toHaveTextContent('—')
+    expect(section('Longest word')).toHaveTextContent('No games in this view.')
     expect(section('Win rate')).toHaveTextContent('—')
     expect(section('Win rate')).toHaveTextContent('No head-to-head games yet.')
 
@@ -98,13 +108,15 @@ describe('StatsScreen', () => {
         {...props}
         games={[
           ...games,
-          { id: 'solo', playedOn: '2026-10-16', words: 3, score: 300, opponents: [] },
+          { id: 'solo', playedOn: '2026-10-16', words: 3, score: 300, longest: 'zen', opponents: [] },
         ]}
       />,
     )
 
     expect(figure('Words a game')).toHaveTextContent('5.3')
-    expect(section('Win rate')).toHaveTextContent('1 solo game stays on the words and score charts.')
+    expect(section('Win rate')).toHaveTextContent(
+      '1 solo game stays on the words, score, and longest-word cards.',
+    )
   })
 })
 

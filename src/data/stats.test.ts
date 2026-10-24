@@ -11,7 +11,7 @@ describe('stats rows', () => {
           {
             game_id: 'g1',
             score: 100,
-            words: [{ word: 'cat' }, { word: 'rat' }],
+            words: [{ word: 'cat' }, { word: '  ' }, { word: 'quartz', points: 1400 }],
             games: { created_at: created },
           },
           { game_id: 'g2', score: 50, words: null, games: null },
@@ -25,8 +25,9 @@ describe('stats rows', () => {
       {
         id: 'g1',
         playedOn: playedOn(new Date(created)),
-        words: 2,
+        words: 3,
         score: 100,
+        longest: 'quartz',
         opponents: [
           { name: 'Mina Chen', score: 40 },
           { name: 'Jonah Park', score: 80 },
@@ -53,6 +54,7 @@ describe('stats rows', () => {
         playedOn: '2026-10-04',
         words: 9,
         score: 1800,
+        longest: '',
         opponents: [{ name: 'Riley Okonkwo', score: 900 }],
       },
     ])

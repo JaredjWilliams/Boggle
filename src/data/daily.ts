@@ -1,7 +1,9 @@
+import { longestWord } from '../game/match'
 import type { ScoredWord } from '../game/round'
-import { compareWords } from '../game/words'
 import { getSupabase } from '../lib/supabase'
 import { playedOn } from './play'
+
+export { longestWord }
 
 export type DailyStanding = {
   playerId: string
@@ -63,12 +65,6 @@ export function dailyStandings(rows: readonly DailyRow[]): DailyStanding[] {
       }
     })
     .sort((left, right) => right.score - left.score || left.name.localeCompare(right.name))
-}
-
-export function longestWord(words: readonly ScoredWord[]): string {
-  const named = words.filter((item) => item.word.trim())
-  if (named.length === 0) return ''
-  return [...named].sort((left, right) => compareWords(left.word, right.word))[0].word
 }
 
 function scoredWords(value: unknown): ScoredWord[] {

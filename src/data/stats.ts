@@ -1,3 +1,5 @@
+import { longestWord } from '../game/match'
+import type { ScoredWord } from '../game/round'
 import { playedOn } from './play'
 import { getSupabase } from '../lib/supabase'
 import type { GameStat, OpponentResult } from '../stats/series'
@@ -63,6 +65,7 @@ export function historyGames(rows: readonly HistoryRow[]): GameStat[] {
         playedOn: row.played_on,
         words: row.words_found,
         score: row.score,
+        longest: '',
         opponents,
       },
     ]
@@ -90,9 +93,21 @@ export function resultGames(mine: readonly MineRow[], others: readonly OtherRow[
         playedOn: playedOn(new Date(parsed)),
         words: Array.isArray(row.words) ? row.words.length : 0,
         score: row.score,
+        longest: longestWord(namedWords(row.words)),
         opponents: rivals.get(row.game_id) ?? [],
       },
     ]
+  })
+}
+
+function namedWords(value: unknown): ScoredWord[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item) => {
+    if (!item || typeof item !== 'object') return []
+    const record = item as { word?: unknown; points?: unknown }
+    if (typeof record.word !== 'string' || !record.word.trim()) return []
+    const points = typeof record.points === 'number' ? record.points : 0
+    return [{ word: record.word, points }]
   })
 }
 

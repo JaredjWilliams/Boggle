@@ -1,3 +1,5 @@
+import { compareWords } from '../game/words'
+
 export type OpponentResult = {
   name: string
   score: number
@@ -8,6 +10,7 @@ export type GameStat = {
   playedOn: string
   words: number
   score: number
+  longest: string
   opponents: OpponentResult[]
 }
 
@@ -55,6 +58,30 @@ export function opponentNames(games: readonly GameStat[]): string[] {
 export function gamesAgainst(games: readonly GameStat[], opponent: string | null): GameStat[] {
   if (!opponent) return [...games]
   return games.filter((game) => game.opponents.some((item) => item.name === opponent))
+}
+
+export function longestFound(games: readonly GameStat[]): GameStat | null {
+  const found = games.filter((game) => game.longest.trim())
+  if (found.length === 0) return null
+  return [...found].sort(
+    (left, right) =>
+      compareWords(left.longest, right.longest) ||
+      left.playedOn.localeCompare(right.playedOn) ||
+      left.id.localeCompare(right.id),
+  )[0]
+}
+
+export function longestFoundNote(games: readonly GameStat[]): string {
+  if (games.length === 0) return 'No games in this view.'
+  const best = longestFound(games)
+  if (!best) return 'No word saved in this view.'
+  const letters = best.longest.length === 1 ? '1 letter' : `${best.longest.length} letters`
+  const when = formatPlayedOn(best.playedOn)
+  const names = best.opponents.map((opponent) => opponent.name).filter(Boolean)
+  if (names.length === 0) return `${letters}, found ${when}.`
+  if (names.length === 1) return `${letters}, found ${when} against ${names[0]}.`
+  const leading = names.slice(0, -1).join(', ')
+  return `${letters}, found ${when} against ${leading} and ${names[names.length - 1]}.`
 }
 
 export function averages(games: readonly GameStat[]): { words: number | null; score: number | null } {

@@ -7,6 +7,8 @@ import {
   gamesAgainst,
   headToHead,
   linearTrend,
+  longestFound,
+  longestFoundNote,
   niceMax,
   opponentNames,
   trendNote,
@@ -20,6 +22,7 @@ const games: GameStat[] = [
     playedOn: '2026-10-01',
     words: 4,
     score: 1000,
+    longest: 'star',
     opponents: [{ name: 'Mina Chen', score: 400 }],
   },
   {
@@ -27,6 +30,7 @@ const games: GameStat[] = [
     playedOn: '2026-10-08',
     words: 8,
     score: 2000,
+    longest: 'quartz',
     opponents: [{ name: 'Jonah Park', score: 2400 }],
   },
   {
@@ -34,6 +38,7 @@ const games: GameStat[] = [
     playedOn: '2026-10-15',
     words: 6,
     score: 1500,
+    longest: 'cats',
     opponents: [{ name: 'Mina Chen', score: 1500 }],
   },
 ]
@@ -43,6 +48,44 @@ describe('stats series', () => {
     expect(opponentNames(games)).toEqual(['Jonah Park', 'Mina Chen'])
     expect(gamesAgainst(games, 'Mina Chen').map((game) => game.id)).toEqual(['a', 'c'])
     expect(gamesAgainst(games, null)).toHaveLength(3)
+  })
+
+  it('keeps the longest saved word, then the earlier game', () => {
+    expect(longestFound(games)?.longest).toBe('quartz')
+    expect(longestFoundNote(games)).toBe('6 letters, found Oct 8 against Jonah Park.')
+    expect(longestFoundNote(gamesAgainst(games, 'Mina Chen'))).toBe(
+      '4 letters, found Oct 15 against Mina Chen.',
+    )
+    expect(longestFound([])).toBeNull()
+    expect(longestFoundNote([])).toBe('No games in this view.')
+    expect(
+      longestFoundNote([
+        { id: 'old', playedOn: '2026-10-01', words: 1, score: 1, longest: '  ', opponents: [] },
+      ]),
+    ).toBe('No word saved in this view.')
+    expect(
+      longestFoundNote([
+        {
+          id: 'solo',
+          playedOn: '2026-10-02',
+          words: 2,
+          score: 2,
+          longest: 'lint',
+          opponents: [],
+        },
+        {
+          id: 'pair',
+          playedOn: '2026-10-03',
+          words: 2,
+          score: 2,
+          longest: 'lint',
+          opponents: [
+            { name: 'Mina Chen', score: 1 },
+            { name: 'Jonah Park', score: 1 },
+          ],
+        },
+      ]),
+    ).toBe('4 letters, found Oct 2.')
   })
 
   it('averages words and points across the games in view', () => {

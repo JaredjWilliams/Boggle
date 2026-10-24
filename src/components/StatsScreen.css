@@ -133,6 +133,14 @@
   line-height: 1;
 }
 
+.stat-figure.stat-word {
+  font-size: 32px;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+}
+
 .stat-note,
 .chart-range {
   margin: 6px 0 0;
