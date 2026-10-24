@@ -2,7 +2,7 @@ import { longestWord } from '../game/match'
 import type { ScoredWord } from '../game/round'
 import { playedOn } from './play'
 import { getSupabase } from '../lib/supabase'
-import type { GameStat, OpponentResult } from '../stats/series'
+import { countByLength, type GameStat, type OpponentResult } from '../stats/series'
 
 type HistoryRow = {
   id: string
@@ -66,6 +66,7 @@ export function historyGames(rows: readonly HistoryRow[]): GameStat[] {
         words: row.words_found,
         score: row.score,
         longest: '',
+        byLength: {},
         opponents,
       },
     ]
@@ -87,13 +88,15 @@ export function resultGames(mine: readonly MineRow[], others: readonly OtherRow[
     if (!created) return []
     const parsed = Date.parse(created)
     if (Number.isNaN(parsed)) return []
+    const found = namedWords(row.words)
     return [
       {
         id: row.game_id,
         playedOn: playedOn(new Date(parsed)),
         words: Array.isArray(row.words) ? row.words.length : 0,
         score: row.score,
-        longest: longestWord(namedWords(row.words)),
+        longest: longestWord(found),
+        byLength: countByLength(found.map((item) => item.word)),
         opponents: rivals.get(row.game_id) ?? [],
       },
     ]

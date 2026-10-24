@@ -28,6 +28,7 @@ describe('stats rows', () => {
         words: 3,
         score: 100,
         longest: 'quartz',
+        byLength: { 3: 1, 6: 1 },
         opponents: [
           { name: 'Mina Chen', score: 40 },
           { name: 'Jonah Park', score: 80 },
@@ -55,6 +56,7 @@ describe('stats rows', () => {
         words: 9,
         score: 1800,
         longest: '',
+        byLength: {},
         opponents: [{ name: 'Riley Okonkwo', score: 900 }],
       },
     ])

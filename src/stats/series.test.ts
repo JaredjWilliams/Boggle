@@ -3,9 +3,11 @@ import {
   averages,
   axisMax,
   compactNumber,
+  countByLength,
   formatAverage,
   gamesAgainst,
   headToHead,
+  lengthNote,
   linearTrend,
   longestFound,
   longestFoundNote,
@@ -13,6 +15,7 @@ import {
   opponentNames,
   trendNote,
   winRate,
+  wordsByLength,
   type GameStat,
 } from './series'
 
@@ -23,6 +26,7 @@ const games: GameStat[] = [
     words: 4,
     score: 1000,
     longest: 'star',
+    byLength: { 3: 2, 4: 2 },
     opponents: [{ name: 'Mina Chen', score: 400 }],
   },
   {
@@ -31,6 +35,7 @@ const games: GameStat[] = [
     words: 8,
     score: 2000,
     longest: 'quartz',
+    byLength: { 3: 1, 4: 2, 5: 3, 6: 2 },
     opponents: [{ name: 'Jonah Park', score: 2400 }],
   },
   {
@@ -39,6 +44,7 @@ const games: GameStat[] = [
     words: 6,
     score: 1500,
     longest: 'cats',
+    byLength: { 3: 3, 4: 2, 5: 1 },
     opponents: [{ name: 'Mina Chen', score: 1500 }],
   },
 ]
@@ -60,7 +66,7 @@ describe('stats series', () => {
     expect(longestFoundNote([])).toBe('No games in this view.')
     expect(
       longestFoundNote([
-        { id: 'old', playedOn: '2026-10-01', words: 1, score: 1, longest: '  ', opponents: [] },
+        { id: 'old', playedOn: '2026-10-01', words: 1, score: 1, longest: '  ', byLength: {}, opponents: [] },
       ]),
     ).toBe('No word saved in this view.')
     expect(
@@ -71,6 +77,7 @@ describe('stats series', () => {
           words: 2,
           score: 2,
           longest: 'lint',
+          byLength: { 4: 2 },
           opponents: [],
         },
         {
@@ -79,6 +86,7 @@ describe('stats series', () => {
           words: 2,
           score: 2,
           longest: 'lint',
+          byLength: { 4: 2 },
           opponents: [
             { name: 'Mina Chen', score: 1 },
             { name: 'Jonah Park', score: 1 },
@@ -86,6 +94,53 @@ describe('stats series', () => {
         },
       ]),
     ).toBe('4 letters, found Oct 2.')
+  })
+
+  it('totals saved words at each length', () => {
+    expect(countByLength(['cat', '  ', 'a', 'quartz', 'lettered'])).toEqual({ 3: 1, 6: 1, 8: 1 })
+    expect(wordsByLength(games)).toEqual([
+      { length: 3, count: 6 },
+      { length: 4, count: 6 },
+      { length: 5, count: 4 },
+      { length: 6, count: 2 },
+      { length: 7, count: 0 },
+      { length: 8, count: 0 },
+    ])
+    expect(
+      wordsByLength([
+        {
+          id: 'long',
+          playedOn: '2026-10-01',
+          words: 2,
+          score: 1,
+          longest: 'letterings',
+          byLength: { 3: 1, 10: 2, 2: 4 },
+          opponents: [],
+        },
+      ]),
+    ).toEqual([
+      { length: 3, count: 1 },
+      { length: 4, count: 0 },
+      { length: 5, count: 0 },
+      { length: 6, count: 0 },
+      { length: 7, count: 0 },
+      { length: 8, count: 0 },
+      { length: 9, count: 0 },
+      { length: 10, count: 2 },
+    ])
+    expect(lengthNote(games)).toBe('18 words across these games.')
+    expect(lengthNote(gamesAgainst(games, 'Mina Chen'))).toBe('10 words across these games.')
+    expect(lengthNote([])).toBe('No games in this view.')
+    expect(
+      lengthNote([
+        { id: 'old', playedOn: '2026-10-01', words: 9, score: 1, longest: '', byLength: {}, opponents: [] },
+      ]),
+    ).toBe('No words saved in this view.')
+    expect(
+      lengthNote([
+        { id: 'one', playedOn: '2026-10-01', words: 1, score: 1, longest: 'cat', byLength: { 3: 1 }, opponents: [] },
+      ]),
+    ).toBe('1 word across these games.')
   })
 
   it('averages words and points across the games in view', () => {

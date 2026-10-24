@@ -148,6 +148,43 @@
   font-size: 14px;
 }
 
+.length-counts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.length-counts li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 44px;
+}
+
+.length-counts span {
+  flex: none;
+  width: 2.5em;
+  color: #6d6458;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: end;
+  white-space: nowrap;
+}
+
+.length-counts strong {
+  font-size: 22px;
+  font-variant-numeric: lining-nums tabular-nums;
+  line-height: 1;
+}
+
+.length-counts li.is-empty strong {
+  color: #6d6458;
+}
+
 .chart-block {
   margin: 4px 0 0;
 }
@@ -222,6 +259,11 @@
 
   .legend {
     width: 100%;
+  }
+
+  .length-counts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 12px;
   }
 }
 

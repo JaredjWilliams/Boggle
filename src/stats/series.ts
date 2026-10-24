@@ -11,7 +11,13 @@ export type GameStat = {
   words: number
   score: number
   longest: string
+  byLength: Readonly<Record<number, number>>
   opponents: OpponentResult[]
+}
+
+export type LengthTotal = {
+  length: number
+  count: number
 }
 
 export type HeadToHead = {
@@ -82,6 +88,40 @@ export function longestFoundNote(games: readonly GameStat[]): string {
   if (names.length === 1) return `${letters}, found ${when} against ${names[0]}.`
   const leading = names.slice(0, -1).join(', ')
   return `${letters}, found ${when} against ${leading} and ${names[names.length - 1]}.`
+}
+
+export function countByLength(words: readonly string[]): Record<number, number> {
+  const counts: Record<number, number> = {}
+  for (const word of words) {
+    const length = word.trim().length
+    if (length < 3) continue
+    counts[length] = (counts[length] ?? 0) + 1
+  }
+  return counts
+}
+
+export function wordsByLength(games: readonly GameStat[]): LengthTotal[] {
+  const totals = new Map<number, number>()
+  for (const game of games) {
+    for (const [key, count] of Object.entries(game.byLength)) {
+      const length = Number(key)
+      if (!Number.isInteger(length) || length < 3 || count <= 0) continue
+      totals.set(length, (totals.get(length) ?? 0) + count)
+    }
+  }
+  const highest = totals.size === 0 ? 8 : Math.max(8, ...totals.keys())
+  return Array.from({ length: highest - 2 }, (_, index) => {
+    const length = index + 3
+    return { length, count: totals.get(length) ?? 0 }
+  })
+}
+
+export function lengthNote(games: readonly GameStat[]): string {
+  if (games.length === 0) return 'No games in this view.'
+  const total = wordsByLength(games).reduce((sum, row) => sum + row.count, 0)
+  if (total === 0) return 'No words saved in this view.'
+  const label = total === 1 ? '1 word' : `${formatCount(total)} words`
+  return `${label} across these games.`
 }
 
 export function averages(games: readonly GameStat[]): { words: number | null; score: number | null } {

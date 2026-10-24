@@ -3,15 +3,18 @@ import { loadPlayerStats } from '../data/stats'
 import {
   averages,
   formatAverage,
+  formatCount,
   formatPercent,
   gamesAgainst,
   headToHead,
+  lengthNote,
   longestFound,
   longestFoundNote,
   opponentNames,
   playedCount,
   trendNote,
   winRate,
+  wordsByLength,
   type GameStat,
 } from '../stats/series'
 import { PieChart, ScatterPlot } from './StatCharts'
@@ -75,6 +78,7 @@ export function StatsScreen({ playerName, games, loading, notice, onRetry }: Pro
   const rate = winRate(record)
   const solos = opponent ? 0 : visible.filter((game) => game.opponents.length === 0).length
   const bestWord = longestFound(visible)
+  const lengths = wordsByLength(visible)
   const wordPoints = visible.map((game) => ({ id: game.id, playedOn: game.playedOn, value: game.words }))
   const scorePoints = visible.map((game) => ({ id: game.id, playedOn: game.playedOn, value: game.score }))
 
@@ -145,6 +149,19 @@ export function StatsScreen({ playerName, games, loading, notice, onRetry }: Pro
             <p className="stat-note">{longestFoundNote(visible)}</p>
           </section>
 
+          <section className="stat-card" aria-labelledby="lengths-heading">
+            <h2 id="lengths-heading">Words by length</h2>
+            <ul className="length-counts" aria-label="Words found at each length">
+              {lengths.map((row) => (
+                <li key={row.length} className={row.count === 0 ? 'is-empty' : undefined}>
+                  <span>{row.length}+</span>
+                  <strong>{formatCount(row.count)}</strong>
+                </li>
+              ))}
+            </ul>
+            <p className="stat-note">{lengthNote(visible)}</p>
+          </section>
+
           <section className="stat-card" aria-labelledby="score-heading">
             <h2 id="score-heading">Points a game</h2>
             <p className="stat-figure">{summary.score === null ? '—' : formatAverage(summary.score)}</p>
@@ -173,5 +190,5 @@ function recordNote(
     played === 0 ? 'No head-to-head games yet.' : `${played} games with another player.`
   if (solos === 0) return result
   const soloLabel = solos === 1 ? '1 solo game stays' : `${solos} solo games stay`
-  return `${result} ${soloLabel} on the words, score, and longest-word cards.`
+  return `${result} ${soloLabel} on the words, score, longest-word, and length cards.`
 }

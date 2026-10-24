@@ -11,6 +11,7 @@ const games: GameStat[] = [
     words: 4,
     score: 1000,
     longest: 'star',
+    byLength: { 3: 2, 4: 2 },
     opponents: [{ name: 'Mina Chen', score: 400 }],
   },
   {
@@ -19,6 +20,7 @@ const games: GameStat[] = [
     words: 8,
     score: 2000,
     longest: 'quartz',
+    byLength: { 3: 1, 4: 2, 5: 3, 6: 2 },
     opponents: [{ name: 'Jonah Park', score: 2400 }],
   },
   {
@@ -27,6 +29,7 @@ const games: GameStat[] = [
     words: 6,
     score: 1500,
     longest: 'cats',
+    byLength: { 3: 3, 4: 2, 5: 1 },
     opponents: [{ name: 'Mina Chen', score: 1500 }],
   },
 ]
@@ -54,6 +57,14 @@ describe('StatsScreen', () => {
     expect(figure('Longest word')).toHaveTextContent('quartz')
     expect(section('Longest word')).toHaveTextContent('6 letters, found Oct 8 against Jonah Park.')
 
+    const lengths = section('Words by length')
+    expect(lengths).toHaveTextContent('18 words across these games.')
+    expect(lengthCount('3+')).toHaveTextContent('6')
+    expect(lengthCount('4+')).toHaveTextContent('6')
+    expect(lengthCount('5+')).toHaveTextContent('4')
+    expect(lengthCount('6+')).toHaveTextContent('2')
+    expect(lengthCount('8+')).toHaveTextContent('0')
+
     const score = section('Points a game')
     expect(figure('Points a game')).toHaveTextContent('1,500')
     expect(score).toHaveTextContent('Up about 250 points a week.')
@@ -74,6 +85,9 @@ describe('StatsScreen', () => {
     expect(figure('Words a game')).toHaveTextContent('5')
     expect(figure('Longest word')).toHaveTextContent('cats')
     expect(section('Longest word')).toHaveTextContent('4 letters, found Oct 15 against Mina Chen.')
+    expect(section('Words by length')).toHaveTextContent('10 words across these games.')
+    expect(lengthCount('3+')).toHaveTextContent('5')
+    expect(lengthCount('6+')).toHaveTextContent('0')
     expect(figure('Points a game')).toHaveTextContent('1,250')
     expect(section('Win rate')).toHaveTextContent('50%')
     expect(section('Win rate')).toHaveTextContent('Wins')
@@ -93,6 +107,8 @@ describe('StatsScreen', () => {
     expect(screen.getAllByText('No games yet')).toHaveLength(2)
     expect(figure('Longest word')).toHaveTextContent('—')
     expect(section('Longest word')).toHaveTextContent('No games in this view.')
+    expect(section('Words by length')).toHaveTextContent('No games in this view.')
+    expect(lengthCount('3+')).toHaveTextContent('0')
     expect(section('Win rate')).toHaveTextContent('—')
     expect(section('Win rate')).toHaveTextContent('No head-to-head games yet.')
 
@@ -108,14 +124,22 @@ describe('StatsScreen', () => {
         {...props}
         games={[
           ...games,
-          { id: 'solo', playedOn: '2026-10-16', words: 3, score: 300, longest: 'zen', opponents: [] },
+          {
+            id: 'solo',
+            playedOn: '2026-10-16',
+            words: 3,
+            score: 300,
+            longest: 'zen',
+            byLength: { 3: 3 },
+            opponents: [],
+          },
         ]}
       />,
     )
 
     expect(figure('Words a game')).toHaveTextContent('5.3')
     expect(section('Win rate')).toHaveTextContent(
-      '1 solo game stays on the words, score, and longest-word cards.',
+      '1 solo game stays on the words, score, longest-word, and length cards.',
     )
   })
 })
@@ -130,5 +154,13 @@ function section(name: string): HTMLElement {
 function figure(name: string): HTMLElement {
   const value = section(name).querySelector('.stat-figure')
   if (!(value instanceof HTMLElement)) throw new Error(`Missing figure for ${name}`)
+  return value
+}
+
+function lengthCount(label: string): HTMLElement {
+  const item = within(section('Words by length')).getByText(label).closest('li')
+  if (!(item instanceof HTMLElement)) throw new Error(`Missing length ${label}`)
+  const value = item.querySelector('strong')
+  if (!(value instanceof HTMLElement)) throw new Error(`Missing count for ${label}`)
   return value
 }
