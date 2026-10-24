@@ -7,6 +7,7 @@ import { EndPanel } from './components/EndPanel'
 import { FriendsScreen } from './components/FriendsScreen'
 import { MatchReview, SavedMatch } from './components/MatchResults'
 import { Header } from './components/Header'
+import { LearnScreen } from './components/LearnScreen'
 import { HomeDashboard } from './components/HomeDashboard'
 import { PlayerStats } from './components/StatsScreen'
 import { LoginPage } from './components/LoginPage'
@@ -86,7 +87,7 @@ function PlayerGame({
   const [matchId, setMatchId] = useState<string | null>(null)
   const [rivals, setRivals] = useState<Rival[]>([])
   const [showPotential, setShowPotential] = useState(false)
-  const [view, setView] = useState<'home' | 'stats' | 'daily' | 'friends'>('home')
+  const [view, setView] = useState<'home' | 'stats' | 'daily' | 'friends' | 'learn'>('home')
   const [openGame, setOpenGame] = useState<ActiveGame | null>(null)
   const [starting, setStarting] = useState(false)
   const startingRef = useRef(false)
@@ -234,6 +235,7 @@ function PlayerGame({
     return (
       <Header
         onHome={onHome}
+        onLearn={includeSignOut ? () => setView('learn') : undefined}
         onSignOut={includeSignOut ? onSignOut : undefined}
         invites={lobby.invites}
         playedBack={notices}
@@ -322,6 +324,17 @@ function PlayerGame({
         {signedInHeader(() => setView('home'))}
         <div className="screen">
           <PlayerStats playerId={player.id} playerName={player.name} />
+        </div>
+      </>
+    )
+  }
+
+  if (round.phase !== 'playing' && view === 'learn') {
+    return (
+      <>
+        {signedInHeader(() => setView('home'))}
+        <div className="screen">
+          <LearnScreen />
         </div>
       </>
     )

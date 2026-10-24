@@ -366,7 +366,8 @@ describe('sign in', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(await screen.findByRole('button', { name: 'Sign out' }))
+    await user.click(await screen.findByRole('button', { name: 'Menu' }))
+    await user.click(screen.getByRole('button', { name: 'Sign out' }))
 
     expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Play solo' })).not.toBeInTheDocument()
@@ -403,6 +404,22 @@ describe('home dashboard', () => {
     expect(screen.getByRole('heading', { name: 'Find every word.' })).toBeInTheDocument()
   })
 
+  it('opens the scoring article from the menu', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(await screen.findByRole('button', { name: 'Menu' }))
+    await user.click(screen.getByRole('button', { name: 'Learn' }))
+
+    expect(screen.getByRole('heading', { name: 'Learn' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Hunt fives and sixes/ }))
+    expect(screen.getByRole('heading', { name: 'Hunt fives and sixes' })).toBeInTheDocument()
+    expect(screen.getByText(/The sixth letter is the biggest step/)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Home' }))
+    expect(screen.getByRole('heading', { name: 'Find every word.' })).toBeInTheDocument()
+  })
+
   it('opens invitations from the header', async () => {
     const user = userEvent.setup()
     render(<App />)
@@ -429,6 +446,7 @@ describe('home dashboard', () => {
 
     expect(await screen.findByRole('button', { name: 'Add' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Home' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Menu' })).not.toBeInTheDocument()
     expect(screen.getByText('3:00')).toBeInTheDocument()
     expect(vi.mocked(shakeBoard)).toHaveBeenCalledTimes(1)
   })

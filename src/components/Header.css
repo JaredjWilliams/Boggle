@@ -35,7 +35,8 @@
 }
 
 .header-home,
-.header-bell {
+.header-bell,
+.header-menu {
   flex: none;
   white-space: nowrap;
   min-height: 44px;
@@ -51,7 +52,8 @@
   padding: 0 14px;
 }
 
-.header-bell {
+.header-bell,
+.header-menu {
   position: relative;
   display: grid;
   place-items: center;
@@ -59,12 +61,15 @@
   padding: 0;
 }
 
-.header-bell svg {
+.header-bell svg,
+.header-menu svg {
   width: 22px;
   height: 22px;
 }
 
-.header-bell:focus-visible {
+.header-bell:focus-visible,
+.header-menu:focus-visible,
+.header-home:focus-visible {
   outline: 2px solid var(--cream);
   outline-offset: 2px;
 }
@@ -173,4 +178,41 @@
   border: 0;
   background: var(--accent);
   color: white;
+}
+
+.menu-pop {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% - 8px);
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--tile);
+  color: var(--ink);
+  box-shadow: 0 12px 32px rgb(27 40 56 / 18%);
+}
+
+.menu-pop:focus {
+  outline: none;
+}
+
+.menu-pop button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+}
+
+.menu-pop button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }

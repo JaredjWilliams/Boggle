@@ -15,6 +15,50 @@ const invite: Invite = {
   ],
 }
 
+describe('Header menu', () => {
+  it('opens learn and sign out from the menu', async () => {
+    const user = userEvent.setup()
+    const onLearn = vi.fn()
+    const onSignOut = vi.fn()
+    render(<Header onLearn={onLearn} onSignOut={onSignOut} />)
+
+    expect(screen.queryByRole('navigation', { name: 'Menu' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Sign out' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Menu' }))
+    const menu = screen.getByRole('navigation', { name: 'Menu' })
+    expect(menu).toHaveTextContent('Learn')
+    expect(menu).toHaveTextContent('Sign out')
+
+    await user.click(screen.getByRole('button', { name: 'Learn' }))
+    expect(onLearn).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('navigation', { name: 'Menu' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Menu' }))
+    await user.click(screen.getByRole('button', { name: 'Sign out' }))
+    expect(onSignOut).toHaveBeenCalledOnce()
+  })
+
+  it('closes the menu when going home', async () => {
+    const user = userEvent.setup()
+    const onHome = vi.fn()
+    render(<Header onHome={onHome} onLearn={vi.fn()} onSignOut={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: 'Menu' }))
+    await user.click(screen.getByRole('button', { name: 'Home' }))
+
+    expect(onHome).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('navigation', { name: 'Menu' })).not.toBeInTheDocument()
+  })
+
+  it('hides the menu until learn or sign out is available', () => {
+    render(<Header onHome={vi.fn()} />)
+
+    expect(screen.queryByRole('button', { name: 'Menu' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Home' })).toBeInTheDocument()
+  })
+})
+
 describe('Header invitations', () => {
   it('hides the notification icon until invitations are available', () => {
     render(<Header onSignOut={vi.fn()} />)

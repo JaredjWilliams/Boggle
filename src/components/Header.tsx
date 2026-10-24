@@ -3,8 +3,11 @@ import { completedGameKey, type ActiveGame } from '../data/activeGames'
 import type { Invite } from '../data/matches'
 import './Header.css'
 
+type Panel = 'notices' | 'menu'
+
 type Props = {
   onHome?: () => void
+  onLearn?: () => void
   onSignOut?: () => void
   invites?: readonly Invite[]
   playedBack?: readonly ActiveGame[]
@@ -15,6 +18,7 @@ type Props = {
 
 export function Header({
   onHome,
+  onLearn,
   onSignOut,
   invites,
   playedBack,
@@ -22,40 +26,45 @@ export function Header({
   onDeclineInvite,
   onOpenPlayedBack,
 }: Props) {
-  const [open, setOpen] = useState(false)
+  const [panel, setPanel] = useState<Panel | null>(null)
   const panelRef = useRef<HTMLElement>(null)
   const incoming = invites ?? []
   const finished = playedBack ?? []
   const showInvites = invites !== undefined && Boolean(onAcceptInvite) && Boolean(onDeclineInvite)
   const showPlayedBack = playedBack !== undefined && Boolean(onOpenPlayedBack)
   const showNotifications = showInvites || showPlayedBack
+  const showMenu = Boolean(onLearn) || Boolean(onSignOut)
   const noticeCount = (showInvites ? incoming.length : 0) + (showPlayedBack ? finished.length : 0)
 
   useEffect(() => {
-    if (!open) return
+    if (!panel) return
     panelRef.current?.focus()
     function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpen(false)
+      if (event.key === 'Escape') setPanel(null)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open])
+  }, [panel])
+
+  function togglePanel(next: Panel) {
+    setPanel((current) => (current === next ? null : next))
+  }
 
   return (
     <div className="app-bar">
       <header className="app-header">
         <GridIcon />
         <Wordmark />
-        {(showNotifications || onHome || onSignOut) && (
+        {(showNotifications || onHome || showMenu) && (
           <div className="header-actions">
             {showNotifications && (
               <button
                 type="button"
                 className="header-bell"
-                aria-expanded={open}
+                aria-expanded={panel === 'notices'}
                 aria-haspopup="dialog"
                 aria-label={notificationLabel(noticeCount)}
-                onClick={() => setOpen((current) => !current)}
+                onClick={() => togglePanel('notices')}
               >
                 <BellIcon />
                 {noticeCount > 0 && (
@@ -65,20 +74,60 @@ export function Header({
                 )}
               </button>
             )}
-            {onSignOut && (
-              <button type="button" className="header-home" onClick={onSignOut}>
-                Sign out
+            {showMenu && (
+              <button
+                type="button"
+                className="header-menu"
+                aria-expanded={panel === 'menu'}
+                aria-haspopup="true"
+                aria-label="Menu"
+                onClick={() => togglePanel('menu')}
+              >
+                <MenuIcon />
               </button>
             )}
             {onHome && (
-              <button type="button" className="header-home" onClick={onHome}>
+              <button
+                type="button"
+                className="header-home"
+                onClick={() => {
+                  setPanel(null)
+                  onHome()
+                }}
+              >
                 Home
               </button>
             )}
           </div>
         )}
       </header>
-      {open && showNotifications && (
+      {panel === 'menu' && (
+        <nav ref={panelRef} className="menu-pop" aria-label="Menu" tabIndex={-1}>
+          {onLearn && (
+            <button
+              type="button"
+              onClick={() => {
+                setPanel(null)
+                onLearn()
+              }}
+            >
+              Learn
+            </button>
+          )}
+          {onSignOut && (
+            <button
+              type="button"
+              onClick={() => {
+                setPanel(null)
+                onSignOut()
+              }}
+            >
+              Sign out
+            </button>
+          )}
+        </nav>
+      )}
+      {panel === 'notices' && showNotifications && (
         <section
           ref={panelRef}
           className="invite-pop"
@@ -101,7 +150,7 @@ export function Header({
                           type="button"
                           aria-label={`Play with ${invite.hostName}`}
                           onClick={() => {
-                            setOpen(false)
+                            setPanel(null)
                             onAcceptInvite(invite)
                           }}
                         >
@@ -111,7 +160,7 @@ export function Header({
                           type="button"
                           aria-label={`Decline invitation from ${invite.hostName}`}
                           onClick={() => {
-                            setOpen(false)
+                            setPanel(null)
                             onDeclineInvite(invite)
                           }}
                         >
@@ -133,7 +182,7 @@ export function Header({
                           type="button"
                           aria-label={`View game with ${game.opponentName}`}
                           onClick={() => {
-                            setOpen(false)
+                            setPanel(null)
                             onOpenPlayedBack(game)
                           }}
                         >
@@ -148,12 +197,12 @@ export function Header({
           )}
         </section>
       )}
-      {open && showNotifications && (
+      {panel && (
         <button
           type="button"
           className="invite-backdrop"
-          aria-label="Close notifications"
-          onClick={() => setOpen(false)}
+          aria-label={panel === 'menu' ? 'Close menu' : 'Close notifications'}
+          onClick={() => setPanel(null)}
         />
       )}
     </div>
@@ -189,6 +238,20 @@ function Wordmark() {
       >
         Boggle
       </text>
+    </svg>
+  )
+}
+
+function MenuIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M4 7h16M4 12h16M4 17h16"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
     </svg>
   )
 }
