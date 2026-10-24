@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { ARTICLES, type Article, type ArticleBlock } from '../learn/articles'
+import { useState, type CSSProperties } from 'react'
+import { ARTICLES, type Article, type ArticleBars, type ArticleBlock, type ArticleHeat } from '../learn/articles'
 import './LearnScreen.css'
 
 type Props = {
@@ -67,6 +67,8 @@ function ArticleBlockView({ block }: { block: ArticleBlock }) {
       </ul>
     )
   }
+  if (block.kind === 'bars') return <BarChart block={block} />
+  if (block.kind === 'heat') return <HeatMap block={block} />
 
   return (
     <table className="article-table">
@@ -91,6 +93,90 @@ function ArticleBlockView({ block }: { block: ArticleBlock }) {
       </tbody>
     </table>
   )
+}
+
+function BarChart({ block }: { block: ArticleBars }) {
+  const max = Math.max(...block.bars.map((bar) => bar.value), block.mark?.value ?? 0, 1)
+  const compact = block.direction === 'up'
+
+  if (block.direction === 'across') {
+    return (
+      <figure className="article-chart" aria-label={block.caption}>
+        <figcaption>{block.caption}</figcaption>
+        <div className="article-hbars">
+          {block.bars.map((bar) => (
+            <div key={bar.label} className={bar.emphasis ? 'article-hbar is-emphasis' : 'article-hbar'}>
+              <span className="article-hbar-label">{bar.label}</span>
+              <span className="article-hbar-track">
+                <span
+                  className="article-hbar-fill"
+                  style={{ '--share': bar.value / max } as CSSProperties}
+                />
+              </span>
+              <span className="article-hbar-value">{formatChartValue(bar.value, compact)}</span>
+            </div>
+          ))}
+        </div>
+        <p className="article-chart-note">{block.summary}</p>
+      </figure>
+    )
+  }
+
+  return (
+    <figure className="article-chart" aria-label={block.caption}>
+      <figcaption>{block.caption}</figcaption>
+      <div className="article-plot" style={{ '--count': block.bars.length } as CSSProperties}>
+        {block.mark && (
+          <div className="article-mark" style={{ '--share': block.mark.value / max } as CSSProperties}>
+            <span>{block.mark.label}</span>
+          </div>
+        )}
+        {block.bars.map((bar) => (
+          <div key={bar.label} className={bar.emphasis ? 'article-column is-emphasis' : 'article-column'}>
+            <span className="article-column-value">{formatChartValue(bar.value, compact)}</span>
+            <span className="article-column-bar" style={{ '--share': bar.value / max } as CSSProperties} />
+            <span className="article-column-name">{bar.label}</span>
+          </div>
+        ))}
+      </div>
+      <p className="article-chart-note">{block.summary}</p>
+    </figure>
+  )
+}
+
+function HeatMap({ block }: { block: ArticleHeat }) {
+  const low = Math.min(...block.cells)
+  const high = Math.max(...block.cells)
+  const span = high - low || 1
+
+  return (
+    <figure className="article-chart" aria-label={block.caption}>
+      <figcaption>{block.caption}</figcaption>
+      <div className="article-heat">
+        {block.cells.map((value, index) => {
+          const row = Math.floor(index / 5) + 1
+          const column = (index % 5) + 1
+          const mix = Math.round(((value - low) / span) * 72 + 8)
+          return (
+            <div
+              key={`${row}-${column}`}
+              className="article-heat-cell"
+              style={{ '--mix': `${mix}%` } as CSSProperties}
+              aria-label={`Row ${row}, column ${column}, ${value.toFixed(1)} words`}
+            >
+              {value.toFixed(1)}
+            </div>
+          )
+        })}
+      </div>
+      <p className="article-chart-note">{block.summary}</p>
+    </figure>
+  )
+}
+
+function formatChartValue(value: number, compact: boolean): string {
+  if (compact && value >= 1000) return `${Math.round(value / 1000)}k`
+  return Math.round(value).toLocaleString('en-US')
 }
 
 function readTime(minutes: number): string {

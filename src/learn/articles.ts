@@ -6,11 +6,29 @@ export type ArticleTable = {
   emphasis: readonly number[]
 }
 
+export type ArticleBars = {
+  kind: 'bars'
+  caption: string
+  summary: string
+  direction: 'up' | 'across'
+  mark?: { value: number; label: string }
+  bars: readonly { label: string; value: number; emphasis?: boolean }[]
+}
+
+export type ArticleHeat = {
+  kind: 'heat'
+  caption: string
+  summary: string
+  cells: readonly number[]
+}
+
 export type ArticleBlock =
   | { kind: 'p'; text: string }
   | { kind: 'h'; text: string }
   | { kind: 'list'; items: readonly string[] }
   | ArticleTable
+  | ArticleBars
+  | ArticleHeat
 
 export type Article = {
   id: string
@@ -87,10 +105,158 @@ export const ARTICLES: readonly Article[] = [
           'Enter an eight or longer when you recognize the word. The score keeps climbing. An eight shows up only a few times, a nine on about one board in three, and a ten on about one board in twelve. Many of the longest legal words are ones you will not be sure of.',
         ],
       },
-      { kind: 'h', text: 'Play the Qu tile early' },
+      { kind: 'h', text: 'Use Qu when you reach it' },
       {
         kind: 'p',
-        text: 'Qu is one tile and two letters, so a path through it jumps a scoring band in a single step. It shows up on about one board in six. When it is on the grid, start there.',
+        text: 'Qu is one tile and two letters, so a path through it jumps a scoring band in a single step. It shows up on about one board in six. Use it when a word you are already tracing runs into it.',
+      },
+    ],
+  },
+  {
+    id: 'add-an-s',
+    title: 'Add an S',
+    summary: 'After you enter a word, try it again with an S. Then try ER, then ED.',
+    minutes: 2,
+    blocks: [
+      {
+        kind: 'p',
+        text: 'Enter the word you see. Then try the same word with an S on the end. If that is not on the board, try ER, then ED. Then leave that word and find another. Adding ING almost never works.',
+      },
+      { kind: 'h', text: 'More S tiles, higher score' },
+      {
+        kind: 'p',
+        text: 'These scores come from the same 200 boards. A board with no S averages about 101,000 points. That is about one board in five. A board with three S tiles averages about 184,000. That is about one board in six. On a typical board, about a quarter of the points are a shorter word plus S.',
+      },
+      {
+        kind: 'bars',
+        caption: 'Average score by how many S tiles you can see',
+        summary:
+          'Up the side: average score, in thousands of points. Along the bottom: how many S tiles are on the board. The line is the average of all 200 boards, 144,000 points.',
+        direction: 'up',
+        mark: { value: 144400, label: '144k' },
+        bars: [
+          { label: 'No S', value: 101000 },
+          { label: '1 S', value: 138700 },
+          { label: '2 S', value: 161800 },
+          { label: '3 S', value: 183500, emphasis: true },
+        ],
+      },
+      {
+        kind: 'p',
+        text: 'The extra points are those S words. From no S to three S tiles, the average rises by about 83,000 points. On the three-S boards, words made by adding S are worth about 71,000 of that. The other letters are not suddenly worth more.',
+      },
+      { kind: 'h', text: 'What to add' },
+      {
+        kind: 'p',
+        text: 'About 1 in 5 five-letter words can grow by one letter. About 4 in 10 six-letter words are a five you already had, plus one letter. Look once, then move on.',
+      },
+      {
+        kind: 'table',
+        caption: 'Endings already on the board',
+        columns: ['Add', 'Times per board'],
+        emphasis: [0],
+        rows: [
+          ['S', '24'],
+          ['ER', '5'],
+          ['ED', '4'],
+          ['ES', '1'],
+          ['ING', 'Less than 1'],
+        ],
+      },
+      {
+        kind: 'p',
+        text: 'You do not need a list of long words. Half the points on a typical board sit in about 50 words, and the best 10 are about 14% of the score. The six-letter word that showed up most often, tenser, was on 10 of the 200 boards. The same long word will not be there next game. Adding S will be.',
+      },
+      {
+        kind: 'list',
+        items: [
+          'Enter the word in front of you.',
+          'Try the same word with an S on the end.',
+          'If that fails, try ER, then ED.',
+          'Stop. ING is almost never there.',
+          'Go find the next word.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'where-to-start',
+    title: 'Start on S, P, C, or T',
+    summary: 'Put your finger on one of those letters before you hunt. The middle helps when one of them is sitting there.',
+    minutes: 2,
+    blocks: [
+      {
+        kind: 'p',
+        text: 'Before the clock runs, find an S, P, C, or T and start there. Words that begin on those letters hold the points. E is the letter you see most, and few words begin on it.',
+      },
+      { kind: 'h', text: 'The letter beats the square' },
+      {
+        kind: 'p',
+        text: 'The center square starts about 18 words. A corner starts about 6. Use the middle when S, P, C, or T is sitting on it. On most boards the best first square is one of those letters, wherever it landed.',
+      },
+      {
+        kind: 'heat',
+        caption: 'How many words start on each square',
+        summary:
+          'Each box is one square on the board. The number is the average count of words that can begin there. Darker means more words.',
+        cells: [
+          7.1, 10.2, 11.8, 10.1, 6.1, 9.8, 14.9, 16.0, 14.0, 10.7, 10.1, 15.7, 17.6, 15.8, 10.7, 9.6, 14.0, 15.7,
+          14.6, 9.3, 5.3, 9.1, 10.6, 8.1, 6.1,
+        ],
+      },
+      {
+        kind: 'bars',
+        caption: 'Points you can reach by starting on each letter',
+        summary:
+          'Each bar is the average points in words that begin on that letter. S, P, C, and T are the ones to look for first.',
+        direction: 'across',
+        bars: [
+          { label: 'S', value: 15030, emphasis: true },
+          { label: 'P', value: 13060, emphasis: true },
+          { label: 'C', value: 12317, emphasis: true },
+          { label: 'T', value: 11283, emphasis: true },
+          { label: 'R', value: 9725 },
+          { label: 'B', value: 9703 },
+          { label: 'D', value: 8507 },
+          { label: 'M', value: 8357 },
+          { label: 'F', value: 7737 },
+          { label: 'L', value: 7504 },
+          { label: 'G', value: 7352 },
+          { label: 'H', value: 6389 },
+          { label: 'A', value: 6299 },
+          { label: 'W', value: 6004 },
+          { label: 'V', value: 5158 },
+          { label: 'Qu', value: 4506 },
+          { label: 'K', value: 4427 },
+          { label: 'N', value: 3664 },
+          { label: 'E', value: 3495 },
+          { label: 'O', value: 2962 },
+          { label: 'U', value: 2390 },
+          { label: 'I', value: 2132 },
+          { label: 'J', value: 2082 },
+          { label: 'Z', value: 1821 },
+          { label: 'Y', value: 1409 },
+          { label: 'X', value: 442 },
+        ],
+      },
+      {
+        kind: 'p',
+        text: 'In the 200 boards, E showed up on 628 squares and S on 288. Starting on E is still worth about 3,500 points, against about 15,000 for S.',
+      },
+      { kind: 'h', text: 'Use Qu when you reach it' },
+      {
+        kind: 'p',
+        text: 'Every board has one of B, J, K, Qu, X, or Z. None of them is a good place to start. Qu is one tile and two letters, so a path through it jumps a scoring band. Words that use it are about 8,600 points, a small part of that board. Use Qu when a word you are already tracing runs into it. J helps the least: words that use it are about 2,700 points.',
+      },
+      {
+        kind: 'list',
+        items: [
+          'Scan for S, P, C, or T before you look at the middle.',
+          'Start on the one you find.',
+          'If the middle has one of those letters, start on that square.',
+          'When your path runs into Qu, use it.',
+          'Leave J, X, and Z until a word you already know needs them.',
+        ],
       },
     ],
   },
