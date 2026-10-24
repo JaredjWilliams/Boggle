@@ -7,6 +7,8 @@ import {
   formatPercent,
   gamesAgainst,
   headToHead,
+  leftOnNote,
+  leftOnSummary,
   lengthNote,
   longestFound,
   longestFoundNote,
@@ -79,6 +81,7 @@ export function StatsScreen({ playerName, games, loading, notice, onRetry }: Pro
   const solos = opponent ? 0 : visible.filter((game) => game.opponents.length === 0).length
   const bestWord = longestFound(visible)
   const lengths = wordsByLength(visible)
+  const started = leftOnSummary(visible)
   const wordPoints = visible.map((game) => ({ id: game.id, playedOn: game.playedOn, value: game.words }))
   const scorePoints = visible.map((game) => ({ id: game.id, playedOn: game.playedOn, value: game.score }))
 
@@ -162,6 +165,31 @@ export function StatsScreen({ playerName, games, loading, notice, onRetry }: Pro
             <p className="stat-note">{lengthNote(visible)}</p>
           </section>
 
+          <section className="stat-card" aria-labelledby="started-heading">
+            <h2 id="started-heading">Words you had started</h2>
+            <p className="stat-figure">{started.count === null ? '—' : formatCount(started.count)}</p>
+            <p className="stat-note">{leftOnNote(started)}</p>
+            {started.examples.length > 0 && (
+              <ul className="started-list" aria-label="Longer words left on a word you found">
+                {started.examples.map((item) => (
+                  <li key={item.longer}>
+                    <span className="sr-only">
+                      {item.found} extended to {item.longer}, {formatCount(item.points)} points
+                    </span>
+                    <span className="started-from" aria-hidden="true">
+                      {item.found}
+                    </span>
+                    <span className="started-arrow" aria-hidden="true">
+                      →
+                    </span>
+                    <strong aria-hidden="true">{item.longer}</strong>
+                    <small aria-hidden="true">{formatCount(item.points)}</small>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
           <section className="stat-card" aria-labelledby="score-heading">
             <h2 id="score-heading">Points a game</h2>
             <p className="stat-figure">{summary.score === null ? '—' : formatAverage(summary.score)}</p>
@@ -190,5 +218,5 @@ function recordNote(
     played === 0 ? 'No head-to-head games yet.' : `${played} games with another player.`
   if (solos === 0) return result
   const soloLabel = solos === 1 ? '1 solo game stays' : `${solos} solo games stay`
-  return `${result} ${soloLabel} on the words, score, longest-word, and length cards.`
+  return `${result} ${soloLabel} on the words, score, longest-word, length, and started-word cards.`
 }

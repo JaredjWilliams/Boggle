@@ -12,7 +12,15 @@ describe('stats rows', () => {
             game_id: 'g1',
             score: 100,
             words: [{ word: 'cat' }, { word: '  ' }, { word: 'quartz', points: 1400 }],
-            games: { created_at: created },
+            games: {
+              created_at: created,
+              possible_words: [
+                { word: 'cat', points: 100 },
+                { word: 'catch', points: 800 },
+                { word: 'quartz', points: 1400 },
+                { word: 'dog', points: 100 },
+              ],
+            },
           },
           { game_id: 'g2', score: 50, words: null, games: null },
         ],
@@ -33,8 +41,26 @@ describe('stats rows', () => {
           { name: 'Mina Chen', score: 40 },
           { name: 'Jonah Park', score: 80 },
         ],
+        leftOn: [{ found: 'cat', longer: 'catch', points: 800 }],
       },
     ])
+  })
+
+  it('leaves the started-word stat empty when the board was not saved', () => {
+    const created = '2026-10-03T15:00:00.000Z'
+    expect(
+      resultGames(
+        [
+          {
+            game_id: 'g3',
+            score: 10,
+            words: [{ word: 'cat', points: 100 }],
+            games: { created_at: created },
+          },
+        ],
+        [],
+      )[0].leftOn,
+    ).toBeNull()
   })
 
   it('keeps a history game when the opponent name is present', () => {
@@ -58,6 +84,7 @@ describe('stats rows', () => {
         longest: '',
         byLength: {},
         opponents: [{ name: 'Riley Okonkwo', score: 900 }],
+        leftOn: null,
       },
     ])
   })

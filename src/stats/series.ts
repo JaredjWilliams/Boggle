@@ -5,6 +5,12 @@ export type OpponentResult = {
   score: number
 }
 
+export type LeftOn = {
+  found: string
+  longer: string
+  points: number
+}
+
 export type GameStat = {
   id: string
   playedOn: string
@@ -13,6 +19,16 @@ export type GameStat = {
   longest: string
   byLength: Readonly<Record<number, number>>
   opponents: OpponentResult[]
+  leftOn: readonly LeftOn[] | null
+}
+
+export type LeftOnSummary = {
+  games: number
+  saved: number
+  count: number | null
+  points: number
+  examples: LeftOn[]
+  more: boolean
 }
 
 export type LengthTotal = {
@@ -122,6 +138,94 @@ export function lengthNote(games: readonly GameStat[]): string {
   if (total === 0) return 'No words saved in this view.'
   const label = total === 1 ? '1 word' : `${formatCount(total)} words`
   return `${label} across these games.`
+}
+
+const LEFT_ON_LIMIT = 3
+
+export function wordsLeftOn(
+  found: readonly string[],
+  missed: readonly { word: string; points: number }[],
+): LeftOn[] {
+  const stems = new Set<string>()
+  for (const word of found) {
+    const stem = word.trim().toLowerCase()
+    if (/^[a-z]{3,}$/.test(stem)) stems.add(stem)
+  }
+
+  const rows = new Map<string, LeftOn>()
+  for (const item of missed) {
+    const longer = item.word.trim().toLowerCase()
+    if (!/^[a-z]{4,}$/.test(longer)) continue
+    let stem = ''
+    for (const candidate of stems) {
+      if (longer.length > candidate.length && longer.startsWith(candidate) && candidate.length > stem.length) {
+        stem = candidate
+      }
+    }
+    if (!stem) continue
+    const points = Number.isFinite(item.points) ? item.points : 0
+    const current = rows.get(longer)
+    if (!current || points > current.points) rows.set(longer, { found: stem, longer, points })
+  }
+
+  return [...rows.values()].sort(
+    (left, right) => right.points - left.points || compareWords(left.longer, right.longer),
+  )
+}
+
+export function leftOnSummary(games: readonly GameStat[]): LeftOnSummary {
+  const saved = games.filter((game) => game.leftOn != null)
+  if (games.length === 0 || saved.length === 0) {
+    return { games: games.length, saved: saved.length, count: null, points: 0, examples: [], more: false }
+  }
+
+  const byLonger = new Map<string, LeftOn>()
+  let count = 0
+  let points = 0
+  for (const game of saved) {
+    for (const row of game.leftOn ?? []) {
+      count += 1
+      points += row.points
+      const current = byLonger.get(row.longer)
+      if (
+        !current ||
+        row.found.length > current.found.length ||
+        (row.found.length === current.found.length && row.points > current.points)
+      ) {
+        byLonger.set(row.longer, row)
+      }
+    }
+  }
+
+  const ranked = [...byLonger.values()].sort(
+    (left, right) =>
+      right.points - left.points || compareWords(left.longer, right.longer) || left.found.localeCompare(right.found),
+  )
+  return {
+    games: games.length,
+    saved: saved.length,
+    count,
+    points,
+    examples: ranked.slice(0, LEFT_ON_LIMIT),
+    more: ranked.length > LEFT_ON_LIMIT,
+  }
+}
+
+export function leftOnNote(summary: LeftOnSummary): string {
+  if (summary.games === 0) return 'No games in this view.'
+  if (summary.saved === 0 || summary.count === null) return 'No missed words saved in this view.'
+  if (summary.count === 0) return withUnsavedBoards('You followed every word you started.', summary)
+  const points = summary.points === 1 ? '1 point' : `${formatCount(summary.points)} points`
+  const worth = `Worth ${points} still on the board.`
+  const shown = summary.more ? `${worth} The three below are the biggest.` : worth
+  return withUnsavedBoards(shown, summary)
+}
+
+function withUnsavedBoards(note: string, summary: LeftOnSummary): string {
+  const unsaved = summary.games - summary.saved
+  if (unsaved <= 0) return note
+  const label = unsaved === 1 ? '1 game has no saved board.' : `${formatCount(unsaved)} games have no saved board.`
+  return `${note} ${label}`
 }
 
 export function averages(games: readonly GameStat[]): { words: number | null; score: number | null } {

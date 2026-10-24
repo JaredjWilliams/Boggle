@@ -1,8 +1,9 @@
 import { longestWord } from '../game/match'
 import type { ScoredWord } from '../game/round'
-import { playedOn } from './play'
 import { getSupabase } from '../lib/supabase'
-import { countByLength, type GameStat, type OpponentResult } from '../stats/series'
+import { countByLength, wordsLeftOn, type GameStat, type OpponentResult } from '../stats/series'
+import { unplayedWords } from './matches'
+import { playedOn } from './play'
 
 type HistoryRow = {
   id: string
@@ -13,11 +14,16 @@ type HistoryRow = {
   opponent_score: number
 }
 
+type SavedGame = {
+  created_at?: string
+  possible_words?: unknown
+}
+
 type MineRow = {
   game_id: string
   score: number
   words: unknown
-  games: { created_at?: string } | { created_at?: string }[] | null
+  games: SavedGame | SavedGame[] | null
 }
 
 type OtherRow = {
@@ -33,7 +39,10 @@ export async function loadPlayerStats(playerId: string): Promise<GameStat[]> {
       .from('match_history')
       .select('id, played_on, words_found, score, opponent_name, opponent_score')
       .eq('player_id', playerId),
-    supabase.from('results').select('game_id, score, words, games(created_at)').eq('player_id', playerId),
+    supabase
+      .from('results')
+      .select('game_id, score, words, games(created_at, possible_words)')
+      .eq('player_id', playerId),
   ])
   if (history.error) throw new Error(history.error.message)
   if (mine.error) throw new Error(mine.error.message)
@@ -68,6 +77,7 @@ export function historyGames(rows: readonly HistoryRow[]): GameStat[] {
         longest: '',
         byLength: {},
         opponents,
+        leftOn: null,
       },
     ]
   })
@@ -89,6 +99,7 @@ export function resultGames(mine: readonly MineRow[], others: readonly OtherRow[
     const parsed = Date.parse(created)
     if (Number.isNaN(parsed)) return []
     const found = namedWords(row.words)
+    const possible = possibleWords(row.games)
     return [
       {
         id: row.game_id,
@@ -98,6 +109,13 @@ export function resultGames(mine: readonly MineRow[], others: readonly OtherRow[
         longest: longestWord(found),
         byLength: countByLength(found.map((item) => item.word)),
         opponents: rivals.get(row.game_id) ?? [],
+        leftOn:
+          possible === null
+            ? null
+            : wordsLeftOn(
+                found.map((item) => item.word),
+                unplayedWords(possible, found),
+              ),
       },
     ]
   })
@@ -123,4 +141,10 @@ function profileName(profiles: OtherRow['profiles']): string {
 function gameCreated(games: MineRow['games']): string {
   const game = Array.isArray(games) ? games[0] : games
   return game?.created_at ?? ''
+}
+
+function possibleWords(games: MineRow['games']): ScoredWord[] | null {
+  const game = Array.isArray(games) ? games[0] : games
+  if (!game || !Array.isArray(game.possible_words)) return null
+  return namedWords(game.possible_words)
 }
