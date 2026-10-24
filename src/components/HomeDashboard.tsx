@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type AnimationEvent, type KeyboardEvent } from 'react'
 import {
   activeGameLabel,
   COMPLETED_GAME_LIMIT,
@@ -10,7 +10,10 @@ import {
   type ActiveGame,
 } from '../data/activeGames'
 import type { Invite } from '../data/matches'
+import { pickMissedWord, wordKindLabel, type MissedWord } from '../learn/missedWords'
 import './HomeDashboard.css'
+
+export const WORD_ROTATE_MS = 7000
 
 type GameTab = 'active' | 'invited' | 'completed'
 
@@ -64,12 +67,72 @@ export function HomeDashboard({
   const unreadKeys = new Set(unread.map(completedGameKey))
   const showGames = inProgress.length > 0 || invites.length > 0 || finished.length > 0
   const [picked, setPicked] = useState<GameTab | null>(null)
+  const [spotlight, setSpotlight] = useState<MissedWord>(() => pickMissedWord())
+  const [leaving, setLeaving] = useState<LeavingWord | null>(null)
+  const [panelHeight, setPanelHeight] = useState<number | null>(null)
+  const leaveId = useRef(0)
+  const panelRefs = useRef<Partial<Record<GameTab, HTMLDivElement | null>>>({})
   const tab = picked ?? defaultGameTab(inProgress, invites)
+  const tabIndex = TABS.findIndex((item) => item.id === tab)
   const unavailable = loading || loadError || starting
+
+  useLayoutEffect(() => {
+    const node = panelRefs.current[tab]
+    if (!node) return
+    const next = node.offsetHeight
+    setPanelHeight((current) => (current === next ? current : next))
+  })
+
+  function showAnotherWord() {
+    const next = pickMissedWord(undefined, spotlight.word)
+    if (canAnimate()) {
+      const id = leaveId.current + 1
+      leaveId.current = id
+      setLeaving({ id, word: spotlight })
+    }
+    setSpotlight(next)
+  }
+
+  useEffect(() => {
+    const timer = window.setInterval(showAnotherWord, WORD_ROTATE_MS)
+    return () => window.clearInterval(timer)
+  }, [spotlight])
+
+  function selectTab(next: GameTab) {
+    if (next !== tab) setPicked(next)
+  }
+
+  function onWordLeave(event: AnimationEvent<HTMLDivElement>) {
+    if (event.target !== event.currentTarget) return
+    const id = Number(event.currentTarget.dataset.leaveId)
+    setLeaving((current) => (current?.id === id ? null : current))
+  }
 
   return (
     <main className="home">
-      <h1>Find every word.</h1>
+      <section className="missed-word" aria-label="Often missed">
+        <div className="missed-word-bar">
+          <p className="missed-word-kicker">Often missed</p>
+          <button type="button" className="missed-word-next" onClick={showAnotherWord}>
+            New word
+          </button>
+        </div>
+        <div className="missed-word-stage">
+          {leaving && (
+            <div
+              className="missed-word-card is-leaving"
+              aria-hidden="true"
+              data-leave-id={leaving.id}
+              onAnimationEnd={onWordLeave}
+            >
+              <MissedWordBody word={leaving.word} />
+            </div>
+          )}
+          <div className={leaving ? 'missed-word-card is-entering' : 'missed-word-card'} aria-live="polite">
+            <MissedWordBody word={spotlight} heading />
+          </div>
+        </div>
+      </section>
 
       <div className="play-choices">
         <button type="button" className="start-game" onClick={onStart} disabled={unavailable}>
@@ -118,8 +181,13 @@ export function HomeDashboard({
             className="game-tabs"
             role="tablist"
             aria-label="Games"
-            onKeyDown={(event) => onTabKey(event, tab, setPicked)}
+            onKeyDown={(event) => onTabKey(event, tab, selectTab)}
           >
+            <span
+              className="game-tab-indicator"
+              style={{ ['--tab-index' as string]: tabIndex }}
+              aria-hidden="true"
+            />
             {TABS.map((item) => {
               const badge = item.id === 'completed' ? unread.length : 0
               return (
@@ -133,7 +201,7 @@ export function HomeDashboard({
                   aria-controls={tabPanelId(item.id)}
                   aria-label={badge > 0 ? `${item.label}, ${badge} new` : item.label}
                   tabIndex={tab === item.id ? 0 : -1}
-                  onClick={() => setPicked(item.id)}
+                  onClick={() => selectTab(item.id)}
                 >
                   <TabName label={item.label} badge={badge} />
                 </button>
@@ -142,53 +210,57 @@ export function HomeDashboard({
           </div>
 
           <div
-            className="game-panel"
-            role="tabpanel"
-            id={tabPanelId('active')}
-            aria-labelledby={tabButtonId('active')}
-            hidden={tab !== 'active'}
+            className="game-viewport"
+            style={panelHeight === null ? undefined : { height: panelHeight }}
           >
-            <GameList
-              label="Active games"
-              games={inProgress}
-              empty="No games in progress."
-              showStatus
-              onOpenGame={onOpenGame}
-            />
-          </div>
-
-          <div
-            className="game-panel"
-            role="tabpanel"
-            id={tabPanelId('invited')}
-            aria-labelledby={tabButtonId('invited')}
-            hidden={tab !== 'invited'}
-          >
-            <InvitedList
-              invites={invites}
-              onAcceptInvite={onAcceptInvite}
-              onDeclineInvite={onDeclineInvite}
-            />
-          </div>
-
-          <div
-            className="game-panel"
-            role="tabpanel"
-            id={tabPanelId('completed')}
-            aria-labelledby={tabButtonId('completed')}
-            hidden={tab !== 'completed'}
-          >
-            {finishedCount > COMPLETED_GAME_LIMIT && (
-              <p className="game-note">Last {COMPLETED_GAME_LIMIT} games.</p>
-            )}
-            <GameList
-              label="Completed games"
-              games={finished}
-              empty="No finished games yet."
-              showStatus={false}
-              unreadKeys={unreadKeys}
-              onOpenGame={onOpenGame}
-            />
+            <div className="game-track" style={{ transform: `translateX(${-tabIndex * 100}%)` }}>
+              {TABS.map((item) => (
+                <div
+                  key={item.id}
+                  className="game-panel"
+                  role="tabpanel"
+                  id={tabPanelId(item.id)}
+                  aria-labelledby={tabButtonId(item.id)}
+                  aria-hidden={tab !== item.id}
+                  inert={tab !== item.id ? true : undefined}
+                  ref={(node) => {
+                    panelRefs.current[item.id] = node
+                  }}
+                >
+                  {item.id === 'active' && (
+                    <GameList
+                      label="Active games"
+                      games={inProgress}
+                      empty="No games in progress."
+                      showStatus
+                      onOpenGame={onOpenGame}
+                    />
+                  )}
+                  {item.id === 'invited' && (
+                    <InvitedList
+                      invites={invites}
+                      onAcceptInvite={onAcceptInvite}
+                      onDeclineInvite={onDeclineInvite}
+                    />
+                  )}
+                  {item.id === 'completed' && (
+                    <>
+                      {finishedCount > COMPLETED_GAME_LIMIT && (
+                        <p className="game-note">Last {COMPLETED_GAME_LIMIT} games.</p>
+                      )}
+                      <GameList
+                        label="Completed games"
+                        games={finished}
+                        empty="No finished games yet."
+                        showStatus={false}
+                        unreadKeys={unreadKeys}
+                        onOpenGame={onOpenGame}
+                      />
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -206,6 +278,27 @@ export function HomeDashboard({
       )}
     </main>
   )
+}
+
+type LeavingWord = {
+  id: number
+  word: MissedWord
+}
+
+function MissedWordBody({ word, heading = false }: { word: MissedWord; heading?: boolean }) {
+  const Title = heading ? 'h1' : 'p'
+  return (
+    <>
+      <Title className="missed-word-title">{word.word}</Title>
+      <p className="missed-word-kind">{wordKindLabel(word.kind)}</p>
+      <p className="missed-word-def">{word.definition}</p>
+    </>
+  )
+}
+
+function canAnimate(): boolean {
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) return false
+  return typeof HTMLElement !== 'undefined' && typeof HTMLElement.prototype.animate === 'function'
 }
 
 function GameList({

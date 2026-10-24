@@ -1,9 +1,10 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { completedGameKey, type ActiveGame } from '../data/activeGames'
 import type { Invite } from '../data/matches'
-import { HomeDashboard } from './HomeDashboard'
+import { MISSED_SIXES, wordKindLabel } from '../learn/missedWords'
+import { HomeDashboard, WORD_ROTATE_MS } from './HomeDashboard'
 
 const props = {
   loading: false,
@@ -15,7 +16,10 @@ describe('HomeDashboard', () => {
   it('opens on the ways to play', () => {
     render(<HomeDashboard {...props} />)
 
-    expect(screen.getByRole('heading', { name: 'Find every word.' })).toBeInTheDocument()
+    const entry = missedWordOnScreen()
+    expect(screen.getByRole('region', { name: 'Often missed' })).toBeInTheDocument()
+    expect(screen.getByText(wordKindLabel(entry.kind))).toBeInTheDocument()
+    expect(screen.getByText(entry.definition)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Play solo' })).toBeEnabled()
     expect(screen.queryByText('Your dashboard')).not.toBeInTheDocument()
     expect(screen.queryByText('Grace Hopper')).not.toBeInTheDocument()
@@ -23,6 +27,127 @@ describe('HomeDashboard', () => {
     expect(screen.queryByRole('heading', { name: 'Points' })).not.toBeInTheDocument()
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
     expect(screen.queryByRole('tablist', { name: 'Games' })).not.toBeInTheDocument()
+  })
+
+  it('shows another missed word without repeating the one on screen', async () => {
+    render(<HomeDashboard {...props} />)
+    const first = missedWordOnScreen()
+
+    await userEvent.click(screen.getByRole('button', { name: 'New word' }))
+
+    const second = missedWordOnScreen()
+    expect(second.word).not.toBe(first.word)
+    expect(screen.queryByText(first.definition)).not.toBeInTheDocument()
+    expect(screen.getByText(wordKindLabel(second.kind))).toBeInTheDocument()
+  })
+
+  it('slides the current word out to the left and the next word in from the right', async () => {
+    const original = HTMLElement.prototype.animate
+    HTMLElement.prototype.animate = (() => ({ cancel() {} })) as unknown as typeof HTMLElement.prototype.animate
+    try {
+      render(<HomeDashboard {...props} />)
+      const first = missedWordOnScreen()
+
+      await userEvent.click(screen.getByRole('button', { name: 'New word' }))
+
+      const stage = screen.getByRole('region', { name: 'Often missed' })
+      const leaving = stage.querySelector('.is-leaving')
+      const entering = stage.querySelector('.is-entering')
+      expect(leaving).toHaveTextContent(first.word)
+      expect(entering).toHaveTextContent(screen.getByRole('heading').textContent ?? '')
+      expect(screen.getByRole('heading').textContent).not.toBe(first.word)
+    } finally {
+      HTMLElement.prototype.animate = original
+    }
+  })
+
+  it('slides in another word every 7 seconds, and waits again after New word', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    try {
+      render(<HomeDashboard {...props} />)
+      const first = missedWordOnScreen()
+
+      await act(async () => {
+        vi.advanceTimersByTime(WORD_ROTATE_MS - 1)
+      })
+      expect(screen.getByRole('heading', { name: first.word })).toBeInTheDocument()
+
+      await act(async () => {
+        vi.advanceTimersByTime(1)
+      })
+      const second = missedWordOnScreen()
+      expect(second.word).not.toBe(first.word)
+
+      await act(async () => {
+        vi.advanceTimersByTime(WORD_ROTATE_MS - 1)
+      })
+      await userEvent.click(screen.getByRole('button', { name: 'New word' }))
+      const chosen = missedWordOnScreen()
+
+      await act(async () => {
+        vi.advanceTimersByTime(WORD_ROTATE_MS - 1)
+      })
+      expect(screen.getByRole('heading', { name: chosen.word })).toBeInTheDocument()
+
+      await act(async () => {
+        vi.advanceTimersByTime(1)
+      })
+      expect(missedWordOnScreen().word).not.toBe(chosen.word)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('slides the game list in the direction of the selected tab', async () => {
+    const waiting: ActiveGame = {
+      gameId: 'g-new',
+      opponentId: 'grace',
+      opponentName: 'Grace Hopper',
+      playedBack: false,
+      hosted: false,
+      wins: 2,
+      losses: 1,
+    }
+    const invite: Invite = {
+      gameId: 'game-1',
+      hostId: 'mina',
+      hostName: 'Mina Chen',
+      board: [
+        ['C', 'A'],
+        ['T', 'S'],
+      ],
+    }
+    render(<HomeDashboard {...props} games={[waiting]} invites={[invite]} />)
+
+    const track = document.querySelector('.game-track')
+    if (!(track instanceof HTMLElement)) throw new Error('missing game track')
+    expect(track.style.transform).toBe('translateX(0%)')
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Invited games' }))
+    expect(track.style.transform).toBe('translateX(-100%)')
+    expect(screen.getByRole('list', { name: 'Invited games' })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Completed games' }))
+    expect(track.style.transform).toBe('translateX(-200%)')
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Active games' }))
+    expect(track.style.transform).toBe('translateX(0%)')
+    expect(screen.getByRole('list', { name: 'Active games' })).toBeInTheDocument()
+  })
+
+  it('picks a new word each time the home screen is opened', () => {
+    const random = vi.spyOn(Math, 'random')
+    random.mockReturnValueOnce(0)
+    const { unmount } = render(<HomeDashboard {...props} />)
+    expect(screen.getByRole('heading', { name: MISSED_SIXES[0].word })).toBeInTheDocument()
+    unmount()
+
+    random.mockReturnValueOnce(0.99)
+    render(<HomeDashboard {...props} />)
+    const last = MISSED_SIXES[MISSED_SIXES.length - 1]
+    expect(screen.getByRole('heading', { name: last.word })).toBeInTheDocument()
+    expect(screen.getByText(last.definition)).toBeInTheDocument()
+    random.mockRestore()
   })
 
   it('starts a game from the dashboard', async () => {
@@ -328,3 +453,10 @@ describe('HomeDashboard', () => {
     expect(screen.getByRole('button', { name: /Mina Chen/ })).toHaveTextContent('New')
   })
 })
+
+function missedWordOnScreen() {
+  const word = screen.getByRole('heading').textContent
+  const entry = MISSED_SIXES.find((item) => item.word === word)
+  if (!entry) throw new Error(`heading ${word} is not a missed six-letter word`)
+  return entry
+}

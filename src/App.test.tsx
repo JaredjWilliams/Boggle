@@ -345,7 +345,7 @@ describe('sign in', () => {
     render(<App />)
 
     expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Find every word.' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Often missed' })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'New here? Create an account' }))
     await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Grace Hopper')
@@ -353,7 +353,7 @@ describe('sign in', () => {
     await user.type(screen.getByLabelText('Password'), 'cobol')
     await user.click(screen.getByRole('button', { name: 'Save profile' }))
 
-    expect(await screen.findByRole('heading', { name: 'Find every word.' })).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'Often missed' })).toBeInTheDocument()
     expect(screen.queryByText('Your dashboard')).not.toBeInTheDocument()
     expect(screen.queryByText('Grace Hopper')).not.toBeInTheDocument()
     expect(JSON.parse(localStorage.getItem('boggle.profiles') ?? '[]')).toEqual([
@@ -397,11 +397,11 @@ describe('home dashboard', () => {
 
     expect(screen.getByRole('heading', { name: 'Play with a friend.' })).toBeInTheDocument()
     expect(screen.getByText('No other players yet.')).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Find every word.' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Often missed' })).not.toBeInTheDocument()
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Home' }))
-    expect(screen.getByRole('heading', { name: 'Find every word.' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Often missed' })).toBeInTheDocument()
   })
 
   it('opens the scoring article from the menu', async () => {
@@ -417,7 +417,7 @@ describe('home dashboard', () => {
     expect(screen.getByText(/The sixth letter is the biggest step/)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Home' }))
-    expect(screen.getByRole('heading', { name: 'Find every word.' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Often missed' })).toBeInTheDocument()
   })
 
   it('opens invitations from the header', async () => {
@@ -437,7 +437,7 @@ describe('home dashboard', () => {
   it('deals a board only after Play solo', async () => {
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'Find every word.' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Often missed' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Home' })).not.toBeInTheDocument()
     expect(vi.mocked(shakeBoard)).not.toHaveBeenCalled()
@@ -460,7 +460,7 @@ describe('home dashboard', () => {
       vi.advanceTimersByTime(ROUND_SECONDS * 1000)
     })
 
-    expect(screen.getByRole('heading', { name: 'Find every word.' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Often missed' })).toBeInTheDocument()
     expect(screen.queryByText("Time's up")).not.toBeInTheDocument()
     expect(vi.mocked(shakeBoard)).not.toHaveBeenCalled()
   })
@@ -473,7 +473,7 @@ describe('home dashboard', () => {
 
     await user.click(screen.getByRole('button', { name: 'Home' }))
 
-    expect(screen.getByRole('heading', { name: 'Find every word.' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Often missed' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Turn' })).not.toBeInTheDocument()
   })
 
@@ -492,7 +492,7 @@ describe('home dashboard', () => {
 
     await user.click(screen.getByRole('button', { name: 'Home' }))
 
-    expect(screen.getByRole('heading', { name: 'Find every word.' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Often missed' })).toBeInTheDocument()
     expect(screen.queryByText('Last score')).not.toBeInTheDocument()
     expect(screen.queryByText("Time's up")).not.toBeInTheDocument()
     expect(vi.mocked(shakeBoard)).toHaveBeenCalledTimes(1)
