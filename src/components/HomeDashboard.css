@@ -182,6 +182,11 @@
   text-align: left;
 }
 
+.active-game.is-unread {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
 .active-game:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
@@ -204,23 +209,24 @@
   white-space: nowrap;
 }
 
-.active-game-status {
+.active-game-result {
   flex: none;
-  padding: 4px 10px;
-  border-radius: 999px;
-  color: var(--muted);
-  font-size: 13px;
+  margin-left: auto;
+  font-size: 15px;
   font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
-.active-game-status.is-back {
-  background: var(--good-fill);
-  color: white;
+.active-game-result.is-win {
+  color: var(--good);
 }
 
-.active-game-status.is-new {
-  background: var(--accent);
-  color: white;
+.active-game-result.is-loss {
+  color: var(--bad);
+}
+
+.active-game-result.is-tie {
+  color: var(--muted);
 }
 
 .active-game-record {

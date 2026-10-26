@@ -91,6 +91,22 @@ export function formatMatchScore(yourScore: number | null, opponentScore: number
   return `${formatPoints(yourScore)} \u2013 ${formatPoints(opponentScore)}`
 }
 
+export type MatchResult = 'win' | 'loss' | 'tie'
+
+/** This game's result once both scores are in. */
+export function matchResult(yourScore: number | null, opponentScore: number | null): MatchResult | null {
+  if (yourScore === null || opponentScore === null) return null
+  if (yourScore > opponentScore) return 'win'
+  if (yourScore < opponentScore) return 'loss'
+  return 'tie'
+}
+
+export function matchResultLabel(result: MatchResult): string {
+  if (result === 'win') return 'Win'
+  if (result === 'loss') return 'Lose'
+  return 'Tie'
+}
+
 export function activeGameLabel(game: ActiveGame): string {
   const place = typeof game.daysLeft === 'number' ? daysLeftLabel(game.daysLeft) : game.playedBack ? 'played back' : 'waiting'
   return `${game.opponentName}, ${formatMatchScore(game.yourScore, game.opponentScore)}, ${recordPhrase(game.wins, game.losses)}, ${place}`

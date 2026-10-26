@@ -6,6 +6,8 @@ import {
   daysLeftLabel,
   formatMatchScore,
   formatRecord,
+  matchResult,
+  matchResultLabel,
   playedBackNotices,
   selectActiveGames,
   selectCompletedGames,
@@ -353,17 +355,20 @@ function GameList({
     <ul className="active-games" aria-label={label}>
       {games.map((game) => {
         const unread = unreadKeys?.has(completedGameKey(game)) ?? false
+        const result = game.playedBack ? matchResult(game.yourScore, game.opponentScore) : null
         return (
           <li key={`${game.gameId}:${game.opponentId}`}>
             <button
               type="button"
-              className="active-game"
-              aria-label={unread ? `${activeGameLabel(game)}, new` : activeGameLabel(game)}
+              className={unread ? 'active-game is-unread' : 'active-game'}
+              aria-label={gameButtonLabel(game, unread, result)}
               onClick={() => onOpenGame?.(game)}
             >
               <span className="active-game-top">
                 <span className="active-game-name">{game.opponentName}</span>
-                {unread && <span className="active-game-status is-new">New</span>}
+                {result && (
+                  <span className={`active-game-result is-${result}`}>{matchResultLabel(result)}</span>
+                )}
                 {typeof game.daysLeft === 'number' && (
                   <span className={game.daysLeft <= 1 ? 'active-game-deadline is-soon' : 'active-game-deadline'}>
                     {daysLeftLabel(game.daysLeft)}
@@ -380,6 +385,16 @@ function GameList({
       })}
     </ul>
   )
+}
+
+function gameButtonLabel(
+  game: ActiveGame,
+  unread: boolean,
+  result: ReturnType<typeof matchResult>,
+): string {
+  const outcome = result ? `, ${matchResultLabel(result).toLowerCase()}` : ''
+  const fresh = unread ? ', new' : ''
+  return `${activeGameLabel(game)}${outcome}${fresh}`
 }
 
 function InvitedList({

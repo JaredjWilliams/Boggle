@@ -7,6 +7,8 @@ import {
   daysLeftToPlay,
   formatMatchScore,
   formatRecord,
+  matchResult,
+  matchResultLabel,
   gameIsExpired,
   playedBackNotices,
   selectActiveGames,
@@ -181,6 +183,13 @@ describe('assembleActiveGames', () => {
 
   it('describes the score, the record, and whether they have played back', () => {
     expect(formatRecord(2, 1)).toBe('2–1')
+    expect(matchResult(16900, 7100)).toBe('win')
+    expect(matchResult(400, 900)).toBe('loss')
+    expect(matchResult(200, 200)).toBe('tie')
+    expect(matchResult(null, 40)).toBeNull()
+    expect(matchResultLabel('win')).toBe('Win')
+    expect(matchResultLabel('loss')).toBe('Lose')
+    expect(matchResultLabel('tie')).toBe('Tie')
     expect(formatMatchScore(12900, null)).toBe('12,900 – ???')
     expect(formatMatchScore(null, 0)).toBe('??? – 0')
     expect(

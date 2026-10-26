@@ -333,9 +333,12 @@ describe('HomeDashboard', () => {
     const finished = screen.getByRole('list', { name: 'Completed games' })
     const finishedButtons = within(finished).getAllByRole('button')
     expect(finishedButtons.map((button) => button.getAttribute('aria-label'))).toEqual([
-      'Mina Chen, 900 – 2,200, 0 wins, 3 losses, played back',
+      'Mina Chen, 900 – 2,200, 0 wins, 3 losses, played back, lose',
     ])
     expect(finishedButtons[0]).toHaveTextContent('900 – 2,200')
+    expect(finishedButtons[0]).toHaveTextContent('Lose')
+    expect(within(finishedButtons[0]).getByText('Lose')).toHaveClass('is-loss')
+    expect(finishedButtons[0]).not.toHaveClass('is-unread')
     expect(finishedButtons[0]).toHaveTextContent('0–3')
     expect(finishedButtons[0]).not.toHaveTextContent('→')
     expect(finishedButtons[0]).not.toHaveTextContent('Last day')
@@ -419,8 +422,8 @@ describe('HomeDashboard', () => {
       hosted: true,
       wins: 1,
       losses: 0,
-      yourScore: null,
-      opponentScore: null,
+      yourScore: 1200,
+      opponentScore: 400,
     }
     const second: ActiveGame = {
       gameId: 'g2',
@@ -459,10 +462,21 @@ describe('HomeDashboard', () => {
 
     await userEvent.click(tab)
     const finished = screen.getByRole('list', { name: 'Completed games' })
-    expect(within(finished).getByRole('button', { name: /Grace Hopper/ })).toHaveTextContent('New')
-    expect(within(finished).getByRole('button', { name: /Ada Lovelace/ })).not.toHaveTextContent('New')
+    const grace = within(finished).getByRole('button', { name: /Grace Hopper/ })
+    const mina = within(finished).getByRole('button', { name: /Mina Chen/ })
+    const ada = within(finished).getByRole('button', { name: /Ada Lovelace/ })
+    expect(grace).toHaveTextContent('Win')
+    expect(within(grace).getByText('Win')).toHaveClass('is-win')
+    expect(grace).toHaveClass('is-unread')
+    expect(grace).not.toHaveTextContent('New')
+    expect(mina).toHaveTextContent('Lose')
+    expect(within(mina).getByText('Lose')).toHaveClass('is-loss')
+    expect(mina).toHaveClass('is-unread')
+    expect(ada).toHaveTextContent('Tie')
+    expect(within(ada).getByText('Tie')).toHaveClass('is-tie')
+    expect(ada).not.toHaveClass('is-unread')
 
-    await userEvent.click(within(finished).getByRole('button', { name: /Grace Hopper/ }))
+    await userEvent.click(grace)
     expect(onOpenGame).toHaveBeenCalledExactlyOnceWith(first)
 
     rerender(
@@ -475,8 +489,10 @@ describe('HomeDashboard', () => {
     )
 
     expect(screen.getByRole('tab', { name: 'Completed games, 1 new' })).toHaveTextContent('1')
-    expect(screen.getByRole('button', { name: /Grace Hopper/ })).not.toHaveTextContent('New')
-    expect(screen.getByRole('button', { name: /Mina Chen/ })).toHaveTextContent('New')
+    expect(screen.getByRole('button', { name: /Grace Hopper/ })).not.toHaveClass('is-unread')
+    expect(screen.getByRole('button', { name: /Grace Hopper/ })).toHaveTextContent('Win')
+    expect(screen.getByRole('button', { name: /Mina Chen/ })).toHaveClass('is-unread')
+    expect(screen.getByRole('button', { name: /Mina Chen/ })).toHaveTextContent('Lose')
   })
 })
 
