@@ -308,7 +308,7 @@ describe('stats series', () => {
     expect(startCells([{ start: 0 }, { start: 0 }, { start: 24 }, { start: 1.5 }, {}])).toEqual(
       cells({ 0: 2, 24: 1 }),
     )
-    expect(startCells([{ word: 'cat' }])).toBeNull()
+    expect(startCells([{}])).toBeNull()
 
     const traced = {
       ...games[0],
