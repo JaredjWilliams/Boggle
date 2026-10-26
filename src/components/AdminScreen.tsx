@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import {
   deleteLabel,
   deletePlayedGame,
@@ -220,7 +220,7 @@ function PlayerMenu({
     }
   }, [open])
 
-  function moveOption(event: KeyboardEvent, direction: 1 | -1) {
+  function moveOption(event: ReactKeyboardEvent, direction: 1 | -1) {
     const options = [...(rootRef.current?.querySelectorAll<HTMLButtonElement>('[role="option"]') ?? [])]
     const index = options.indexOf(document.activeElement as HTMLButtonElement)
     const next = options[index + direction]

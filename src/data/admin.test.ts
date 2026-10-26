@@ -107,7 +107,12 @@ type Query = {
 
 const supabase = vi.hoisted(() => {
   const calls: Query[] = []
-  const rpc = vi.fn(async () => ({ data: null, error: null }))
+  const rpc = vi.fn(
+    async (): Promise<{ data: null; error: { message: string } | null }> => ({
+      data: null,
+      error: null,
+    }),
+  )
 
   function from(table: string) {
     const query: Query = { table, filters: [] }
