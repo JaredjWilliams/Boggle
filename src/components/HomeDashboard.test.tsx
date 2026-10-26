@@ -107,6 +107,8 @@ describe('HomeDashboard', () => {
       hosted: false,
       wins: 2,
       losses: 1,
+      yourScore: null,
+      opponentScore: null,
     }
     const invite: Invite = {
       gameId: 'game-1',
@@ -213,6 +215,8 @@ describe('HomeDashboard', () => {
       hosted: false,
       wins: 1,
       losses: 0,
+      yourScore: null,
+      opponentScore: null,
     }
     const { rerender } = render(
       <HomeDashboard
@@ -276,6 +280,9 @@ describe('HomeDashboard', () => {
       hosted: false,
       wins: 2,
       losses: 1,
+      yourScore: 1500,
+      opponentScore: null,
+      daysLeft: 3,
     }
     const played: ActiveGame = {
       gameId: 'g-old',
@@ -285,6 +292,8 @@ describe('HomeDashboard', () => {
       hosted: false,
       wins: 0,
       losses: 3,
+      yourScore: 900,
+      opponentScore: 2200,
     }
     const onOpenGame = vi.fn()
     render(
@@ -309,10 +318,14 @@ describe('HomeDashboard', () => {
 
     const buttons = within(games).getAllByRole('button')
     expect(buttons.map((button) => button.getAttribute('aria-label'))).toEqual([
-      'Grace Hopper, 2 wins, 1 loss, waiting',
+      'Grace Hopper, 1,500 – ???, 2 wins, 1 loss, 3 days left',
     ])
-    expect(buttons[0]).toHaveTextContent('Waiting')
+    expect(buttons[0]).not.toHaveTextContent('Waiting')
+    expect(buttons[0]).toHaveTextContent('1,500 – ???')
     expect(buttons[0]).toHaveTextContent('2–1')
+    expect(buttons[0]).toHaveTextContent('3 days left')
+    expect(buttons[0]).not.toHaveTextContent('→')
+    expect(buttons[0]).not.toHaveTextContent('Wins–losses')
     expect(within(games).queryByText('Mina Chen')).not.toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('tab', { name: 'Completed games' }))
@@ -320,9 +333,12 @@ describe('HomeDashboard', () => {
     const finished = screen.getByRole('list', { name: 'Completed games' })
     const finishedButtons = within(finished).getAllByRole('button')
     expect(finishedButtons.map((button) => button.getAttribute('aria-label'))).toEqual([
-      'Mina Chen, 0 wins, 3 losses, played back',
+      'Mina Chen, 900 – 2,200, 0 wins, 3 losses, played back',
     ])
+    expect(finishedButtons[0]).toHaveTextContent('900 – 2,200')
     expect(finishedButtons[0]).toHaveTextContent('0–3')
+    expect(finishedButtons[0]).not.toHaveTextContent('→')
+    expect(finishedButtons[0]).not.toHaveTextContent('Last day')
     expect(finishedButtons[0]).not.toHaveTextContent('Played back')
 
     await userEvent.click(finishedButtons[0])
@@ -338,6 +354,7 @@ describe('HomeDashboard', () => {
         ['C', 'A'],
         ['T', 'S'],
       ],
+      daysLeft: 2,
     }
     const onAcceptInvite = vi.fn()
     const onDeclineInvite = vi.fn()
@@ -353,6 +370,7 @@ describe('HomeDashboard', () => {
     expect(screen.getByRole('tab', { name: 'Invited games', selected: true })).toBeInTheDocument()
     const invited = screen.getByRole('list', { name: 'Invited games' })
     expect(within(invited).getByText('Grace Hopper invited you.')).toBeInTheDocument()
+    expect(within(invited).getByText('2 days left')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Play with Grace Hopper' }))
     expect(onAcceptInvite).toHaveBeenCalledExactlyOnceWith(invite)
@@ -370,6 +388,8 @@ describe('HomeDashboard', () => {
       hosted: false,
       wins: 1,
       losses: 0,
+      yourScore: null,
+      opponentScore: null,
     }))
     const onOpenGame = vi.fn()
     render(<HomeDashboard {...props} games={games} onOpenGame={onOpenGame} />)
@@ -399,6 +419,8 @@ describe('HomeDashboard', () => {
       hosted: true,
       wins: 1,
       losses: 0,
+      yourScore: null,
+      opponentScore: null,
     }
     const second: ActiveGame = {
       gameId: 'g2',
@@ -408,6 +430,8 @@ describe('HomeDashboard', () => {
       hosted: true,
       wins: 0,
       losses: 1,
+      yourScore: 400,
+      opponentScore: 900,
     }
     const joined: ActiveGame = {
       gameId: 'g3',
@@ -417,6 +441,8 @@ describe('HomeDashboard', () => {
       hosted: false,
       wins: 2,
       losses: 0,
+      yourScore: 200,
+      opponentScore: 200,
     }
     const onOpenGame = vi.fn()
     const { rerender } = render(

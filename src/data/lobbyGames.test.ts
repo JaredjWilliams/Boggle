@@ -9,8 +9,13 @@ type Query = {
   filters: Filter[]
 }
 
+const recent = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+const older = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+const expired = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString()
+
 const supabase = vi.hoisted(() => {
   const calls: Query[] = []
+  const rpc = vi.fn(async () => ({ data: null, error: null }))
 
   function from(table: string) {
     const query: Query = { table, filters: [] }
@@ -42,11 +47,11 @@ const supabase = vi.hoisted(() => {
     return chain
   }
 
-  return { calls, from }
+  return { calls, from, rpc }
 })
 
 vi.mock('../lib/supabase', () => ({
-  getSupabase: () => ({ from: supabase.from }),
+  getSupabase: () => ({ from: supabase.from, rpc: supabase.rpc }),
 }))
 
 function answer(query: Query): { data: unknown; error: { message: string } | null } {
@@ -57,11 +62,32 @@ function answer(query: Query): { data: unknown; error: { message: string } | nul
     }
   }
   if (query.table === 'game_players' && has(query, 'eq', 'status', 'invited')) {
-    return { data: [], error: null }
+    return {
+      data: [
+        {
+          game_id: 'fresh-invite',
+          games: { board: [['A']], host_id: 'grace', created_at: recent },
+        },
+        {
+          game_id: 'old-invite',
+          games: { board: [['B']], host_id: 'grace', created_at: expired },
+        },
+      ],
+      error: null,
+    }
   }
   if (query.table === 'game_players' && has(query, 'eq', 'status', 'accepted')) {
     return {
-      data: [{ game_id: 'g1', games: { created_at: '2026-10-22T18:00:00.000Z', host_id: 'ada' } }],
+      data: [{ game_id: 'g1', games: { created_at: recent, host_id: 'ada' } }],
+      error: null,
+    }
+  }
+  if (query.table === 'match_history') {
+    return {
+      data: [
+        { opponent_id: 'grace', score: 30, opponent_score: 10 },
+        { opponent_id: null, score: 15, opponent_score: null },
+      ],
       error: null,
     }
   }
@@ -86,8 +112,8 @@ function answer(query: Query): { data: unknown; error: { message: string } | nul
   if (query.table === 'results') {
     return {
       data: [
-        { game_id: 'g1', score: 80, games: { created_at: '2026-10-22T18:00:00.000Z' } },
-        { game_id: 'old', score: 20, games: { created_at: '2026-10-21T12:00:00.000Z' } },
+        { game_id: 'g1', score: 80, games: { created_at: recent } },
+        { game_id: 'old', score: 20, games: { created_at: older } },
       ],
       error: null,
     }
@@ -103,12 +129,14 @@ function has(query: Query, op: Filter['op'], column: string, value?: unknown): b
 
 beforeEach(() => {
   supabase.calls.length = 0
+  supabase.rpc.mockClear()
 })
 
 describe('loadLobby active games', () => {
-  it('loads who you are playing and the win-loss ratio from saved results', async () => {
+  it('loads who you are playing and the record from saved and kept results', async () => {
     await expect(loadLobby('ada')).resolves.toMatchObject({
       lastScore: 80,
+      invites: [{ gameId: 'fresh-invite', daysLeft: 3 }],
       games: [
         {
           gameId: 'g1',
@@ -116,11 +144,14 @@ describe('loadLobby active games', () => {
           opponentName: 'Grace Hopper',
           playedBack: true,
           hosted: true,
-          wins: 2,
+          wins: 3,
           losses: 0,
+          yourScore: 80,
+          opponentScore: 50,
         },
       ],
     })
+    expect(supabase.rpc).toHaveBeenCalledWith('expire_stale_games')
 
     const rivalScores = supabase.calls.find(
       (call) => call.table === 'results' && has(call, 'neq', 'player_id', 'ada'),

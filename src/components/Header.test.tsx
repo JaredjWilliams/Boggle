@@ -127,6 +127,8 @@ describe('Header invitations', () => {
       hosted: true,
       wins: 1,
       losses: 0,
+      yourScore: 100,
+      opponentScore: 40,
     }
     render(
       <Header

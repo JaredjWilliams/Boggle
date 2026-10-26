@@ -223,7 +223,7 @@
 .active-game-record {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 12px;
   color: #6d6458;
   font-size: 12px;
   font-weight: 700;
@@ -240,13 +240,28 @@
   text-transform: none;
 }
 
-.active-game-open {
+.active-game-tally {
   margin-left: auto;
-  color: var(--accent);
-  font-size: 20px;
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
   letter-spacing: 0;
   line-height: 1;
   text-transform: none;
+}
+
+.active-game-deadline {
+  margin-left: auto;
+  color: var(--warn);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.active-game-deadline.is-soon {
+  color: var(--accent);
 }
 
 .daily-game,
@@ -448,6 +463,17 @@
   font-size: 18px;
   font-weight: 700;
   line-height: 1.25;
+}
+
+.invited-game .invited-deadline {
+  color: var(--warn);
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.invited-game .invited-deadline.is-soon {
+  color: var(--accent);
 }
 
 .invited-actions {

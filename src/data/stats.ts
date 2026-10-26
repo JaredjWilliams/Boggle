@@ -10,8 +10,9 @@ type HistoryRow = {
   played_on: string
   words_found: number
   score: number
-  opponent_name: string
-  opponent_score: number
+  opponent_name: string | null
+  opponent_score: number | null
+  archive_group?: string | null
 }
 
 type SavedGame = {
@@ -37,7 +38,7 @@ export async function loadPlayerStats(playerId: string): Promise<GameStat[]> {
   const [history, mine] = await Promise.all([
     supabase
       .from('match_history')
-      .select('id, played_on, words_found, score, opponent_name, opponent_score')
+      .select('id, played_on, words_found, score, opponent_name, opponent_score, archive_group')
       .eq('player_id', playerId),
     supabase
       .from('results')
@@ -65,21 +66,31 @@ export async function loadPlayerStats(playerId: string): Promise<GameStat[]> {
 }
 
 export function historyGames(rows: readonly HistoryRow[]): GameStat[] {
-  return rows.flatMap((row) => {
-    const name = row.opponent_name.trim()
-    const opponents: OpponentResult[] = name ? [{ name, score: row.opponent_score }] : []
-    return [
-      {
-        id: row.id,
-        playedOn: row.played_on,
-        words: row.words_found,
-        score: row.score,
-        longest: '',
-        byLength: {},
-        opponents,
-        leftOn: null,
-      },
-    ]
+  const groups = new Map<string, HistoryRow[]>()
+  for (const row of rows) {
+    const key = row.archive_group || row.id
+    const group = groups.get(key) ?? []
+    group.push(row)
+    groups.set(key, group)
+  }
+
+  return [...groups.values()].map((group) => {
+    const first = group[0]
+    const opponents = group.flatMap((row) => {
+      const name = row.opponent_name?.trim() ?? ''
+      if (!name || row.opponent_score == null) return []
+      return [{ name, score: row.opponent_score }]
+    })
+    return {
+      id: first.archive_group || first.id,
+      playedOn: first.played_on,
+      words: first.words_found,
+      score: first.score,
+      longest: '',
+      byLength: {},
+      opponents,
+      leftOn: null,
+    }
   })
 }
 

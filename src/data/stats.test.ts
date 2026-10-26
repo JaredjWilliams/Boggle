@@ -88,4 +88,62 @@ describe('stats rows', () => {
       },
     ])
   })
+
+  it('keeps a score when the other player never played', () => {
+    expect(
+      historyGames([
+        {
+          id: 'h2',
+          played_on: '2026-10-05',
+          words_found: 4,
+          score: 500,
+          opponent_name: null,
+          opponent_score: null,
+          archive_group: 'solo',
+        },
+        {
+          id: 'h3',
+          played_on: '2026-10-06',
+          words_found: 6,
+          score: 800,
+          opponent_name: 'Mina Chen',
+          opponent_score: 200,
+          archive_group: 'both',
+        },
+        {
+          id: 'h4',
+          played_on: '2026-10-06',
+          words_found: 6,
+          score: 800,
+          opponent_name: 'Jonah Park',
+          opponent_score: 900,
+          archive_group: 'both',
+        },
+      ]),
+    ).toEqual([
+      {
+        id: 'solo',
+        playedOn: '2026-10-05',
+        words: 4,
+        score: 500,
+        longest: '',
+        byLength: {},
+        opponents: [],
+        leftOn: null,
+      },
+      {
+        id: 'both',
+        playedOn: '2026-10-06',
+        words: 6,
+        score: 800,
+        longest: '',
+        byLength: {},
+        opponents: [
+          { name: 'Mina Chen', score: 200 },
+          { name: 'Jonah Park', score: 900 },
+        ],
+        leftOn: null,
+      },
+    ])
+  })
 })

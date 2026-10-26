@@ -3,7 +3,11 @@ import {
   activeGameLabel,
   assembleActiveGames,
   completedGameKey,
+  daysLeftLabel,
+  daysLeftToPlay,
+  formatMatchScore,
   formatRecord,
+  gameIsExpired,
   playedBackNotices,
   selectActiveGames,
   selectCompletedGames,
@@ -11,6 +15,8 @@ import {
   type ActiveSeat,
   type HeadScore,
 } from './activeGames'
+
+const now = Date.parse('2026-10-22T21:00:00.000Z')
 
 const names = [
   { id: 'grace', name: ' Grace Hopper ' },
@@ -39,7 +45,7 @@ describe('assembleActiveGames', () => {
       { gameId: 'loss', playerId: 'grace', score: 50 },
     ]
 
-    expect(assembleActiveGames('ada', seats, scores, names)).toEqual([
+    expect(assembleActiveGames('ada', seats, scores, names, { now })).toEqual([
       {
         gameId: 'new',
         opponentId: 'grace',
@@ -48,6 +54,9 @@ describe('assembleActiveGames', () => {
         hosted: false,
         wins: 1,
         losses: 1,
+        yourScore: null,
+        opponentScore: null,
+        daysLeft: 5,
       },
       {
         gameId: 'old',
@@ -57,6 +66,8 @@ describe('assembleActiveGames', () => {
         hosted: false,
         wins: 1,
         losses: 1,
+        yourScore: 100,
+        opponentScore: 40,
       },
     ])
   })
@@ -74,7 +85,7 @@ describe('assembleActiveGames', () => {
       { gameId: 'earlier', playerId: 'mina', score: 30 },
     ]
 
-    expect(assembleActiveGames('ada', seats, scores, names)).toEqual([
+    expect(assembleActiveGames('ada', seats, scores, names, { now })).toEqual([
       {
         gameId: 'g1',
         opponentId: 'mina',
@@ -83,6 +94,8 @@ describe('assembleActiveGames', () => {
         hosted: false,
         wins: 0,
         losses: 1,
+        yourScore: 80,
+        opponentScore: null,
       },
       {
         gameId: 'g1',
@@ -92,12 +105,84 @@ describe('assembleActiveGames', () => {
         hosted: false,
         wins: 1,
         losses: 0,
+        yourScore: 80,
+        opponentScore: 0,
       },
     ])
   })
 
-  it('describes the win-loss ratio and whether they have played back', () => {
+  it('drops a game older than five days without charging a loss to someone who never played', () => {
+    const later = Date.parse('2026-10-27T18:00:00.000Z')
+    const seats: ActiveSeat[] = [
+      seat('open', 'ada', 'accepted', '2026-10-26T18:00:00.000Z'),
+      seat('open', 'grace', 'accepted', '2026-10-26T18:00:00.000Z'),
+      seat('stale', 'ada', 'accepted', '2026-10-21T18:00:00.000Z'),
+      seat('stale', 'grace', 'accepted', '2026-10-21T18:00:00.000Z'),
+    ]
+    const scores: HeadScore[] = [
+      { gameId: 'stale', playerId: 'ada', score: 80 },
+      { gameId: 'earlier', playerId: 'ada', score: 40 },
+      { gameId: 'earlier', playerId: 'grace', score: 10 },
+    ]
+
+    expect(gameIsExpired('2026-10-21T18:00:00.000Z', later)).toBe(true)
+    expect(daysLeftToPlay('2026-10-26T18:00:00.000Z', later)).toBe(4)
+    expect(daysLeftToPlay('2026-10-22T18:00:00.000Z', Date.parse('2026-10-27T18:00:00.000Z'))).toBe(0)
+    expect(daysLeftLabel(0)).toBe('Last day')
+    expect(daysLeftLabel(1)).toBe('1 day left')
+    expect(daysLeftLabel(4)).toBe('4 days left')
+
+    expect(
+      assembleActiveGames('ada', seats, scores, names, {
+        now: later,
+        kept: [{ opponentId: 'grace', score: 90, opponentScore: 20 }],
+      }),
+    ).toEqual([
+      {
+        gameId: 'open',
+        opponentId: 'grace',
+        opponentName: 'Grace Hopper',
+        playedBack: false,
+        hosted: false,
+        wins: 2,
+        losses: 0,
+        yourScore: null,
+        opponentScore: null,
+        daysLeft: 4,
+      },
+    ])
+  })
+
+  it('keeps a finished game after five days and does not show a deadline', () => {
+    const later = Date.parse('2026-10-27T18:00:00.000Z')
+    const seats: ActiveSeat[] = [
+      seat('done', 'ada', 'accepted', '2026-10-21T18:00:00.000Z'),
+      seat('done', 'grace', 'accepted', '2026-10-21T18:00:00.000Z'),
+    ]
+    const scores: HeadScore[] = [
+      { gameId: 'done', playerId: 'ada', score: 80 },
+      { gameId: 'done', playerId: 'grace', score: 40 },
+    ]
+
+    expect(assembleActiveGames('ada', seats, scores, names, { now: later })).toEqual([
+      {
+        gameId: 'done',
+        opponentId: 'grace',
+        opponentName: 'Grace Hopper',
+        playedBack: true,
+        hosted: false,
+        wins: 1,
+        losses: 0,
+        yourScore: 80,
+        opponentScore: 40,
+      },
+    ])
+  })
+
+  it('describes the score, the record, and whether they have played back', () => {
     expect(formatRecord(2, 1)).toBe('2–1')
+    expect(formatMatchScore(12900, null)).toBe('12,900 – ???')
+    expect(formatMatchScore(null, 0)).toBe('??? – 0')
     expect(
       activeGameLabel({
         gameId: 'g1',
@@ -107,8 +192,10 @@ describe('assembleActiveGames', () => {
         hosted: true,
         wins: 1,
         losses: 0,
+        yourScore: 100,
+        opponentScore: 40,
       }),
-    ).toBe('Grace Hopper, 1 win, 0 losses, played back')
+    ).toBe('Grace Hopper, 100 – 40, 1 win, 0 losses, played back')
     expect(
       activeGameLabel({
         gameId: 'g1',
@@ -118,8 +205,11 @@ describe('assembleActiveGames', () => {
         hosted: true,
         wins: 0,
         losses: 1,
+        yourScore: 80,
+        opponentScore: null,
+        daysLeft: 2,
       }),
-    ).toBe('Grace Hopper, 0 wins, 1 loss, waiting')
+    ).toBe('Grace Hopper, 80 – ???, 0 wins, 1 loss, 2 days left')
   })
 })
 
@@ -163,7 +253,7 @@ describe('playedBackNotices', () => {
       { gameId: 'g2', playerId: 'grace', score: 10 },
     ]
 
-    const games = assembleActiveGames('ada', seats, scores, names)
+    const games = assembleActiveGames('ada', seats, scores, names, { now })
 
     expect(games.map((game) => ({ gameId: game.gameId, playedBack: game.playedBack, hosted: game.hosted }))).toEqual([
       { gameId: 'g1', playedBack: true, hosted: true },
@@ -187,6 +277,8 @@ function game(gameId: string, opponentName: string, playedBack: boolean, hosted 
     hosted,
     wins: 1,
     losses: 0,
+    yourScore: 100,
+    opponentScore: playedBack ? 40 : null,
   }
 }
 

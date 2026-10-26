@@ -3,6 +3,8 @@ import {
   activeGameLabel,
   COMPLETED_GAME_LIMIT,
   completedGameKey,
+  daysLeftLabel,
+  formatMatchScore,
   formatRecord,
   playedBackNotices,
   selectActiveGames,
@@ -232,7 +234,6 @@ export function HomeDashboard({
                       label="Active games"
                       games={inProgress}
                       empty="No games in progress."
-                      showStatus
                       onOpenGame={onOpenGame}
                     />
                   )}
@@ -252,7 +253,6 @@ export function HomeDashboard({
                         label="Completed games"
                         games={finished}
                         empty="No finished games yet."
-                        showStatus={false}
                         unreadKeys={unreadKeys}
                         onOpenGame={onOpenGame}
                       />
@@ -305,14 +305,12 @@ function GameList({
   label,
   games,
   empty,
-  showStatus,
   unreadKeys,
   onOpenGame,
 }: {
   label: string
   games: readonly ActiveGame[]
   empty: string
-  showStatus: boolean
   unreadKeys?: ReadonlySet<string>
   onOpenGame?: (game: ActiveGame) => void
 }) {
@@ -333,18 +331,15 @@ function GameList({
               <span className="active-game-top">
                 <span className="active-game-name">{game.opponentName}</span>
                 {unread && <span className="active-game-status is-new">New</span>}
-                {showStatus && (
-                  <span className={game.playedBack ? 'active-game-status is-back' : 'active-game-status'}>
-                    {game.playedBack ? 'Played back' : 'Waiting'}
+                {typeof game.daysLeft === 'number' && (
+                  <span className={game.daysLeft <= 1 ? 'active-game-deadline is-soon' : 'active-game-deadline'}>
+                    {daysLeftLabel(game.daysLeft)}
                   </span>
                 )}
               </span>
               <span className="active-game-record">
-                <span>Wins–losses</span>
-                <strong>{formatRecord(game.wins, game.losses)}</strong>
-                <span className="active-game-open" aria-hidden="true">
-                  →
-                </span>
+                <strong>{formatMatchScore(game.yourScore, game.opponentScore)}</strong>
+                <span className="active-game-tally">{formatRecord(game.wins, game.losses)}</span>
               </span>
             </button>
           </li>
@@ -371,6 +366,11 @@ function InvitedList({
         <li key={invite.gameId}>
           <div className="invited-game">
             <p>{invite.hostName} invited you.</p>
+            {typeof invite.daysLeft === 'number' && (
+              <p className={invite.daysLeft <= 1 ? 'invited-deadline is-soon' : 'invited-deadline'}>
+                {daysLeftLabel(invite.daysLeft)}
+              </p>
+            )}
             <div className="invited-actions">
               <button
                 type="button"
