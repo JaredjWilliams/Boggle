@@ -285,15 +285,48 @@ type LeavingWord = {
   word: MissedWord
 }
 
+const DEFINITION_SIZE = 16
+const DEFINITION_MIN = 8
+
 function MissedWordBody({ word, heading = false }: { word: MissedWord; heading?: boolean }) {
   const Title = heading ? 'h1' : 'p'
+  const definitionRef = useRef<HTMLParagraphElement>(null)
+
+  useLayoutEffect(() => {
+    const el = definitionRef.current
+    if (!el) return
+    const fit = () => fitDefinition(el)
+    fit()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(fit)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [word.definition])
+
   return (
     <>
       <Title className="missed-word-title">{word.word}</Title>
       <p className="missed-word-kind">{wordKindLabel(word.kind)}</p>
-      <p className="missed-word-def">{word.definition}</p>
+      <p ref={definitionRef} className="missed-word-def">
+        {word.definition}
+      </p>
     </>
   )
+}
+
+function fitDefinition(el: HTMLElement) {
+  const available = el.clientWidth
+  if (available <= 0) return
+  el.style.fontSize = `${DEFINITION_SIZE}px`
+  if (el.scrollWidth <= available) return
+
+  const ratio = available / el.scrollWidth
+  let size = Math.max(DEFINITION_MIN, Math.floor(DEFINITION_SIZE * ratio * 10) / 10)
+  el.style.fontSize = `${size}px`
+  while (el.scrollWidth > available && size > DEFINITION_MIN) {
+    size = Math.round((size - 0.5) * 10) / 10
+    el.style.fontSize = `${size}px`
+  }
 }
 
 function canAnimate(): boolean {
