@@ -17,7 +17,7 @@
 .friends-lede,
 .friends-status {
   margin: 12px 0 0;
-  color: #6d6458;
+  color: var(--muted);
   font-size: 16px;
 }
 
@@ -74,7 +74,7 @@
 }
 
 .friend-id small {
-  color: #6d6458;
+  color: var(--muted);
 }
 
 .friend-list strong {

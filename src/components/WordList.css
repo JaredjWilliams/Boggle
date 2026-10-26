@@ -29,7 +29,7 @@
 .word-list .word-points {
   flex: none;
   margin-left: auto;
-  color: #6d6458;
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
   text-align: right;
   white-space: nowrap;

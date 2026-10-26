@@ -82,7 +82,7 @@
   padding: 0 2px;
   border: 0;
   background: transparent;
-  color: #6d6458;
+  color: var(--muted);
   font: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -97,7 +97,7 @@
 
 .missed-word-kind {
   margin: 8px 0 0;
-  color: #6d6458;
+  color: var(--muted);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -112,7 +112,7 @@
 
 .home-lede {
   margin: 12px 0 0;
-  color: #6d6458;
+  color: var(--muted);
   font-size: 16px;
 }
 
@@ -152,7 +152,7 @@
 
 .daily-game.is-played:disabled {
   opacity: 1;
-  color: #6d6458;
+  color: var(--muted);
 }
 
 .active-games {
@@ -205,13 +205,13 @@
   flex: none;
   padding: 4px 10px;
   border-radius: 999px;
-  color: #6d6458;
+  color: var(--muted);
   font-size: 13px;
   font-weight: 700;
 }
 
 .active-game-status.is-back {
-  background: var(--good);
+  background: var(--good-fill);
   color: white;
 }
 
@@ -224,7 +224,7 @@
   display: flex;
   align-items: baseline;
   gap: 12px;
-  color: #6d6458;
+  color: var(--muted);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -430,7 +430,7 @@
 .game-empty,
 .game-note {
   margin: 0;
-  color: #6d6458;
+  color: var(--muted);
   font-size: 15px;
 }
 

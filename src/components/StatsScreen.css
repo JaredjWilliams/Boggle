@@ -15,7 +15,7 @@
 .stats-player span,
 .stats h2 {
   margin: 0;
-  color: #6d6458;
+  color: var(--muted);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -40,7 +40,7 @@
 .stats-lede,
 .stats-status {
   margin: 12px 0 0;
-  color: #6d6458;
+  color: var(--muted);
   font-size: 16px;
 }
 
@@ -144,7 +144,7 @@
 .stat-note,
 .chart-range {
   margin: 6px 0 0;
-  color: #6d6458;
+  color: var(--muted);
   font-size: 14px;
 }
 
@@ -167,7 +167,7 @@
 .length-counts span {
   flex: none;
   width: 2.5em;
-  color: #6d6458;
+  color: var(--muted);
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -182,7 +182,7 @@
 }
 
 .length-counts li.is-empty strong {
-  color: #6d6458;
+  color: var(--muted);
 }
 
 .started-list {
@@ -204,7 +204,7 @@
 .started-from,
 .started-arrow {
   flex: none;
-  color: #6d6458;
+  color: var(--muted);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -224,7 +224,7 @@
 
 .started-list small {
   flex: none;
-  color: #6d6458;
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
 }
@@ -246,14 +246,14 @@
 }
 
 .chart-label {
-  fill: #6d6458;
+  fill: var(--muted);
   font-family: var(--sans);
   font-size: 11px;
   font-weight: 700;
 }
 
 .chart-empty {
-  fill: #6d6458;
+  fill: var(--muted);
   font-family: var(--sans);
   font-size: 14px;
   font-weight: 700;
@@ -266,7 +266,7 @@
 }
 
 .chart-axis {
-  stroke: #d3c6b4;
+  stroke: var(--axis);
   stroke-width: 1.5;
 }
 
@@ -349,7 +349,7 @@
 
 .legend small {
   margin-left: auto;
-  color: #6d6458;
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
 }

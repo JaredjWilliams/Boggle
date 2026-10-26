@@ -1,4 +1,153 @@
+@property --ink {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #f3eee6;
+}
+
+@property --cream {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #1a2330;
+}
+
+@property --bg {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #141c27;
+}
+
+@property --page {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #0d131b;
+}
+
+@property --tile {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #243140;
+}
+
+@property --line {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #3c4c60;
+}
+
+@property --accent {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #e15a2d;
+}
+
+@property --good {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #8fd9b0;
+}
+
+@property --good-fill {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #157a3c;
+}
+
+@property --warn {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #f0a04b;
+}
+
+@property --bad {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #ff8d86;
+}
+
+@property --muted {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #c4b8a8;
+}
+
+@property --message {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #ffb089;
+}
+
+@property --axis {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #4d5e72;
+}
+
+@property --header {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #101820;
+}
+
+@property --header-ink {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #f6f1e7;
+}
+
+@property --shadow {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #00000080;
+}
+
 :root {
+  --ink: #f3eee6;
+  --cream: #1a2330;
+  --bg: #141c27;
+  --page: #0d131b;
+  --tile: #243140;
+  --line: #3c4c60;
+  --accent: #e15a2d;
+  --good: #8fd9b0;
+  --good-fill: #157a3c;
+  --warn: #f0a04b;
+  --bad: #ff8d86;
+  --muted: #c4b8a8;
+  --message: #ffb089;
+  --axis: #4d5e72;
+  --header: #101820;
+  --header-ink: #f6f1e7;
+  --shadow: #00000080;
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  color-scheme: dark;
+  font: 16px/1.45 var(--sans);
+  color: var(--ink);
+  background: var(--page);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  transition:
+    --ink 280ms ease,
+    --cream 280ms ease,
+    --bg 280ms ease,
+    --page 280ms ease,
+    --tile 280ms ease,
+    --line 280ms ease,
+    --accent 280ms ease,
+    --good 280ms ease,
+    --good-fill 280ms ease,
+    --warn 280ms ease,
+    --bad 280ms ease,
+    --muted 280ms ease,
+    --message 280ms ease,
+    --axis 280ms ease,
+    --header 280ms ease,
+    --header-ink 280ms ease,
+    --shadow 280ms ease;
+}
+
+html[data-theme='light'] {
   --ink: #1b2838;
   --cream: #f6f1e7;
   --bg: #f6f1e7;
@@ -7,16 +156,23 @@
   --line: #e4d9c8;
   --accent: #e15a2d;
   --good: #157a3c;
+  --good-fill: #157a3c;
   --warn: #b86100;
   --bad: #c62828;
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --muted: #6d6458;
+  --message: #9a3412;
+  --axis: #d3c6b4;
+  --header: #1b2838;
+  --header-ink: #f6f1e7;
+  --shadow: #1b28382e;
 
-  font: 16px/1.45 var(--sans);
-  color: var(--ink);
-  background: var(--page);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
+  color-scheme: light;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    transition: none;
+  }
 }
 
 body {

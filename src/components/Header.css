@@ -12,8 +12,8 @@
   gap: 12px;
   flex: none;
   padding: calc(16px + env(safe-area-inset-top)) 20px 16px;
-  background: var(--ink);
-  color: var(--cream);
+  background: var(--header);
+  color: var(--header-ink);
 }
 
 .brand-icon {
@@ -40,10 +40,10 @@
   flex: none;
   white-space: nowrap;
   min-height: 44px;
-  border: 1px solid var(--cream);
+  border: 1px solid var(--header-ink);
   border-radius: 999px;
   background: transparent;
-  color: var(--cream);
+  color: var(--header-ink);
   font: inherit;
   font-weight: 700;
 }
@@ -70,7 +70,7 @@
 .header-bell:focus-visible,
 .header-menu:focus-visible,
 .header-home:focus-visible {
-  outline: 2px solid var(--cream);
+  outline: 2px solid var(--header-ink);
   outline-offset: 2px;
 }
 
@@ -112,7 +112,7 @@
   border-radius: 16px;
   background: var(--tile);
   color: var(--ink);
-  box-shadow: 0 12px 32px rgb(27 40 56 / 18%);
+  box-shadow: 0 12px 32px var(--shadow);
 }
 
 .invite-pop:focus {
@@ -121,7 +121,7 @@
 
 .invite-pop h2 {
   margin: 0 0 10px;
-  color: #6d6458;
+  color: var(--muted);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -134,7 +134,7 @@
 
 .invite-pop > p {
   margin: 0;
-  color: #6d6458;
+  color: var(--muted);
 }
 
 .invite-pop ul {
@@ -193,7 +193,7 @@
   border-radius: 16px;
   background: var(--tile);
   color: var(--ink);
-  box-shadow: 0 12px 32px rgb(27 40 56 / 18%);
+  box-shadow: 0 12px 32px var(--shadow);
 }
 
 .menu-pop:focus {

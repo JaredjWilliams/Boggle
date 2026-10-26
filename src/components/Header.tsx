@@ -8,6 +8,7 @@ type Panel = 'notices' | 'menu'
 type Props = {
   onHome?: () => void
   onLearn?: () => void
+  onSettings?: () => void
   onSignOut?: () => void
   invites?: readonly Invite[]
   playedBack?: readonly ActiveGame[]
@@ -19,6 +20,7 @@ type Props = {
 export function Header({
   onHome,
   onLearn,
+  onSettings,
   onSignOut,
   invites,
   playedBack,
@@ -33,7 +35,7 @@ export function Header({
   const showInvites = invites !== undefined && Boolean(onAcceptInvite) && Boolean(onDeclineInvite)
   const showPlayedBack = playedBack !== undefined && Boolean(onOpenPlayedBack)
   const showNotifications = showInvites || showPlayedBack
-  const showMenu = Boolean(onLearn) || Boolean(onSignOut)
+  const showMenu = Boolean(onLearn) || Boolean(onSettings) || Boolean(onSignOut)
   const noticeCount = (showInvites ? incoming.length : 0) + (showPlayedBack ? finished.length : 0)
 
   useEffect(() => {
@@ -112,6 +114,17 @@ export function Header({
               }}
             >
               Learn
+            </button>
+          )}
+          {onSettings && (
+            <button
+              type="button"
+              onClick={() => {
+                setPanel(null)
+                onSettings()
+              }}
+            >
+              Settings
             </button>
           )}
           {onSignOut && (

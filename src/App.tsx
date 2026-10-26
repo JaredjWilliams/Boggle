@@ -11,6 +11,7 @@ import { LearnScreen } from './components/LearnScreen'
 import { HomeDashboard } from './components/HomeDashboard'
 import { PlayerStats } from './components/StatsScreen'
 import { LoginPage } from './components/LoginPage'
+import { SettingsScreen } from './components/SettingsScreen'
 import { StatusBar } from './components/StatusBar'
 import { WordForm } from './components/WordForm'
 import { completedGameKey, playedBackNotices } from './data/activeGames'
@@ -23,6 +24,8 @@ import { findAllWords, scoreWord } from './game/words'
 import type { Rival } from './game/match'
 import { useLobby, type ActiveGame, type Invite } from './hooks/useLobby'
 import { useRound, type AttemptFeedback } from './hooks/useRound'
+import { useTheme } from './theme/useTheme'
+import type { Theme } from './theme/theme'
 import './App.css'
 
 const testing = import.meta.env.MODE === 'test'
@@ -30,6 +33,8 @@ const testing = import.meta.env.MODE === 'test'
 function App() {
   const [player, setPlayer] = useState<Player | null>(() => (testing ? readSession() : null))
   const [authReady, setAuthReady] = useState(testing)
+  const [guestView, setGuestView] = useState<'login' | 'settings'>('login')
+  const { theme, setTheme } = useTheme()
 
   useEffect(() => {
     if (testing) return
@@ -63,22 +68,40 @@ function App() {
   if (!player) {
     return (
       <>
-        <Header />
+        <Header
+          onHome={guestView === 'settings' ? () => setGuestView('login') : undefined}
+          onSettings={() => setGuestView('settings')}
+        />
         <div className="screen">
-          <LoginPage onSignedIn={setPlayer} />
+          {guestView === 'settings' ? (
+            <SettingsScreen theme={theme} onThemeChange={setTheme} />
+          ) : (
+            <LoginPage onSignedIn={setPlayer} />
+          )}
         </div>
       </>
     )
   }
 
-  return <PlayerGame player={player} onSignOut={() => void signOut()} />
+  return (
+    <PlayerGame
+      player={player}
+      theme={theme}
+      onThemeChange={setTheme}
+      onSignOut={() => void signOut()}
+    />
+  )
 }
 
 function PlayerGame({
   player,
+  theme,
+  onThemeChange,
   onSignOut,
 }: {
   player: Player
+  theme: Theme
+  onThemeChange: (theme: Theme) => void
   onSignOut: () => void
 }) {
   const round = useRound()
@@ -87,7 +110,9 @@ function PlayerGame({
   const [matchId, setMatchId] = useState<string | null>(null)
   const [rivals, setRivals] = useState<Rival[]>([])
   const [showPotential, setShowPotential] = useState(false)
-  const [view, setView] = useState<'home' | 'stats' | 'daily' | 'friends' | 'learn'>('home')
+  const [view, setView] = useState<'home' | 'stats' | 'daily' | 'friends' | 'learn' | 'settings'>(
+    'home',
+  )
   const [openGame, setOpenGame] = useState<ActiveGame | null>(null)
   const [starting, setStarting] = useState(false)
   const startingRef = useRef(false)
@@ -236,6 +261,7 @@ function PlayerGame({
       <Header
         onHome={onHome}
         onLearn={includeSignOut ? () => setView('learn') : undefined}
+        onSettings={includeSignOut ? () => setView('settings') : undefined}
         onSignOut={includeSignOut ? onSignOut : undefined}
         invites={lobby.invites}
         playedBack={notices}
@@ -335,6 +361,17 @@ function PlayerGame({
         {signedInHeader(() => setView('home'))}
         <div className="screen">
           <LearnScreen />
+        </div>
+      </>
+    )
+  }
+
+  if (round.phase !== 'playing' && view === 'settings') {
+    return (
+      <>
+        {signedInHeader(() => setView('home'))}
+        <div className="screen">
+          <SettingsScreen theme={theme} onThemeChange={onThemeChange} />
         </div>
       </>
     )

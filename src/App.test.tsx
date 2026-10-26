@@ -420,6 +420,33 @@ describe('home dashboard', () => {
     expect(screen.getByRole('region', { name: 'Often missed' })).toBeInTheDocument()
   })
 
+  it('toggles dark mode from settings and keeps it on the home screen', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(await screen.findByRole('button', { name: 'Menu' }))
+    await user.click(screen.getByRole('button', { name: 'Settings' }))
+
+    const toggle = screen.getByRole('switch', { name: 'Dark mode' })
+    expect(toggle).toHaveAttribute('aria-checked', 'true')
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark')
+
+    await user.click(toggle)
+    expect(toggle).toHaveAttribute('aria-checked', 'false')
+    expect(document.documentElement).toHaveAttribute('data-theme', 'light')
+    expect(localStorage.getItem('boggle-theme')).toBe('light')
+
+    await user.click(screen.getByRole('button', { name: 'Home' }))
+    expect(screen.getByRole('region', { name: 'Often missed' })).toBeInTheDocument()
+    expect(document.documentElement).toHaveAttribute('data-theme', 'light')
+
+    await user.click(screen.getByRole('button', { name: 'Menu' }))
+    await user.click(screen.getByRole('button', { name: 'Settings' }))
+    await user.click(screen.getByRole('switch', { name: 'Dark mode' }))
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark')
+    expect(localStorage.getItem('boggle-theme')).toBe('dark')
+  })
+
   it('opens invitations from the header', async () => {
     const user = userEvent.setup()
     render(<App />)

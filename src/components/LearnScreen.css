@@ -17,7 +17,7 @@
 .learn-lede,
 .learn-empty {
   margin: 12px 0 0;
-  color: #6d6458;
+  color: var(--muted);
   font-size: 16px;
 }
 
@@ -61,7 +61,7 @@
 }
 
 .article-card-summary {
-  color: #6d6458;
+  color: var(--muted);
   font-size: 15px;
   line-height: 1.4;
 }
@@ -127,7 +127,7 @@
 
 .article-table caption {
   margin-bottom: 8px;
-  color: #6d6458;
+  color: var(--muted);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -144,7 +144,7 @@
 }
 
 .article-table th {
-  color: #6d6458;
+  color: var(--muted);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -172,7 +172,7 @@
 
 .article-chart figcaption,
 .article-chart-note {
-  color: #6d6458;
+  color: var(--muted);
 }
 
 .article-chart figcaption {
@@ -216,7 +216,7 @@
   bottom: 2px;
   padding: 0 4px;
   background: var(--bg);
-  color: #6d6458;
+  color: var(--muted);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -260,7 +260,7 @@
 .article-column-name {
   position: absolute;
   top: calc(100% + 6px);
-  color: #6d6458;
+  color: var(--muted);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;

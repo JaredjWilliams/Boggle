@@ -39,6 +39,19 @@ describe('Header menu', () => {
     expect(onSignOut).toHaveBeenCalledOnce()
   })
 
+  it('opens settings from the menu', async () => {
+    const user = userEvent.setup()
+    const onSettings = vi.fn()
+    render(<Header onLearn={vi.fn()} onSettings={onSettings} onSignOut={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: 'Menu' }))
+    expect(screen.getByRole('navigation', { name: 'Menu' })).toHaveTextContent('Settings')
+
+    await user.click(screen.getByRole('button', { name: 'Settings' }))
+    expect(onSettings).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('navigation', { name: 'Menu' })).not.toBeInTheDocument()
+  })
+
   it('closes the menu when going home', async () => {
     const user = userEvent.setup()
     const onHome = vi.fn()

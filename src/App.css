@@ -10,7 +10,7 @@
   flex: none;
   min-height: 1.3em;
   margin: 8px 16px;
-  color: #9a3412;
+  color: var(--message);
   font-size: 14px;
 }
 
