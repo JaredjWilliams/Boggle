@@ -1,0 +1,337 @@
+.admin {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 28px 20px calc(28px + env(safe-area-inset-bottom));
+}
+
+.admin h1,
+.admin-profile h2 {
+  margin: 0;
+  font-family: Georgia, 'Palatino Linotype', Palatino, serif;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.admin h1 {
+  font-size: 36px;
+}
+
+.admin-lede,
+.admin-profile p,
+.admin-empty,
+.admin-date,
+.admin-score,
+.admin-opponents {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.admin-search {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.admin-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.admin-picker {
+  position: relative;
+}
+
+.admin-select {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 64px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--tile);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.admin-select-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.admin-select-copy span,
+.admin-select-copy small,
+.admin-select-placeholder,
+.admin-select-menu button span,
+.admin-select-menu small {
+  overflow-wrap: anywhere;
+}
+
+.admin-select-copy small,
+.admin-select-placeholder,
+.admin-select-menu small {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.admin-chevron {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  transition: transform 180ms ease;
+}
+
+.admin-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.admin-select-menu {
+  position: absolute;
+  z-index: 3;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  max-height: 280px;
+  margin: 0;
+  padding: 6px;
+  overflow: auto;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--tile);
+  box-shadow: 0 12px 32px var(--shadow);
+  scrollbar-color: var(--line) transparent;
+  scrollbar-width: thin;
+}
+
+.admin-select-menu::-webkit-scrollbar {
+  width: 8px;
+}
+
+.admin-select-menu::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.admin-select-menu button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+}
+
+.admin-select-menu button[aria-selected='true'] {
+  background: color-mix(in srgb, var(--accent) 18%, var(--tile));
+}
+
+.admin-select-menu button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-chevron {
+    transition: none;
+  }
+}
+
+.admin-select:focus-visible,
+.admin-sort-chip:focus-visible,
+.admin-delete:focus-visible,
+.admin-delete-confirm:focus-visible,
+.admin-keep:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.admin-delete,
+.admin-delete-confirm,
+.admin-keep {
+  min-height: 44px;
+  border-radius: 14px;
+  font: inherit;
+  font-weight: 700;
+}
+
+.admin-select:disabled,
+.admin-delete:disabled,
+.admin-delete-confirm:disabled,
+.admin-keep:disabled {
+  opacity: 0.45;
+}
+
+.admin-notice {
+  margin: 14px 0 0;
+  color: var(--bad);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.admin-profile {
+  margin-top: 22px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--tile);
+}
+
+.admin-profile h2 {
+  font-size: 28px;
+}
+
+.admin-profile p:last-child {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.admin-empty {
+  margin-top: 18px;
+}
+
+.admin-sort {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.admin-sort-chip {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--tile);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+}
+
+.admin-sort-chip.is-selected {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.admin-games {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-game {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--tile);
+}
+
+.admin-game-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-kind {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.admin-kind-daily {
+  background: var(--accent);
+  color: white;
+}
+
+.admin-kind-friends {
+  background: var(--good-fill);
+  color: white;
+}
+
+.admin-kind-solo {
+  border-color: var(--line);
+  background: transparent;
+  color: var(--ink);
+}
+
+.admin-state {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.admin-opponents {
+  padding: 0;
+  list-style: none;
+}
+
+.admin-delete,
+.admin-keep {
+  width: 100%;
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+}
+
+.admin-delete {
+  color: var(--bad);
+}
+
+.admin-confirm {
+  margin-top: 12px;
+}
+
+.admin-confirm p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.admin-delete-confirm {
+  width: 100%;
+  margin-top: 10px;
+  border: 0;
+  background: var(--accent);
+  color: white;
+}

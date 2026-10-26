@@ -367,6 +367,7 @@ describe('sign in', () => {
     render(<App />)
 
     await user.click(await screen.findByRole('button', { name: 'Menu' }))
+    expect(screen.getByRole('navigation', { name: 'Menu' })).not.toHaveTextContent('Admin')
     await user.click(screen.getByRole('button', { name: 'Sign out' }))
 
     expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
@@ -402,6 +403,18 @@ describe('home dashboard', () => {
 
     await user.click(screen.getByRole('button', { name: 'Home' }))
     expect(screen.getByRole('region', { name: 'Often missed' })).toBeInTheDocument()
+  })
+
+  it('opens admin from the menu for the admin account', async () => {
+    writeSession({ name: 'Jared Williams', username: 'jaredjwilliams' })
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(await screen.findByRole('button', { name: 'Menu' }))
+    await user.click(screen.getByRole('button', { name: 'Admin' }))
+
+    expect(screen.getByRole('heading', { name: 'Admin' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Player' })).toBeInTheDocument()
   })
 
   it('opens the scoring article from the menu', async () => {

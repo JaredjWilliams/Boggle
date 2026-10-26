@@ -29,6 +29,7 @@ describe('Header menu', () => {
     const menu = screen.getByRole('navigation', { name: 'Menu' })
     expect(menu).toHaveTextContent('Learn')
     expect(menu).toHaveTextContent('Sign out')
+    expect(menu).not.toHaveTextContent('Admin')
 
     await user.click(screen.getByRole('button', { name: 'Learn' }))
     expect(onLearn).toHaveBeenCalledOnce()
@@ -50,6 +51,19 @@ describe('Header menu', () => {
 
     await user.click(screen.getByRole('button', { name: 'Leaderboard' }))
     expect(onLeaderboard).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('navigation', { name: 'Menu' })).not.toBeInTheDocument()
+  })
+
+  it('opens admin from the menu', async () => {
+    const user = userEvent.setup()
+    const onAdmin = vi.fn()
+    render(<Header onLearn={vi.fn()} onAdmin={onAdmin} onSignOut={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: 'Menu' }))
+    expect(screen.getByRole('navigation', { name: 'Menu' })).toHaveTextContent('Admin')
+
+    await user.click(screen.getByRole('button', { name: 'Admin' }))
+    expect(onAdmin).toHaveBeenCalledOnce()
     expect(screen.queryByRole('navigation', { name: 'Menu' })).not.toBeInTheDocument()
   })
 

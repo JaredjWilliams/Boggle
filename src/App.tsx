@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import { isAdmin } from './auth/admin'
 import { endSession, readSession, restorePlayer, type Player } from './auth/profiles'
+import { AdminPage } from './components/AdminScreen'
 import { Board } from './components/Board'
 import { BuiltWord } from './components/BuiltWord'
 import { DailyBoardResults } from './components/DailyResults'
@@ -112,7 +114,7 @@ function PlayerGame({
   const [rivals, setRivals] = useState<Rival[]>([])
   const [showPotential, setShowPotential] = useState(false)
   const [view, setView] = useState<
-    'home' | 'stats' | 'daily' | 'friends' | 'learn' | 'leaderboard' | 'settings'
+    'home' | 'stats' | 'daily' | 'friends' | 'learn' | 'leaderboard' | 'settings' | 'admin'
   >('home')
   const [openGame, setOpenGame] = useState<ActiveGame | null>(null)
   const [starting, setStarting] = useState(false)
@@ -264,6 +266,7 @@ function PlayerGame({
         onLeaderboard={includeSignOut ? () => setView('leaderboard') : undefined}
         onLearn={includeSignOut ? () => setView('learn') : undefined}
         onSettings={includeSignOut ? () => setView('settings') : undefined}
+        onAdmin={includeSignOut && isAdmin(player) ? () => setView('admin') : undefined}
         onSignOut={includeSignOut ? onSignOut : undefined}
         invites={lobby.invites}
         playedBack={notices}
@@ -374,6 +377,17 @@ function PlayerGame({
         {signedInHeader(() => setView('home'))}
         <div className="screen">
           <LearnScreen />
+        </div>
+      </>
+    )
+  }
+
+  if (round.phase !== 'playing' && view === 'admin' && isAdmin(player)) {
+    return (
+      <>
+        {signedInHeader(() => setView('home'))}
+        <div className="screen">
+          <AdminPage />
         </div>
       </>
     )
