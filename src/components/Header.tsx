@@ -7,6 +7,7 @@ type Panel = 'notices' | 'menu'
 
 type Props = {
   onHome?: () => void
+  onLeaderboard?: () => void
   onLearn?: () => void
   onSettings?: () => void
   onSignOut?: () => void
@@ -19,6 +20,7 @@ type Props = {
 
 export function Header({
   onHome,
+  onLeaderboard,
   onLearn,
   onSettings,
   onSignOut,
@@ -35,7 +37,8 @@ export function Header({
   const showInvites = invites !== undefined && Boolean(onAcceptInvite) && Boolean(onDeclineInvite)
   const showPlayedBack = playedBack !== undefined && Boolean(onOpenPlayedBack)
   const showNotifications = showInvites || showPlayedBack
-  const showMenu = Boolean(onLearn) || Boolean(onSettings) || Boolean(onSignOut)
+  const showMenu =
+    Boolean(onLeaderboard) || Boolean(onLearn) || Boolean(onSettings) || Boolean(onSignOut)
   const noticeCount = (showInvites ? incoming.length : 0) + (showPlayedBack ? finished.length : 0)
 
   useEffect(() => {
@@ -105,6 +108,17 @@ export function Header({
       </header>
       {panel === 'menu' && (
         <nav ref={panelRef} className="menu-pop" aria-label="Menu" tabIndex={-1}>
+          {onLeaderboard && (
+            <button
+              type="button"
+              onClick={() => {
+                setPanel(null)
+                onLeaderboard()
+              }}
+            >
+              Leaderboard
+            </button>
+          )}
           {onLearn && (
             <button
               type="button"

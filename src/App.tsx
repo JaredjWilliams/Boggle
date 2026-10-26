@@ -7,6 +7,7 @@ import { EndPanel } from './components/EndPanel'
 import { FriendsScreen } from './components/FriendsScreen'
 import { MatchReview, SavedMatch } from './components/MatchResults'
 import { Header } from './components/Header'
+import { PlayerLeaderboard } from './components/LeaderboardScreen'
 import { LearnScreen } from './components/LearnScreen'
 import { HomeDashboard } from './components/HomeDashboard'
 import { PlayerStats } from './components/StatsScreen'
@@ -110,9 +111,9 @@ function PlayerGame({
   const [matchId, setMatchId] = useState<string | null>(null)
   const [rivals, setRivals] = useState<Rival[]>([])
   const [showPotential, setShowPotential] = useState(false)
-  const [view, setView] = useState<'home' | 'stats' | 'daily' | 'friends' | 'learn' | 'settings'>(
-    'home',
-  )
+  const [view, setView] = useState<
+    'home' | 'stats' | 'daily' | 'friends' | 'learn' | 'leaderboard' | 'settings'
+  >('home')
   const [openGame, setOpenGame] = useState<ActiveGame | null>(null)
   const [starting, setStarting] = useState(false)
   const startingRef = useRef(false)
@@ -260,6 +261,7 @@ function PlayerGame({
     return (
       <Header
         onHome={onHome}
+        onLeaderboard={includeSignOut ? () => setView('leaderboard') : undefined}
         onLearn={includeSignOut ? () => setView('learn') : undefined}
         onSettings={includeSignOut ? () => setView('settings') : undefined}
         onSignOut={includeSignOut ? onSignOut : undefined}
@@ -339,6 +341,17 @@ function PlayerGame({
         {signedInHeader(() => setView('home'))}
         <div className="screen">
           <DailyBoardResults playerId={player.id} />
+        </div>
+      </>
+    )
+  }
+
+  if (round.phase !== 'playing' && view === 'leaderboard') {
+    return (
+      <>
+        {signedInHeader(() => setView('home'))}
+        <div className="screen">
+          <PlayerLeaderboard viewerId={player.id ?? ''} />
         </div>
       </>
     )

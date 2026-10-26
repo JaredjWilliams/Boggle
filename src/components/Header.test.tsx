@@ -39,6 +39,20 @@ describe('Header menu', () => {
     expect(onSignOut).toHaveBeenCalledOnce()
   })
 
+  it('opens the leaderboard from the menu', async () => {
+    const user = userEvent.setup()
+    const onLeaderboard = vi.fn()
+    render(<Header onLeaderboard={onLeaderboard} onLearn={vi.fn()} onSignOut={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: 'Menu' }))
+    const menu = screen.getByRole('navigation', { name: 'Menu' })
+    expect(menu).toHaveTextContent('Leaderboard')
+
+    await user.click(screen.getByRole('button', { name: 'Leaderboard' }))
+    expect(onLeaderboard).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('navigation', { name: 'Menu' })).not.toBeInTheDocument()
+  })
+
   it('opens settings from the menu', async () => {
     const user = userEvent.setup()
     const onSettings = vi.fn()
