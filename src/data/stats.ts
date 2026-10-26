@@ -1,7 +1,7 @@
 import { longestWord } from '../game/match'
 import type { ScoredWord } from '../game/round'
 import { getSupabase } from '../lib/supabase'
-import { countByLength, wordsLeftOn, type GameStat, type OpponentResult } from '../stats/series'
+import { countByLength, startCells, wordsLeftOn, type GameStat, type OpponentResult } from '../stats/series'
 import { unplayedWords } from './matches'
 import { playedOn } from './play'
 
@@ -90,6 +90,7 @@ export function historyGames(rows: readonly HistoryRow[]): GameStat[] {
       byLength: {},
       opponents,
       leftOn: null,
+      starts: null,
     }
   })
 }
@@ -120,6 +121,7 @@ export function resultGames(mine: readonly MineRow[], others: readonly OtherRow[
         longest: longestWord(found),
         byLength: countByLength(found.map((item) => item.word)),
         opponents: rivals.get(row.game_id) ?? [],
+        starts: startCells(found),
         leftOn:
           possible === null
             ? null
@@ -136,10 +138,11 @@ function namedWords(value: unknown): ScoredWord[] {
   if (!Array.isArray(value)) return []
   return value.flatMap((item) => {
     if (!item || typeof item !== 'object') return []
-    const record = item as { word?: unknown; points?: unknown }
+    const record = item as { word?: unknown; points?: unknown; start?: unknown }
     if (typeof record.word !== 'string' || !record.word.trim()) return []
     const points = typeof record.points === 'number' ? record.points : 0
-    return [{ word: record.word, points }]
+    const start = typeof record.start === 'number' && Number.isInteger(record.start) ? record.start : undefined
+    return [start == null ? { word: record.word, points } : { word: record.word, points, start }]
   })
 }
 

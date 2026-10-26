@@ -1,4 +1,7 @@
+import { SIDE } from '../game/dice'
 import { compareWords } from '../game/words'
+
+export const START_CELLS = SIDE * SIDE
 
 export type OpponentResult = {
   name: string
@@ -20,6 +23,7 @@ export type GameStat = {
   byLength: Readonly<Record<number, number>>
   opponents: OpponentResult[]
   leftOn: readonly LeftOn[] | null
+  starts?: readonly number[] | null
 }
 
 export type LeftOnSummary = {
@@ -130,6 +134,54 @@ export function wordsByLength(games: readonly GameStat[]): LengthTotal[] {
     const length = index + 3
     return { length, count: totals.get(length) ?? 0 }
   })
+}
+
+export function startCells(words: readonly { start?: number }[]): number[] | null {
+  const counts = Array.from({ length: START_CELLS }, () => 0)
+  let saved = 0
+  for (const word of words) {
+    const start = word.start
+    if (typeof start !== 'number' || !Number.isInteger(start) || start < 0 || start >= START_CELLS) continue
+    counts[start] += 1
+    saved += 1
+  }
+  return saved === 0 ? null : counts
+}
+
+export type StartHeat = {
+  games: number
+  saved: number
+  cells: readonly number[] | null
+}
+
+export function startHeat(games: readonly GameStat[]): StartHeat {
+  const saved = games.filter((game) => game.starts?.some((count) => count > 0))
+  if (games.length === 0 || saved.length === 0) {
+    return { games: games.length, saved: saved.length, cells: null }
+  }
+
+  const totals = Array.from({ length: START_CELLS }, () => 0)
+  for (const game of saved) {
+    game.starts?.forEach((count, index) => {
+      if (index < START_CELLS && count > 0) totals[index] += count
+    })
+  }
+  return {
+    games: games.length,
+    saved: saved.length,
+    cells: totals.map((count) => count / saved.length),
+  }
+}
+
+export function startHeatNote(summary: StartHeat): string {
+  if (summary.games === 0) return 'No games in this view.'
+  if (summary.saved === 0 || summary.cells === null) return 'No traced starts saved in this view.'
+  const note =
+    'Each square is where a traced word began. The number is the average across these games. Darker means more words.'
+  const unsaved = summary.games - summary.saved
+  if (unsaved <= 0) return note
+  const label = unsaved === 1 ? '1 game has no traced starts.' : `${formatCount(unsaved)} games have no traced starts.`
+  return `${note} ${label}`
 }
 
 export function lengthNote(games: readonly GameStat[]): string {

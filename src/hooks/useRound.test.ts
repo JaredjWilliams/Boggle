@@ -303,7 +303,7 @@ describe('useRound drag', () => {
     })
 
     expect(round.result.current.score).toBe(100)
-    expect(round.result.current.found).toEqual([{ word: 'cat', points: 100 }])
+    expect(round.result.current.found).toEqual([{ word: 'cat', points: 100, start: 4 }])
     expect(round.result.current.board[0]).toEqual(['U', 'F', 'D', 'R', 'C'])
     expect(round.result.current.phase).toBe('playing')
     expect(shakeBoard).toHaveBeenCalledTimes(1)

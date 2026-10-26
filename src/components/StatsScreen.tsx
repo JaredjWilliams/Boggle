@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { SIDE } from '../game/dice'
 import { loadPlayerStats } from '../data/stats'
 import {
   averages,
@@ -14,6 +15,8 @@ import {
   longestFoundNote,
   opponentNames,
   playedCount,
+  startHeat,
+  startHeatNote,
   trendNote,
   winRate,
   wordsByLength,
@@ -82,6 +85,7 @@ export function StatsScreen({ playerName, games, loading, notice, onRetry }: Pro
   const bestWord = longestFound(visible)
   const lengths = wordsByLength(visible)
   const started = leftOnSummary(visible)
+  const heat = startHeat(visible)
   const wordPoints = visible.map((game) => ({ id: game.id, playedOn: game.playedOn, value: game.words }))
   const scorePoints = visible.map((game) => ({ id: game.id, playedOn: game.playedOn, value: game.score }))
 
@@ -165,6 +169,16 @@ export function StatsScreen({ playerName, games, loading, notice, onRetry }: Pro
             <p className="stat-note">{lengthNote(visible)}</p>
           </section>
 
+          <section className="stat-card" aria-labelledby="where-heading">
+            <h2 id="where-heading">Where you start</h2>
+            {heat.cells ? (
+              <StartHeat cells={heat.cells} />
+            ) : (
+              <p className="stat-figure">—</p>
+            )}
+            <p className="stat-note">{startHeatNote(heat)}</p>
+          </section>
+
           <section className="stat-card" aria-labelledby="started-heading">
             <h2 id="started-heading">Words you had started</h2>
             <p className="stat-figure">{started.count === null ? '—' : formatCount(started.count)}</p>
@@ -218,5 +232,31 @@ function recordNote(
     played === 0 ? 'No head-to-head games yet.' : `${played} games with another player.`
   if (solos === 0) return result
   const soloLabel = solos === 1 ? '1 solo game stays' : `${solos} solo games stay`
-  return `${result} ${soloLabel} on the words, score, longest-word, length, and started-word cards.`
+  return `${result} ${soloLabel} on the words, score, longest-word, length, where-you-start, and started-word cards.`
+}
+
+function StartHeat({ cells }: { cells: readonly number[] }) {
+  const low = Math.min(...cells)
+  const high = Math.max(...cells)
+  const span = high - low || 1
+
+  return (
+    <figure className="start-heat" aria-label="Where traced words started">
+      {cells.map((value, index) => {
+        const row = Math.floor(index / SIDE) + 1
+        const column = (index % SIDE) + 1
+        const mix = Math.round(((value - low) / span) * 72 + 8)
+        return (
+          <div
+            key={`${row}-${column}`}
+            className="start-heat-cell"
+            style={{ '--mix': `${mix}%` } as CSSProperties}
+            aria-label={`Row ${row}, column ${column}, ${value.toFixed(1)} words`}
+          >
+            {value.toFixed(1)}
+          </div>
+        )
+      })}
+    </figure>
+  )
 }

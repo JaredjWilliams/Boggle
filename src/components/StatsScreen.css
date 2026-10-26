@@ -185,6 +185,29 @@
   color: var(--muted);
 }
 
+.start-heat {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin: 14px 0 0;
+  padding: 8px;
+  border-radius: 12px;
+  background: var(--page);
+}
+
+.start-heat-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) var(--mix), var(--tile));
+  color: var(--ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
 .started-list {
   display: flex;
   flex-direction: column;

@@ -11,6 +11,7 @@ import { loadDictionary, type Dictionary, type Trie } from '../game/dictionary'
 import {
   judgeWord,
   ROUND_SECONDS,
+  startIndex,
   totalScore,
   unfoundWords,
   type AttemptKind,
@@ -171,12 +172,13 @@ export function useRound() {
   }, [phase])
 
   const submitWord = useCallback(
-    (raw: string) => {
+    (raw: string, origin?: Cell) => {
       if (phaseRef.current !== 'playing' || secondsRef.current <= 0) return
       const dictionary = dictRef.current
       if (!dictionary) return
 
       const word = raw.trim().toLowerCase()
+      const start = startIndex(origin, boardRef.current.length)
       clearPath()
       if (!word) return
 
@@ -201,7 +203,7 @@ export function useRound() {
         return
       }
 
-      const next = [{ word, points }, ...foundRef.current]
+      const next = [start == null ? { word, points } : { word, points, start }, ...foundRef.current]
       foundRef.current = next
       setFound(next)
       setMessage('')
@@ -259,7 +261,7 @@ export function useRound() {
     const gesture = gestureRef.current
     gestureRef.current = null
     setDrag(null)
-    if (gesture?.moved) submitWord(pathWord(boardRef.current, gesture.path))
+    if (gesture?.moved) submitWord(pathWord(boardRef.current, gesture.path), gesture.path[0])
   }
 
   function onPointerCancel() {
@@ -280,7 +282,7 @@ export function useRound() {
   function onSubmit() {
     const typed = draft.trim()
     if (typed) submitWord(typed)
-    else submitWord(pathWord(boardRef.current, pathRef.current))
+    else submitWord(pathWord(boardRef.current, pathRef.current), pathRef.current[0])
   }
 
   const highlight = useMemo(

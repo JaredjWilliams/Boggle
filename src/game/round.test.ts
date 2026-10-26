@@ -3,6 +3,7 @@ import { dictionaryFromText } from './dictionary'
 import {
   invalidWordMessage,
   judgeWord,
+  startIndex,
   totalScore,
   unfoundWords,
 } from './round'
@@ -66,6 +67,17 @@ describe('totalScore', () => {
         { word: 'cats', points: 400 },
       ]),
     ).toBe(500)
+  })
+})
+
+describe('startIndex', () => {
+  it('numbers a traced cell from the top left', () => {
+    expect(startIndex({ row: 0, col: 0 }, 5)).toBe(0)
+    expect(startIndex({ row: 0, col: 4 }, 5)).toBe(4)
+    expect(startIndex({ row: 2, col: 2 }, 5)).toBe(12)
+    expect(startIndex({ row: 4, col: 4 }, 5)).toBe(24)
+    expect(startIndex({ row: 5, col: 0 }, 5)).toBeUndefined()
+    expect(startIndex(null, 5)).toBeUndefined()
   })
 })
 

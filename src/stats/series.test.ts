@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { START_CELLS } from './series'
 import {
   averages,
   axisMax,
@@ -11,6 +12,9 @@ import {
   leftOnSummary,
   lengthNote,
   linearTrend,
+  startCells,
+  startHeat,
+  startHeatNote,
   longestFound,
   longestFoundNote,
   niceMax,
@@ -299,4 +303,39 @@ describe('stats series', () => {
       ),
     ).toBe('Worth 1 point still on the board. 2 games have no saved board.')
   })
+
+  it('averages traced starts on the 25 squares', () => {
+    expect(startCells([{ start: 0 }, { start: 0 }, { start: 24 }, { start: 1.5 }, {}])).toEqual(
+      cells({ 0: 2, 24: 1 }),
+    )
+    expect(startCells([{ word: 'cat' }])).toBeNull()
+
+    const traced = {
+      ...games[0],
+      starts: cells({ 0: 2, 6: 1 }),
+    }
+    const later = {
+      ...games[1],
+      starts: cells({ 0: 4 }),
+    }
+    const summary = startHeat([traced, later, games[2]])
+    expect(summary.saved).toBe(2)
+    expect(summary.cells?.[0]).toBe(3)
+    expect(summary.cells?.[6]).toBe(0.5)
+    expect(summary.cells?.[24]).toBe(0)
+    expect(startHeatNote(summary)).toBe(
+      'Each square is where a traced word began. The number is the average across these games. Darker means more words. 1 game has no traced starts.',
+    )
+    expect(startHeatNote(startHeat([traced]))).toBe(
+      'Each square is where a traced word began. The number is the average across these games. Darker means more words.',
+    )
+    expect(startHeatNote(startHeat(games))).toBe('No traced starts saved in this view.')
+    expect(startHeatNote(startHeat([]))).toBe('No games in this view.')
+  })
 })
+
+function cells(marks: Record<number, number>): number[] {
+  const grid = Array.from({ length: START_CELLS }, () => 0)
+  for (const [index, count] of Object.entries(marks)) grid[Number(index)] = count
+  return grid
+}

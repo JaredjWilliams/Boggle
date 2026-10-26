@@ -1,6 +1,6 @@
 import type { Board } from './dice'
 import type { Trie } from './dictionary'
-import { canFormWord, compareWords, findAllWords, scoreWord } from './words'
+import { canFormWord, compareWords, findAllWords, scoreWord, type Cell } from './words'
 
 export const ROUND_SECONDS = 180
 
@@ -9,6 +9,15 @@ export type Phase = 'loading' | 'ready' | 'playing' | 'ended'
 export type ScoredWord = {
   word: string
   points: number
+  start?: number
+}
+
+export function startIndex(cell: Cell | null | undefined, width: number): number | undefined {
+  if (!cell || width < 1) return undefined
+  const { row, col } = cell
+  if (!Number.isInteger(row) || !Number.isInteger(col)) return undefined
+  if (row < 0 || col < 0 || row >= width || col >= width) return undefined
+  return row * width + col
 }
 
 export function totalScore(words: readonly ScoredWord[]): number {

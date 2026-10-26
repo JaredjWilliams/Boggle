@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import type { GameStat } from '../stats/series'
+import { START_CELLS, type GameStat } from '../stats/series'
 import { StatsScreen } from './StatsScreen'
 
 const games: GameStat[] = [
@@ -65,6 +65,8 @@ describe('StatsScreen', () => {
 
     const lengths = section('Words by length')
     expect(lengths).toHaveTextContent('18 words across these games.')
+    expect(figure('Where you start')).toHaveTextContent('—')
+    expect(section('Where you start')).toHaveTextContent('No traced starts saved in this view.')
     expect(lengthCount('3+')).toHaveTextContent('6')
     expect(lengthCount('4+')).toHaveTextContent('6')
     expect(lengthCount('5+')).toHaveTextContent('4')
@@ -127,6 +129,8 @@ describe('StatsScreen', () => {
     expect(figure('Longest word')).toHaveTextContent('—')
     expect(section('Longest word')).toHaveTextContent('No games in this view.')
     expect(section('Words by length')).toHaveTextContent('No games in this view.')
+    expect(figure('Where you start')).toHaveTextContent('—')
+    expect(section('Where you start')).toHaveTextContent('No games in this view.')
     expect(figure('Words you had started')).toHaveTextContent('—')
     expect(section('Words you had started')).toHaveTextContent('No games in this view.')
     expect(lengthCount('3+')).toHaveTextContent('0')
@@ -137,6 +141,32 @@ describe('StatsScreen', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Could not load your stats.')
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(onRetry).toHaveBeenCalledOnce()
+  })
+
+  it('shows the average traced start on each square', async () => {
+    render(
+      <StatsScreen
+        {...props}
+        games={[
+          { ...games[0], starts: cells({ 0: 2, 6: 1 }) },
+          { ...games[1], starts: cells({ 0: 4 }) },
+          games[2],
+        ]}
+      />,
+    )
+
+    const where = section('Where you start')
+    const heat = within(where).getByRole('figure', { name: 'Where traced words started' })
+    expect(heat).toHaveTextContent('3.0')
+    expect(within(heat).getByLabelText('Row 1, column 1, 3.0 words')).toHaveTextContent('3.0')
+    expect(within(heat).getByLabelText('Row 2, column 2, 0.5 words')).toHaveTextContent('0.5')
+    expect(within(heat).getByLabelText('Row 5, column 5, 0.0 words')).toHaveTextContent('0.0')
+    expect(where).toHaveTextContent('1 game has no traced starts.')
+    expect(heat.querySelectorAll('.start-heat-cell')).toHaveLength(25)
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Jonah Park' }))
+    expect(within(section('Where you start')).getByLabelText('Row 1, column 1, 4.0 words')).toHaveTextContent('4.0')
+    expect(section('Where you start')).not.toHaveTextContent('no traced starts')
   })
 
   it('keeps solo games on the date charts only', () => {
@@ -161,10 +191,16 @@ describe('StatsScreen', () => {
 
     expect(figure('Words a game')).toHaveTextContent('5.3')
     expect(section('Win rate')).toHaveTextContent(
-      '1 solo game stays on the words, score, longest-word, length, and started-word cards.',
+      '1 solo game stays on the words, score, longest-word, length, where-you-start, and started-word cards.',
     )
   })
 })
+
+function cells(marks: Record<number, number>): number[] {
+  const grid = Array.from({ length: START_CELLS }, () => 0)
+  for (const [index, count] of Object.entries(marks)) grid[Number(index)] = count
+  return grid
+}
 
 function section(name: string): HTMLElement {
   const heading = screen.getByRole('heading', { name })
