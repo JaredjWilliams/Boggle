@@ -12,6 +12,8 @@ export type BoardId =
   | 'longest'
   | 'wins'
   | 'friends'
+  | 'outgoing'
+  | 'days'
   | 'solo'
   | 'averageWords'
   | 'averagePoints'
@@ -47,8 +49,8 @@ export type LeaderboardResult = {
   words: unknown
   profiles: { name?: string } | { name?: string }[] | null
   games:
-    | { daily_on?: string | null; created_at?: string | null }
-    | { daily_on?: string | null; created_at?: string | null }[]
+    | { daily_on?: string | null; created_at?: string | null; host_id?: string | null }
+    | { daily_on?: string | null; created_at?: string | null; host_id?: string | null }[]
     | null
 }
 
@@ -112,6 +114,18 @@ const BOARDS: readonly {
     figureKind: 'count',
   },
   {
+    id: 'outgoing',
+    title: 'Most outgoing',
+    note: 'Invitations that became a finished game.',
+    figureKind: 'count',
+  },
+  {
+    id: 'days',
+    title: 'Days on the board',
+    note: 'Distinct daily boards you have finished.',
+    figureKind: 'count',
+  },
+  {
     id: 'solo',
     title: 'Solo plays',
     note: 'Finished games with nobody else in the match.',
@@ -140,6 +154,7 @@ type Play = {
   longest: string
   dailyOn: string | null
   createdAt: number
+  hostId: string | null
 }
 
 type Totals = {
@@ -156,6 +171,7 @@ type Totals = {
   solo: number
   dailyStarts: number
   dailyWins: number
+  outgoing: number
 }
 
 type PairTally = {
@@ -190,7 +206,7 @@ export async function loadLeaderboard(): Promise<LeaderboardBoard[]> {
     readPages((from, to) =>
       supabase
         .from('results')
-        .select('game_id, player_id, score, words, profiles(name), games(daily_on, created_at)')
+        .select('game_id, player_id, score, words, profiles(name), games(daily_on, created_at, host_id)')
         .range(from, to),
     ),
     readPages((from, to) =>
@@ -235,6 +251,7 @@ export function buildLeaderboard(
   }
 
   awardDaily(plays, totals)
+  awardGathering(byGame, totals)
   const pairs = tallyPairs(byGame)
   return BOARDS.map((board) => ({
     ...board,
@@ -298,6 +315,20 @@ function friendRows(pairs: readonly PairTally[], totals: ReadonlyMap<string, Tot
   return rankRows(drafts)
 }
 
+function awardGathering(byGame: ReadonlyMap<string, readonly Play[]>, totals: Map<string, Totals>) {
+  for (const group of byGame.values()) {
+    const hostId = group.find((play) => play.hostId)?.hostId
+    if (!hostId) continue
+    const host = totals.get(hostId)
+    if (!host) continue
+
+    const finishedOthers = new Set(
+      group.filter((play) => play.playerId !== hostId).map((play) => play.playerId),
+    )
+    host.outgoing += finishedOthers.size
+  }
+}
+
 async function readPages(
   query: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>,
 ): Promise<unknown[]> {
@@ -337,6 +368,8 @@ function draftFor(id: BoardId, player: Totals): Draft | null {
     }
   }
   if (id === 'wins' && player.comparisons > 0) return counted(player, player.wins)
+  if (id === 'outgoing' && player.outgoing > 0) return counted(player, player.outgoing)
+  if (id === 'days' && player.dailyStarts > 0) return counted(player, player.dailyStarts)
   if (id === 'solo' && player.solo > 0) return counted(player, player.solo)
   if (id === 'averageWords' && player.games > 0) return averaged(player, player.words / player.games)
   if (id === 'averagePoints' && player.games > 0) return averaged(player, player.points / player.games)
@@ -429,6 +462,7 @@ function ensure(totals: Map<string, Totals>, play: Play): Totals {
     solo: 0,
     dailyStarts: 0,
     dailyWins: 0,
+    outgoing: 0,
   }
   totals.set(play.playerId, created)
   return created
@@ -457,6 +491,7 @@ function toPlay(row: LeaderboardResult): Play[] {
       longest: longestWord(words),
       dailyOn: daily,
       createdAt: Number.isNaN(created) ? 0 : created,
+      hostId: game?.host_id?.trim() || null,
     },
   ]
 }
