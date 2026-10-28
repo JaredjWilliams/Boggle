@@ -66,7 +66,19 @@ function result(row: Partial<LeaderboardResult> & Pick<LeaderboardResult, 'game_
   }
 }
 
-function rows(id: 'daily' | 'points' | 'words' | 'longest' | 'wins' | 'friends' | 'solo' | 'averageWords' | 'averagePoints') {
+function rows(
+  id:
+    | 'daily'
+    | 'points'
+    | 'bestScore'
+    | 'words'
+    | 'longest'
+    | 'wins'
+    | 'friends'
+    | 'solo'
+    | 'averageWords'
+    | 'averagePoints',
+) {
   const board = buildLeaderboard(
     [
       ...sampleResults(),
@@ -228,6 +240,15 @@ describe('leaderboard records', () => {
     expect(rows('points')).toEqual([
       { playerId: 'ada', name: 'Ada Lovelace', rank: 1, value: 220, figure: '220', caption: '' },
       { playerId: 'grace', name: 'Grace Hopper', rank: 2, value: 145, figure: '145', caption: '' },
+      { playerId: 'jonah', name: 'Jonah Park', rank: 3, value: 20, figure: '20', caption: '' },
+      { playerId: 'mina', name: 'Mina Chen', rank: 4, value: 10, figure: '10', caption: '' },
+    ])
+  })
+
+  it('ranks the highest score from a single game', () => {
+    expect(rows('bestScore')).toEqual([
+      { playerId: 'ada', name: 'Ada Lovelace', rank: 1, value: 100, figure: '100', caption: '' },
+      { playerId: 'grace', name: 'Grace Hopper', rank: 1, value: 100, figure: '100', caption: '' },
       { playerId: 'jonah', name: 'Jonah Park', rank: 3, value: 20, figure: '20', caption: '' },
       { playerId: 'mina', name: 'Mina Chen', rank: 4, value: 10, figure: '10', caption: '' },
     ])

@@ -7,6 +7,7 @@ import { formatCount } from '../stats/series'
 export type BoardId =
   | 'daily'
   | 'points'
+  | 'bestScore'
   | 'words'
   | 'longest'
   | 'wins'
@@ -81,6 +82,12 @@ const BOARDS: readonly {
     figureKind: 'count',
   },
   {
+    id: 'bestScore',
+    title: 'Highest score',
+    note: 'The highest score from a single game.',
+    figureKind: 'count',
+  },
+  {
     id: 'words',
     title: 'Most words in a game',
     note: 'The highest word count from a single game.',
@@ -141,6 +148,7 @@ type Totals = {
   points: number
   games: number
   words: number
+  bestScore: number
   bestWords: number
   longest: string
   wins: number
@@ -211,6 +219,7 @@ export function buildLeaderboard(
     player.points += play.score
     player.games += 1
     player.words += play.wordCount
+    if (play.score > player.bestScore) player.bestScore = play.score
     if (play.wordCount > player.bestWords) player.bestWords = play.wordCount
     player.longest = betterWord(player.longest, play.longest)
 
@@ -315,6 +324,7 @@ function draftFor(id: BoardId, player: Totals): Draft | null {
   if (player.games <= MINIMUM_FINISHED_GAMES) return null
   if (id === 'daily' && player.dailyStarts > 0) return counted(player, player.dailyWins)
   if (id === 'points' && player.games > 0) return counted(player, player.points)
+  if (id === 'bestScore' && player.games > 0) return counted(player, player.bestScore)
   if (id === 'words' && player.games > 0) return counted(player, player.bestWords)
   if (id === 'longest' && player.longest.trim()) {
     const letters = player.longest.trim().length
@@ -411,6 +421,7 @@ function ensure(totals: Map<string, Totals>, play: Play): Totals {
     points: 0,
     games: 0,
     words: 0,
+    bestScore: 0,
     bestWords: 0,
     longest: '',
     wins: 0,

@@ -31,6 +31,13 @@ const boards: LeaderboardBoard[] = [
     rows: [{ playerId: 'grace', name: 'Grace Hopper', rank: 1, value: 1200, figure: '1,200', caption: '' }],
   },
   {
+    id: 'bestScore',
+    title: 'Highest score',
+    note: 'The highest score from a single game.',
+    figureKind: 'count',
+    rows: [{ playerId: 'ada', name: 'Ada Lovelace', rank: 1, value: 180, figure: '180', caption: '' }],
+  },
+  {
     id: 'words',
     title: 'Most words in a game',
     note: 'The highest word count from a single game.',
@@ -94,11 +101,19 @@ describe('LeaderboardScreen', () => {
     expect(daily).toHaveTextContent('Ada Lovelace')
     expect(daily).toHaveTextContent('4')
     expect(screen.getByRole('radio', { name: /Points scored/ })).toHaveTextContent('1,200')
+    expect(screen.getByRole('radio', { name: /Highest score/ })).toHaveTextContent('180')
     expect(screen.getByRole('radio', { name: /Longest word/ })).toHaveTextContent('QUARTZ')
 
     expect(screen.getByRole('heading', { name: 'Daily boards won' })).toBeInTheDocument()
     expect(screen.getByText('You are 1st of 2.')).toBeInTheDocument()
     expect(screen.getByText('You')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('radio', { name: /Highest score/ }))
+
+    expect(screen.getByRole('heading', { name: 'Highest score' })).toBeInTheDocument()
+    expect(screen.getByText('The highest score from a single game.')).toBeInTheDocument()
+    expect(screen.getByRole('list')).toHaveTextContent('180')
+    expect(screen.getByText('You are 1st of 1.')).toBeInTheDocument()
 
     await user.click(screen.getByRole('radio', { name: /Longest word/ }))
 
