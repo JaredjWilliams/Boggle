@@ -231,21 +231,21 @@ describe('word result', () => {
       fireEvent.pointerDown(grid, { clientX: 10, clientY: 10, pointerId: 1 })
       expect(document.querySelector('.connectors')).toBeNull()
 
-      fireEvent.pointerMove(grid, { clientX: 45, clientY: 20, pointerId: 1 })
+      fireEvent.pointerMove(grid, { clientX: 40, clientY: 20, pointerId: 1 })
       expect(document.querySelector('.built-slot')).toHaveTextContent(/^c$/i)
       expect(connectorPoints()).toEqual([
         { x1: '20', y1: '20', x2: '60', y2: '20' },
       ])
 
-      fireEvent.pointerMove(grid, { clientX: 20, clientY: 10, pointerId: 1 })
+      fireEvent.pointerMove(grid, { clientX: 58, clientY: 20, pointerId: 1 })
       expect(document.querySelector('.built-slot')).toHaveTextContent(/ca/i)
       expect(connectorPoints()).toEqual([
         { x1: '20', y1: '20', x2: '60', y2: '20' },
       ])
       expect(screen.queryByTestId('attempt')).not.toBeInTheDocument()
 
-      fireEvent.pointerMove(grid, { clientX: 30, clientY: 10, pointerId: 1 })
-      fireEvent.pointerUp(grid, { clientX: 30, clientY: 10, pointerId: 1 })
+      fireEvent.pointerMove(grid, { clientX: 96, clientY: 20, pointerId: 1 })
+      fireEvent.pointerUp(grid, { clientX: 96, clientY: 20, pointerId: 1 })
     } finally {
       document.elementFromPoint = original
       rects.mockRestore()

@@ -18,7 +18,14 @@ import {
   type Phase,
   type ScoredWord,
 } from '../game/round'
-import { pathOnDrag, pathOnPress, tileAt } from '../game/trace'
+import {
+  aimedNeighbor,
+  pathOnDrag,
+  pathOnPress,
+  sameCell,
+  tileAt,
+  tileCenters,
+} from '../game/trace'
 import { pathWord, scoreWord, typedHighlight, type Cell } from '../game/words'
 
 const EMPTY_DICTIONARY: ReadonlySet<string> = new Set()
@@ -236,11 +243,20 @@ export function useRound() {
     const gesture = gestureRef.current
     if (!gesture || phaseRef.current !== 'playing') return
 
-    const over = tileAt(event.clientX, event.clientY)
+    const under = tileAt(event.clientX, event.clientY)
+    const last = gesture.path[gesture.path.length - 1]
+    const centers = last ? tileCenters(event.currentTarget) : []
+    // A diagonal swipe crosses the corner of the tile beside it. Aim from the
+    // last tile's center so that corner does not become the next letter.
+    const aimed =
+      last && centers.length > 0
+        ? aimedNeighbor(last, { x: event.clientX, y: event.clientY }, centers)
+        : under
+    const over = aimed ?? (last && under && sameCell(last, under) ? under : null)
     setDrag({ x: event.clientX, y: event.clientY, over })
-    if (!over) return
+    if (!aimed) return
 
-    const nextPath = pathOnDrag(gesture.path, over)
+    const nextPath = pathOnDrag(gesture.path, aimed)
     if (!nextPath) return
 
     if (gesture.path.length > 0) gesture.moved = true

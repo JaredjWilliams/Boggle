@@ -309,6 +309,41 @@ describe('useRound drag', () => {
     expect(shakeBoard).toHaveBeenCalledTimes(1)
   })
 
+  it('does not take the orthogonal tile a diagonal swipe only clips', async () => {
+    const round = await startPlaying()
+    const grid = boardGrid()
+    const rects = mockTileRects()
+
+    try {
+      hitAt(0, 0)
+      act(() => {
+        round.result.current.onPointerDown(pointer(32, 32, grid))
+      })
+
+      hitAt(0, 1)
+      act(() => {
+        round.result.current.onPointerMove(pointer(72, 64, grid))
+      })
+
+      expect(round.result.current.path).toEqual([{ row: 0, col: 0 }])
+      expect(round.result.current.drag?.over).toBeNull()
+
+      hitAt(0, 1)
+      act(() => {
+        round.result.current.onPointerMove(pointer(90, 90, grid))
+      })
+
+      expect(round.result.current.path).toEqual([
+        { row: 0, col: 0 },
+        { row: 1, col: 1 },
+      ])
+      expect(round.result.current.traced).toBe('ce')
+    } finally {
+      rects.mockRestore()
+      grid.remove()
+    }
+  })
+
   it('lights every typed route until the word is in the dictionary', async () => {
     vi.mocked(shakeBoard).mockReturnValueOnce([
       ['C', 'A', 'T', 'X', 'X'],
@@ -372,13 +407,40 @@ function hitNothing() {
   document.elementFromPoint = () => null
 }
 
-function pointer(x: number, y: number) {
+function boardGrid() {
+  const grid = document.createElement('div')
+  for (let row = 0; row < 5; row += 1) {
+    for (let col = 0; col < 5; col += 1) {
+      const tile = document.createElement('div')
+      tile.dataset.row = String(row)
+      tile.dataset.col = String(col)
+      grid.append(tile)
+    }
+  }
+  document.body.append(grid)
+  return grid
+}
+
+function mockTileRects() {
+  const stride = 72
+  const size = 64
+  return vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function rect(
+    this: HTMLElement,
+  ) {
+    const row = Number(this.dataset.row)
+    const col = Number(this.dataset.col)
+    if (!Number.isInteger(row) || !Number.isInteger(col)) return new DOMRect(0, 0, 0, 0)
+    return new DOMRect(col * stride, row * stride, size, size)
+  })
+}
+
+function pointer(x: number, y: number, target?: EventTarget) {
   return {
     clientX: x,
     clientY: y,
     pointerId: 1,
     preventDefault() {},
-    currentTarget: {
+    currentTarget: target ?? {
       setPointerCapture() {},
       hasPointerCapture() {
         return false
