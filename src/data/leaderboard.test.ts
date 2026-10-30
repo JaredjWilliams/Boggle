@@ -90,6 +90,7 @@ function rows(
       ...fillers('jonah', 'Jonah Park', 10),
     ],
     sampleSeats(),
+    new Date('2026-10-30T12:00:00.000Z'),
   ).find((item) => item.id === id)
   if (!board) throw new Error(`Missing ${id}`)
   return board.rows
@@ -230,11 +231,89 @@ describe('place labels', () => {
 })
 
 describe('leaderboard records', () => {
-  it('gives a daily board only to the unique high score, using the latest play that day', () => {
+  it('gives a finished daily board only to the unique high score, using the latest play that day', () => {
     expect(rows('daily')).toEqual([
       { playerId: 'mina', name: 'Mina Chen', rank: 1, value: 1, figure: '1', caption: '' },
       { playerId: 'ada', name: 'Ada Lovelace', rank: 2, value: 0, figure: '0', caption: '' },
       { playerId: 'grace', name: 'Grace Hopper', rank: 2, value: 0, figure: '0', caption: '' },
+    ])
+  })
+
+  it('awards the daily point when the day ends, and ignores a score saved after that', () => {
+    const day = '2026-10-28'
+    const open = new Date('2026-10-29T11:59:59.000Z')
+    const closed = new Date('2026-10-29T12:00:00.000Z')
+    const plays = [
+      ...fillers('ada', 'Ada Lovelace', 10),
+      ...fillers('grace', 'Grace Hopper', 10),
+      result({
+        game_id: 'ada-leads',
+        player_id: 'ada',
+        score: 100,
+        words: [],
+        profiles: { name: 'Ada Lovelace' },
+        games: { daily_on: day, created_at: '2026-10-28T15:00:00.000Z' },
+      }),
+      result({
+        game_id: 'grace-trails',
+        player_id: 'grace',
+        score: 80,
+        words: [],
+        profiles: { name: 'Grace Hopper' },
+        games: { daily_on: day, created_at: '2026-10-28T16:00:00.000Z' },
+      }),
+      result({
+        game_id: 'grace-late',
+        player_id: 'grace',
+        score: 500,
+        words: [],
+        profiles: { name: 'Grace Hopper' },
+        games: { daily_on: day, created_at: '2026-10-29T12:00:00.000Z' },
+      }),
+    ]
+
+    const daily = (now: Date) =>
+      buildLeaderboard(plays, [], now).find((board) => board.id === 'daily')?.rows
+
+    expect(daily(open)).toEqual([
+      { playerId: 'ada', name: 'Ada Lovelace', rank: 1, value: 0, figure: '0', caption: '' },
+      { playerId: 'grace', name: 'Grace Hopper', rank: 1, value: 0, figure: '0', caption: '' },
+    ])
+    expect(daily(closed)).toEqual([
+      { playerId: 'ada', name: 'Ada Lovelace', rank: 1, value: 1, figure: '1', caption: '' },
+      { playerId: 'grace', name: 'Grace Hopper', rank: 2, value: 0, figure: '0', caption: '' },
+    ])
+  })
+
+  it('gives a finished day to the player who is ahead at the end, not whoever led earlier', () => {
+    const day = '2026-10-28'
+    const plays = [
+      ...fillers('ada', 'Ada Lovelace', 10),
+      ...fillers('grace', 'Grace Hopper', 10),
+      result({
+        game_id: 'ada-leads',
+        player_id: 'ada',
+        score: 100,
+        words: [],
+        profiles: { name: 'Ada Lovelace' },
+        games: { daily_on: day, created_at: '2026-10-28T15:00:00.000Z' },
+      }),
+      result({
+        game_id: 'grace-passes',
+        player_id: 'grace',
+        score: 120,
+        words: [],
+        profiles: { name: 'Grace Hopper' },
+        games: { daily_on: day, created_at: '2026-10-28T20:00:00.000Z' },
+      }),
+    ]
+
+    expect(
+      buildLeaderboard(plays, [], new Date('2026-10-29T12:00:00.000Z')).find((board) => board.id === 'daily')
+        ?.rows,
+    ).toEqual([
+      { playerId: 'grace', name: 'Grace Hopper', rank: 1, value: 1, figure: '1', caption: '' },
+      { playerId: 'ada', name: 'Ada Lovelace', rank: 2, value: 0, figure: '0', caption: '' },
     ])
   })
 

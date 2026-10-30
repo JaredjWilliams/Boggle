@@ -74,7 +74,7 @@ const BOARDS: readonly {
   {
     id: 'daily',
     title: 'Daily boards won',
-    note: 'Highest score on that day’s shared board. A tie is not a win.',
+    note: 'Highest score at the end of that day. A tie is not a win.',
     figureKind: 'count',
   },
   {
@@ -213,12 +213,13 @@ export async function loadLeaderboard(): Promise<LeaderboardBoard[]> {
       supabase.from('game_players').select('game_id, player_id, status').range(from, to),
     ),
   ])
-  return buildLeaderboard(results as LeaderboardResult[], seats as LeaderboardSeat[])
+  return buildLeaderboard(results as LeaderboardResult[], seats as LeaderboardSeat[], new Date())
 }
 
 export function buildLeaderboard(
   results: readonly LeaderboardResult[],
   seats: readonly LeaderboardSeat[],
+  now = new Date(),
 ): LeaderboardBoard[] {
   const plays = results.flatMap(toPlay)
   const rivals = activeRivals(seats)
@@ -250,7 +251,7 @@ export function buildLeaderboard(
     if (!waitingRival && others.length === 0) player.solo += 1
   }
 
-  awardDaily(plays, totals)
+  awardDaily(plays, totals, now)
   awardGathering(byGame, totals)
   const pairs = tallyPairs(byGame)
   return BOARDS.map((board) => ({
@@ -412,34 +413,66 @@ function rankRows(drafts: readonly Draft[]): LeaderboardRow[] {
   })
 }
 
-function awardDaily(plays: readonly Play[], totals: Map<string, Totals>) {
+/** The last offset still on a calendar date. Noon UTC the next day is midnight in UTC−12. */
+const DAILY_CLOSE_UTC_HOUR = 12
+
+function awardDaily(plays: readonly Play[], totals: Map<string, Totals>, now: Date) {
   const latest = new Map<string, Play>()
+  const contenders = new Map<string, Play>()
   for (const play of plays) {
     if (!play.dailyOn) continue
     const key = `${play.dailyOn}\0${play.playerId}`
     const current = latest.get(key)
     if (!current || play.createdAt >= current.createdAt) latest.set(key, play)
+
+    const closesAt = dayClosesAt(play.dailyOn)
+    if (closesAt == null || play.createdAt >= closesAt) continue
+    const counted = contenders.get(key)
+    if (!counted || play.createdAt >= counted.createdAt) contenders.set(key, play)
   }
 
+  const byDay = groupByDay(latest.values())
+  const finalByDay = groupByDay(contenders.values())
+
+  for (const [day, group] of byDay) {
+    for (const play of group) ensure(totals, play).dailyStarts += 1
+    const closesAt = dayClosesAt(day)
+    if (closesAt == null || now.getTime() < closesAt) continue
+    const leaders = uniqueLeaders(finalByDay.get(day) ?? [])
+    if (leaders.length !== 1) continue
+    ensure(totals, leaders[0]).dailyWins += 1
+  }
+}
+
+function groupByDay(plays: Iterable<Play>): Map<string, Play[]> {
   const byDay = new Map<string, Play[]>()
-  for (const play of latest.values()) {
+  for (const play of plays) {
     const group = byDay.get(play.dailyOn ?? '') ?? []
     group.push(play)
     byDay.set(play.dailyOn ?? '', group)
   }
+  return byDay
+}
 
-  for (const group of byDay.values()) {
-    let best = Number.NEGATIVE_INFINITY
-    for (const play of group) {
-      if (play.score > best) best = play.score
-    }
-    const leaders = group.filter((play) => play.score === best)
-    for (const play of group) {
-      const player = ensure(totals, play)
-      player.dailyStarts += 1
-      if (leaders.length === 1 && leaders[0].playerId === play.playerId) player.dailyWins += 1
-    }
+function uniqueLeaders(group: readonly Play[]): Play[] {
+  let best = Number.NEGATIVE_INFINITY
+  for (const play of group) {
+    if (play.score > best) best = play.score
   }
+  return group.filter((play) => play.score === best)
+}
+
+function dayClosesAt(dailyOn: string): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dailyOn)
+  if (!match) return null
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const start = new Date(Date.UTC(year, month - 1, day))
+  if (start.getUTCFullYear() !== year || start.getUTCMonth() !== month - 1 || start.getUTCDate() !== day) {
+    return null
+  }
+  return Date.UTC(year, month - 1, day + 1, DAILY_CLOSE_UTC_HOUR)
 }
 
 function ensure(totals: Map<string, Totals>, play: Play): Totals {

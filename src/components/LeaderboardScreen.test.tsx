@@ -16,7 +16,7 @@ const boards: LeaderboardBoard[] = [
   {
     id: 'daily',
     title: 'Daily boards won',
-    note: 'Highest score on that day’s shared board. A tie is not a win.',
+    note: 'Highest score at the end of that day. A tie is not a win.',
     figureKind: 'count',
     rows: [
       { playerId: 'ada', name: 'Ada Lovelace', rank: 1, value: 4, figure: '4', caption: '' },
