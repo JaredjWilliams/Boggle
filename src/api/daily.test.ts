@@ -1,51 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { dailyStandings, hasPlayedDaily, loadDailyStandings, longestWord } from './daily'
-
-type QueryResult = { data: unknown; error: { message: string } | null }
-
-type Query = {
-  table: string
-  select?: string
-  filters: Array<{ column: string; value: unknown }>
-  limited: boolean
-}
+import { blankQuery, queryChain, shiftQueue, type QueryResult, type RecordedQuery } from '../test/queryChain'
+import { hasPlayedDaily, loadDailyStandings } from './daily'
+import { dailyStandings } from '../domain/daily'
+import { longestWord } from '../game/match'
 
 const supabase = vi.hoisted(() => {
-  const calls: Query[] = []
+  const calls: RecordedQuery[] = []
   const queues = new Map<string, QueryResult[]>()
 
   function from(table: string) {
-    const query: Query = { table, filters: [], limited: false }
+    const query = blankQuery(table)
     calls.push(query)
-    const answer = () => {
-      const next = queues.get(table)?.shift()
-      if (!next) throw new Error(`No response queued for ${table}`)
-      return next
-    }
-    const chain = {
-      select(columns: string) {
-        query.select = columns
-        return chain
-      },
-      eq(column: string, value: unknown) {
-        query.filters.push({ column, value })
-        return chain
-      },
-      limit() {
-        query.limited = true
-        return chain
-      },
-      maybeSingle() {
-        return Promise.resolve(answer())
-      },
-      then(
-        onFulfilled: (value: QueryResult) => unknown,
-        onRejected?: (reason: unknown) => unknown,
-      ) {
-        return Promise.resolve(answer()).then(onFulfilled, onRejected)
-      },
-    }
-    return chain
+    return queryChain(query, () => shiftQueue(queues, table))
   }
 
   return { calls, queues, from }
@@ -61,7 +27,7 @@ function queue(table: string, result: QueryResult) {
   supabase.queues.set(table, list)
 }
 
-function queryFor(table: string): Query {
+function queryFor(table: string): RecordedQuery {
   const query = supabase.calls.find((call) => call.table === table)
   if (!query) throw new Error(`No query for ${table}`)
   return query
@@ -200,8 +166,8 @@ describe('daily board lookup', () => {
     expect(queryFor('results')).toMatchObject({
       select: 'player_id, games!inner(daily_on)',
       filters: [
-        { column: 'player_id', value: 'ada' },
-        { column: 'games.daily_on', value: '2026-10-21' },
+        { op: 'eq', column: 'player_id', value: 'ada' },
+        { op: 'eq', column: 'games.daily_on', value: '2026-10-21' },
       ],
       limited: true,
     })
@@ -255,7 +221,7 @@ describe('daily board lookup', () => {
     ])
     expect(queryFor('results')).toMatchObject({
       select: 'player_id, score, words, profiles(name), games!inner(created_at, daily_on)',
-      filters: [{ column: 'games.daily_on', value: '2026-10-21' }],
+      filters: [{ op: 'eq', column: 'games.daily_on', value: '2026-10-21' }],
     })
   })
 

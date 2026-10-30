@@ -1,5 +1,4 @@
-import { getSupabase } from '../lib/supabase'
-import { playedOn } from './play'
+import { playedOn } from './dates'
 
 export type GameKind = 'Daily' | 'Friends' | 'Solo'
 export type GameState = 'Finished' | 'In progress' | 'Invited' | 'Declined' | 'Archived'
@@ -57,47 +56,6 @@ export type ArchivedGame = {
   words: number
   opponentName: string | null
   opponentScore: number | null
-}
-
-type GameCard = {
-  created_at?: string | null
-  daily_on?: string | null
-}
-
-type MineSeatRow = {
-  game_id: string
-  status: string | null
-  games: GameCard | GameCard[] | null
-}
-
-type MineScoreRow = {
-  game_id: string
-  score: number
-  words: unknown
-  games: GameCard | GameCard[] | null
-}
-
-type SeatRow = {
-  game_id: string
-  player_id: string
-  status: string | null
-  profiles: { name?: string | null } | { name?: string | null }[] | null
-}
-
-type ScoreRow = {
-  game_id: string
-  player_id: string
-  score: number
-  words: unknown
-}
-
-type HistoryRow = {
-  id: string
-  played_on: string
-  words_found: number
-  score: number
-  opponent_name: string | null
-  opponent_score: number | null
 }
 
 export function assembleAdminGames(
@@ -212,94 +170,6 @@ export function profileChoices(
     )
 }
 
-export async function loadProfiles(): Promise<AdminProfile[]> {
-  const { data, error } = await getSupabase().from('profiles').select('id, name, username')
-  if (error) throw new Error(error.message)
-  return profileChoices(data ?? [])
-}
-
-export async function loadProfileGames(playerId: string): Promise<AdminGame[]> {
-  const supabase = getSupabase()
-  const [seatResult, scoreResult, historyResult] = await Promise.all([
-    supabase
-      .from('game_players')
-      .select('game_id, status, games(created_at, daily_on)')
-      .eq('player_id', playerId),
-    supabase
-      .from('results')
-      .select('game_id, score, words, games(created_at, daily_on)')
-      .eq('player_id', playerId),
-    supabase
-      .from('match_history')
-      .select('id, played_on, words_found, score, opponent_name, opponent_score')
-      .eq('player_id', playerId),
-  ])
-  if (seatResult.error) throw new Error(seatResult.error.message)
-  if (scoreResult.error) throw new Error(scoreResult.error.message)
-  if (historyResult.error) throw new Error(historyResult.error.message)
-
-  const mineSeats = (seatResult.data ?? []) as MineSeatRow[]
-  const mineScores = (scoreResult.data ?? []) as MineScoreRow[]
-  const history = (historyResult.data ?? []) as HistoryRow[]
-  const gameIds = [
-    ...new Set([...mineSeats.map((row) => row.game_id), ...mineScores.map((row) => row.game_id)]),
-  ]
-
-  const [allSeats, allScores] = gameIds.length
-    ? await Promise.all([
-        supabase
-          .from('game_players')
-          .select('game_id, player_id, status, profiles(name)')
-          .in('game_id', gameIds),
-        supabase.from('results').select('game_id, player_id, score, words').in('game_id', gameIds),
-      ])
-    : [{ data: [], error: null }, { data: [], error: null }]
-  if (allSeats.error) throw new Error(allSeats.error.message)
-  if (allScores.error) throw new Error(allScores.error.message)
-
-  const info = new Map<string, PlayedGameInfo>()
-  for (const row of [...mineSeats, ...mineScores]) {
-    const card = one(row.games)
-    const current = info.get(row.game_id)
-    info.set(row.game_id, {
-      gameId: row.game_id,
-      createdAt: card?.created_at || current?.createdAt || '',
-      dailyOn: card?.daily_on ?? current?.dailyOn ?? null,
-    })
-  }
-
-  return assembleAdminGames(
-    playerId,
-    [...info.values()],
-    ((allSeats.data ?? []) as SeatRow[]).map((row) => ({
-      gameId: row.game_id,
-      playerId: row.player_id,
-      status: row.status ?? '',
-      name: profileName(row.profiles),
-    })),
-    ((allScores.data ?? []) as ScoreRow[]).map((row) => ({
-      gameId: row.game_id,
-      playerId: row.player_id,
-      score: row.score,
-      words: countedWords(row.words),
-    })),
-    history.map((row) => ({
-      id: row.id,
-      playedOn: row.played_on,
-      score: row.score,
-      words: row.words_found,
-      opponentName: row.opponent_name,
-      opponentScore: row.opponent_score,
-    })),
-  )
-}
-
-export async function deletePlayedGame(game: Pick<AdminGame, 'source' | 'id'>): Promise<void> {
-  const name = game.source === 'archive' ? 'delete_archive' : 'delete_game'
-  const { error } = await getSupabase().rpc(name, { target: game.id })
-  if (error) throw new Error(error.message)
-}
-
 function archivedGame(archive: ArchivedGame): AdminGame {
   const name = archive.opponentName?.trim() ?? ''
   const opponents: AdminOpponent[] = name
@@ -367,18 +237,4 @@ function dayFromTimestamp(value: string): string | null {
 
 function displayName(name: string): string {
   return name.trim() || 'A player'
-}
-
-function one<T>(value: T | T[] | null | undefined): T | null {
-  if (!value) return null
-  return Array.isArray(value) ? (value[0] ?? null) : value
-}
-
-function profileName(value: SeatRow['profiles']): string {
-  const name = one(value)?.name?.trim()
-  return name || 'A player'
-}
-
-function countedWords(value: unknown): number {
-  return Array.isArray(value) ? value.length : 0
 }

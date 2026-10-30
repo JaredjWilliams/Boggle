@@ -1,11 +1,9 @@
-import { useEffect, useState } from 'react'
-import {
-  loadLeaderboard,
-  placeLabel,
-  type BoardId,
-  type LeaderboardBoard,
-} from '../data/leaderboard'
+import { useState } from 'react'
+import { loadLeaderboard } from '../api/leaderboard'
+import { placeLabel, type BoardId, type LeaderboardBoard } from '../domain/leaderboard'
+import { useLoaded } from '../hooks/useLoaded'
 import { formatCount } from '../stats/series'
+import { StatusBlock } from './StatusBlock'
 import './LeaderboardScreen.css'
 
 type Props = {
@@ -17,39 +15,21 @@ type Props = {
 }
 
 export function PlayerLeaderboard({ viewerId }: { viewerId: string }) {
-  const [boards, setBoards] = useState<LeaderboardBoard[]>([])
-  const [loading, setLoading] = useState(true)
-  const [notice, setNotice] = useState('')
-  const [attempt, setAttempt] = useState(0)
-
-  useEffect(() => {
-    let cancel = false
-    setLoading(true)
-    setNotice('')
-    void loadLeaderboard()
-      .then((next) => {
-        if (!cancel) setBoards(next)
-      })
-      .catch((error: unknown) => {
-        if (cancel) return
-        setBoards([])
-        setNotice(error instanceof Error ? error.message : 'Could not load the leaderboard.')
-      })
-      .finally(() => {
-        if (!cancel) setLoading(false)
-      })
-    return () => {
-      cancel = true
-    }
-  }, [attempt])
+  const board = useLoaded(
+    () => loadLeaderboard(),
+    [] as LeaderboardBoard[],
+    'Could not load the leaderboard.',
+    [],
+    { clearOnError: true },
+  )
 
   return (
     <LeaderboardScreen
       viewerId={viewerId}
-      boards={boards}
-      loading={loading}
-      notice={notice}
-      onRetry={() => setAttempt((current) => current + 1)}
+      boards={board.data}
+      loading={board.loading}
+      notice={board.notice}
+      onRetry={board.reload}
     />
   )
 }
@@ -59,22 +39,16 @@ export function LeaderboardScreen({ viewerId, boards, loading, notice, onRetry }
   const board = boards.find((item) => item.id === selected) ?? boards[0]
 
   return (
-    <main className="leaderboard">
+    <main className="page leaderboard">
       <h1>Leaderboard</h1>
-      <p className="leaderboard-lede">Career records for players with more than 10 finished games.</p>
+      <p className="page-lede">Career records for players with more than 10 finished games.</p>
 
-      {loading && <p className="leaderboard-status">Loading the leaderboard…</p>}
-
-      {!loading && notice && (
-        <div className="leaderboard-alert" role="alert">
-          <p>{notice}</p>
-          {onRetry && (
-            <button type="button" className="leaderboard-retry" onClick={onRetry}>
-              Try again
-            </button>
-          )}
-        </div>
-      )}
+      <StatusBlock
+        loading={loading}
+        loadingLabel="Loading the leaderboard…"
+        notice={loading ? '' : notice}
+        onRetry={onRetry}
+      />
 
       {!loading && !notice && board && (
         <>

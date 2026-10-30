@@ -1,32 +1,17 @@
 import { describe, expect, it, vi } from 'vitest'
-import { loadSavedRound, unplayedWords } from './matches'
-
-type Query = {
-  table: string
-  filters: Array<{ column: string; value: unknown }>
-}
+import { blankQuery, queryChain, type QueryResult, type RecordedQuery } from '../test/queryChain'
+import { loadSavedRound } from './results'
+import { unplayedWords } from '../domain/results'
 
 const supabase = vi.hoisted(() => {
-  const calls: Query[] = []
-  let result: { data: unknown; error: { message: string } | null } = { data: null, error: null }
-  let game: { data: unknown; error: { message: string } | null } = { data: null, error: null }
+  const calls: RecordedQuery[] = []
+  let result: QueryResult = { data: null, error: null }
+  let game: QueryResult = { data: null, error: null }
 
   function from(table: string) {
-    const query: Query = { table, filters: [] }
+    const query = blankQuery(table)
     calls.push(query)
-    const chain = {
-      select() {
-        return chain
-      },
-      eq(column: string, value: unknown) {
-        query.filters.push({ column, value })
-        return chain
-      },
-      maybeSingle() {
-        return Promise.resolve(table === 'games' ? game : result)
-      },
-    }
-    return chain
+    return queryChain(query, () => (table === 'games' ? game : result))
   }
 
   return {

@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   watchMatchResults: vi.fn<(gameId: string, onChange: () => void) => () => void>(() => () => {}),
 }))
 
-vi.mock('../data/matches', () => ({
+vi.mock('../api/results', () => ({
   loadMatchPlayers: mocks.loadMatchPlayers,
   loadSavedRound: mocks.loadSavedRound,
   watchMatchResults: mocks.watchMatchResults,

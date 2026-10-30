@@ -1,62 +1,31 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { assembleMatchPlayers, loadMatchPlayers, watchMatchResults } from './matches'
-
-type QueryResult = { data: unknown; error: { message: string } | null }
-
-type Query = {
-  table: string
-  select?: string
-  filters: Array<{ column: string; value: unknown }>
-}
+import { blankQuery, queryChain, shiftQueue, type QueryResult, type RecordedQuery } from '../test/queryChain'
+import { loadMatchPlayers, watchMatchResults } from './results'
+import { assembleMatchPlayers } from '../domain/results'
 
 const supabase = vi.hoisted(() => {
-  const calls: Query[] = []
+  const calls: RecordedQuery[] = []
   const queues = new Map<string, QueryResult[]>()
-  const channel = {
+  const api = {
     on: vi.fn(),
     subscribe: vi.fn(),
   }
-  channel.on.mockReturnValue(channel)
-  channel.subscribe.mockReturnValue(channel)
+  api.on.mockReturnValue(api)
+  api.subscribe.mockReturnValue(api)
 
   function from(table: string) {
-    const query: Query = { table, filters: [] }
+    const query = blankQuery(table)
     calls.push(query)
-    const answer = () => {
-      const next = queues.get(table)?.shift()
-      if (!next) throw new Error(`No response queued for ${table}`)
-      return next
-    }
-    const chain = {
-      select(columns: string) {
-        query.select = columns
-        return chain
-      },
-      eq(column: string, value: unknown) {
-        query.filters.push({ column, value })
-        return chain
-      },
-      in(column: string, value: unknown) {
-        query.filters.push({ column, value })
-        return chain
-      },
-      then(
-        onFulfilled: (value: QueryResult) => unknown,
-        onRejected?: (reason: unknown) => unknown,
-      ) {
-        return Promise.resolve(answer()).then(onFulfilled, onRejected)
-      },
-    }
-    return chain
+    return queryChain(query, () => shiftQueue(queues, table))
   }
 
   return {
     calls,
     queues,
     from,
-    channel: vi.fn(() => channel),
+    channel: vi.fn(() => api),
     removeChannel: vi.fn(),
-    channelApi: channel,
+    channelApi: api,
   }
 })
 
@@ -142,13 +111,13 @@ describe('loadMatchPlayers', () => {
     expect(supabase.calls.map((call) => call.table)).toEqual(['game_players', 'results', 'profiles'])
     expect(supabase.calls[0]).toMatchObject({
       select: 'player_id, status',
-      filters: [{ column: 'game_id', value: 'game-1' }],
+      filters: [{ op: 'eq', column: 'game_id', value: 'game-1' }],
     })
     expect(supabase.calls[1]).toMatchObject({
       select: 'player_id, score, words',
-      filters: [{ column: 'game_id', value: 'game-1' }],
+      filters: [{ op: 'eq', column: 'game_id', value: 'game-1' }],
     })
-    expect(supabase.calls[2].filters).toEqual([{ column: 'id', value: ['ada'] }])
+    expect(supabase.calls[2].filters).toEqual([{ op: 'in', column: 'id', value: ['ada'] }])
   })
 
   it('reports a roster that could not be loaded', async () => {

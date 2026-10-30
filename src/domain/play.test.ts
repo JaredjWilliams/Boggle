@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { ROUND_SECONDS } from '../game/round'
-import { accountEmail, playedOn, secondsRemaining } from './play'
+import { accountEmail } from '../auth/account'
+import { secondsRemaining } from './clock'
+import { playedOn } from './dates'
 
 describe('accountEmail', () => {
   it('builds a stable sign-in address from the username', () => {

@@ -16,15 +16,22 @@ const channel = vi.hoisted(() => {
   return api
 })
 
-vi.mock('../data/matches', () => ({
+vi.mock('../api/lobby', () => ({
   loadLobby: mocks.loadLobby,
-}))
-
-vi.mock('../lib/supabase', () => ({
-  getSupabase: () => ({
-    channel: () => channel,
-    removeChannel: vi.fn(),
-  }),
+  watchLobby: (playerId: string, onChange: () => void) => {
+    channel.on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'game_players', filter: `player_id=eq.${playerId}` },
+      onChange,
+    )
+    channel.on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'results' },
+      onChange,
+    )
+    channel.subscribe()
+    return () => {}
+  },
 }))
 
 function lobby(playedBack: boolean) {

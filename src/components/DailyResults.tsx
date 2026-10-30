@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react'
-import { loadDailyStandings, type DailyStanding } from '../data/daily'
+import { loadDailyStandings } from '../api/daily'
+import type { DailyStanding } from '../domain/daily'
+import { useLoaded } from '../hooks/useLoaded'
+import { StatusBlock } from './StatusBlock'
 import './DailyResults.css'
 
 type Props = {
@@ -11,68 +13,40 @@ type Props = {
 }
 
 export function DailyBoardResults({ playerId }: { playerId: string }) {
-  const [standings, setStandings] = useState<DailyStanding[]>([])
-  const [loading, setLoading] = useState(true)
-  const [notice, setNotice] = useState('')
-  const [attempt, setAttempt] = useState(0)
-
-  useEffect(() => {
-    let cancel = false
-    void loadDailyStandings()
-      .then((next) => {
-        if (!cancel) setStandings(next)
-      })
-      .catch((error: unknown) => {
-        if (cancel) return
-        setStandings([])
-        setNotice(error instanceof Error ? error.message : "Could not load today's results.")
-      })
-      .finally(() => {
-        if (!cancel) setLoading(false)
-      })
-    return () => {
-      cancel = true
-    }
-  }, [attempt])
-
-  function retry() {
-    setLoading(true)
-    setNotice('')
-    setAttempt((current) => current + 1)
-  }
+  const today = useLoaded(
+    () => loadDailyStandings(),
+    [] as DailyStanding[],
+    "Could not load today's results.",
+    [playerId],
+    { clearOnError: true },
+  )
 
   return (
     <DailyResults
       viewerId={playerId}
-      standings={standings}
-      loading={loading}
-      notice={notice}
-      onRetry={retry}
+      standings={today.data}
+      loading={today.loading}
+      notice={today.notice}
+      onRetry={today.reload}
     />
   )
 }
 
 export function DailyResults({ viewerId, standings, loading, notice, onRetry }: Props) {
   return (
-    <main className="daily-results">
+    <main className="page daily-results">
       <h1>Today's results</h1>
-      <p className="daily-lede">Everyone who finished today's board.</p>
+      <p className="page-lede">Everyone who finished today's board.</p>
 
-      {loading && <p className="daily-status">Loading today's results…</p>}
-
-      {!loading && notice && (
-        <div className="daily-alert" role="alert">
-          <p>{notice}</p>
-          {onRetry && (
-            <button type="button" className="daily-retry" onClick={onRetry}>
-              Try again
-            </button>
-          )}
-        </div>
-      )}
+      <StatusBlock
+        loading={loading}
+        loadingLabel="Loading today's results…"
+        notice={loading ? '' : notice}
+        onRetry={onRetry}
+      />
 
       {!loading && !notice && standings.length === 0 && (
-        <p className="daily-status">No one has finished today's board.</p>
+        <p className="page-status">No one has finished today's board.</p>
       )}
 
       {!loading && !notice && standings.length > 0 && (

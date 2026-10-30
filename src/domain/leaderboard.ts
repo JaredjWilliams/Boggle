@@ -1,7 +1,6 @@
+import { first, profileName, scoredWords } from '../api/rows'
 import { longestWord } from '../game/match'
-import type { ScoredWord } from '../game/round'
 import { compareWords } from '../game/words'
-import { getSupabase } from '../lib/supabase'
 import { formatCount } from '../stats/series'
 
 export type BoardId =
@@ -59,8 +58,6 @@ export type LeaderboardSeat = {
   player_id: string
   status: string | null
 }
-
-const PAGE = 1000
 
 /** Players with this many finished games or fewer stay off every board. */
 const MINIMUM_FINISHED_GAMES = 10
@@ -200,22 +197,6 @@ export function placeLabel(rank: number): string {
   return `${rank}${suffix}`
 }
 
-export async function loadLeaderboard(): Promise<LeaderboardBoard[]> {
-  const supabase = getSupabase()
-  const [results, seats] = await Promise.all([
-    readPages((from, to) =>
-      supabase
-        .from('results')
-        .select('game_id, player_id, score, words, profiles(name), games(daily_on, created_at, host_id)')
-        .range(from, to),
-    ),
-    readPages((from, to) =>
-      supabase.from('game_players').select('game_id, player_id, status').range(from, to),
-    ),
-  ])
-  return buildLeaderboard(results as LeaderboardResult[], seats as LeaderboardSeat[], new Date())
-}
-
 export function buildLeaderboard(
   results: readonly LeaderboardResult[],
   seats: readonly LeaderboardSeat[],
@@ -327,19 +308,6 @@ function awardGathering(byGame: ReadonlyMap<string, readonly Play[]>, totals: Ma
       group.filter((play) => play.playerId !== hostId).map((play) => play.playerId),
     )
     host.outgoing += finishedOthers.size
-  }
-}
-
-async function readPages(
-  query: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>,
-): Promise<unknown[]> {
-  const rows: unknown[] = []
-  for (let from = 0; ; from += PAGE) {
-    const result = await query(from, from + PAGE - 1)
-    if (result.error) throw new Error(result.error.message)
-    const batch = result.data ?? []
-    rows.push(...batch)
-    if (batch.length < PAGE) return rows
   }
 }
 
@@ -510,15 +478,15 @@ function betterWord(current: string, next: string): string {
 function toPlay(row: LeaderboardResult): Play[] {
   if (!row.game_id || !row.player_id) return []
   if (typeof row.score !== 'number' || !Number.isFinite(row.score)) return []
-  const words = scoredWords(row.words)
-  const game = Array.isArray(row.games) ? row.games[0] : row.games
+  const words = scoredWords(row.words, { trim: true })
+  const game = first(row.games)
   const daily = game?.daily_on?.trim() || null
   const created = Date.parse(game?.created_at ?? '')
   return [
     {
       gameId: row.game_id,
       playerId: row.player_id,
-      name: profileName(row.profiles),
+      name: profileName(row.profiles, 'A player'),
       score: row.score,
       wordCount: words.length,
       longest: longestWord(words),
@@ -539,21 +507,4 @@ function activeRivals(seats: readonly LeaderboardSeat[]): Map<string, Set<string
     rivals.set(seat.game_id, group)
   }
   return rivals
-}
-
-function scoredWords(value: unknown): ScoredWord[] {
-  if (!Array.isArray(value)) return []
-  return value.flatMap((item) => {
-    if (!item || typeof item !== 'object') return []
-    const record = item as { word?: unknown; points?: unknown }
-    if (typeof record.word !== 'string' || !record.word.trim()) return []
-    const points = typeof record.points === 'number' ? record.points : 0
-    return [{ word: record.word.trim(), points }]
-  })
-}
-
-function profileName(profiles: LeaderboardResult['profiles']): string {
-  const profile = Array.isArray(profiles) ? profiles[0] : profiles
-  const name = profile?.name?.trim()
-  return name || 'A player'
 }

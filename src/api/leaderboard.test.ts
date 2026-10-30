@@ -1,46 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { blankQuery, queryChain, shiftQueue, type QueryResult, type RecordedQuery } from '../test/queryChain'
+import { loadLeaderboard } from './leaderboard'
 import {
   buildLeaderboard,
-  loadLeaderboard,
   placeLabel,
   type LeaderboardResult,
   type LeaderboardSeat,
-} from './leaderboard'
-
-type QueryResult = { data: unknown; error: { message: string } | null }
-
-type Query = {
-  table: string
-  select?: string
-  range?: { from: number; to: number }
-}
+} from '../domain/leaderboard'
 
 const supabase = vi.hoisted(() => {
-  const calls: Query[] = []
+  const calls: RecordedQuery[] = []
   const queues = new Map<string, QueryResult[]>()
 
   function from(table: string) {
-    const query: Query = { table }
+    const query = blankQuery(table)
     calls.push(query)
-    const answer = () => {
-      const next = queues.get(table)?.shift()
-      if (!next) throw new Error(`No response queued for ${table}`)
-      return next
-    }
-    const chain = {
-      select(columns: string) {
-        query.select = columns
-        return chain
-      },
-      range(fromIndex: number, toIndex: number) {
-        query.range = { from: fromIndex, to: toIndex }
-        return chain
-      },
-      then(onFulfilled: (value: QueryResult) => unknown, onRejected?: (reason: unknown) => unknown) {
-        return Promise.resolve(answer()).then(onFulfilled, onRejected)
-      },
-    }
-    return chain
+    return queryChain(query, () => shiftQueue(queues, table))
   }
 
   return { calls, queues, from }

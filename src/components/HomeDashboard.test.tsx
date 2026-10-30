@@ -1,8 +1,7 @@
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { completedGameKey, type ActiveGame } from '../data/activeGames'
-import type { Invite } from '../data/matches'
+import { completedGameKey, type ActiveGame, type Invite } from '../domain/lobby'
 import { MISSED_SIXES, wordKindLabel } from '../learn/missedWords'
 import { HomeDashboard, WORD_ROTATE_MS } from './HomeDashboard'
 

@@ -60,8 +60,7 @@
 }
 
 .see-words,
-.potential-back,
-.match-retry {
+.potential-back {
   min-height: 44px;
   padding: 0 18px;
   border-radius: 999px;
@@ -82,26 +81,9 @@
   color: var(--ink);
 }
 
-.match-alert {
+.match .page-alert {
   width: 100%;
   box-sizing: border-box;
-  padding: 14px 16px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--tile);
-}
-
-.match-alert p {
-  margin: 0;
-  color: var(--bad);
-  font-weight: 700;
-}
-
-.match-retry {
-  margin-top: 12px;
-  border: 0;
-  background: var(--accent);
-  color: white;
 }
 
 .match-columns {

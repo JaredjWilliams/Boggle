@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { loadLobby, type Friend, type Invite, type Lobby } from '../data/matches'
-import type { ActiveGame } from '../data/activeGames'
-import { getSupabase } from '../lib/supabase'
+import { loadLobby, watchLobby } from '../api/lobby'
+import type { ActiveGame, Friend, Invite, Lobby } from '../domain/lobby'
+import { errorMessage } from '../lib/errorMessage'
 
 const EMPTY: Lobby = { friends: [], invites: [], games: [], lastScore: null }
 
@@ -25,7 +25,7 @@ export function useLobby(playerId: string | undefined) {
       setLobby(next)
     } catch (error: unknown) {
       if (request.current !== ticket || playerRef.current !== id) return
-      setNotice(error instanceof Error ? error.message : 'Could not load games.')
+      setNotice(errorMessage(error, 'Could not load games.'))
     }
   }, [])
 
@@ -37,33 +37,14 @@ export function useLobby(playerId: string | undefined) {
       if (!cancel) setLoading(false)
     })
 
-    const channel = getSupabase()
-      .channel(`invites-${playerId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'game_players',
-          filter: `player_id=eq.${playerId}`,
-        },
-        () => {
-          void refresh()
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'results' },
-        () => {
-          void refresh()
-        },
-      )
-      .subscribe()
+    const stop = watchLobby(playerId, () => {
+      void refresh()
+    })
 
     return () => {
       cancel = true
       request.current += 1
-      void getSupabase().removeChannel(channel)
+      stop()
     }
   }, [playerId, refresh])
 

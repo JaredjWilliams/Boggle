@@ -1,8 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import type { ActiveGame } from '../data/activeGames'
-import type { Invite } from '../data/matches'
+import type { ActiveGame, Invite } from '../domain/lobby'
 import { Header } from './Header'
 
 const invite: Invite = {

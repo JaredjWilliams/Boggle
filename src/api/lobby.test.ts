@@ -1,50 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { loadLobby } from './matches'
+import { blankQuery, queryChain, type RecordedQuery } from '../test/queryChain'
+import { loadLobby } from './lobby'
 
 type Filter = { op: 'eq' | 'neq' | 'in'; column: string; value: unknown }
-
-type Query = {
-  table: string
-  select?: string
-  filters: Filter[]
-}
 
 const recent = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
 const older = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
 const expired = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString()
 
 const supabase = vi.hoisted(() => {
-  const calls: Query[] = []
+  const calls: RecordedQuery[] = []
   const rpc = vi.fn(async () => ({ data: null, error: null }))
 
   function from(table: string) {
-    const query: Query = { table, filters: [] }
+    const query = blankQuery(table)
     calls.push(query)
-    const chain = {
-      select(columns: string) {
-        query.select = columns
-        return chain
-      },
-      eq(column: string, value: unknown) {
-        query.filters.push({ op: 'eq', column, value })
-        return chain
-      },
-      neq(column: string, value: unknown) {
-        query.filters.push({ op: 'neq', column, value })
-        return chain
-      },
-      in(column: string, value: unknown) {
-        query.filters.push({ op: 'in', column, value })
-        return chain
-      },
-      then(
-        onFulfilled: (value: { data: unknown; error: { message: string } | null }) => unknown,
-        onRejected?: (reason: unknown) => unknown,
-      ) {
-        return Promise.resolve(answer(query)).then(onFulfilled, onRejected)
-      },
-    }
-    return chain
+    return queryChain(query, () => answer(query))
   }
 
   return { calls, from, rpc }
@@ -54,7 +25,7 @@ vi.mock('../lib/supabase', () => ({
   getSupabase: () => ({ from: supabase.from, rpc: supabase.rpc }),
 }))
 
-function answer(query: Query): { data: unknown; error: { message: string } | null } {
+function answer(query: RecordedQuery): { data: unknown; error: { message: string } | null } {
   if (query.table === 'profiles') {
     return {
       data: [{ id: 'grace', name: 'Grace Hopper', username: 'grace' }],
@@ -121,7 +92,7 @@ function answer(query: Query): { data: unknown; error: { message: string } | nul
   return { data: null, error: { message: `unexpected ${query.table}` } }
 }
 
-function has(query: Query, op: Filter['op'], column: string, value?: unknown): boolean {
+function has(query: RecordedQuery, op: Filter['op'], column: string, value?: unknown): boolean {
   return query.filters.some(
     (filter) => filter.op === op && filter.column === column && (value === undefined || filter.value === value),
   )

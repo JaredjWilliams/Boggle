@@ -1,11 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  loadMatchPlayers,
-  loadSavedRound,
-  watchMatchResults,
-  type MatchPlayerRow,
-  type SavedRound,
-} from '../data/matches'
+import { useEffect, useRef, useState } from 'react'
+import { loadMatchPlayers, loadSavedRound, watchMatchResults } from '../api/results'
+import type { MatchPlayerRow, SavedRound } from '../domain/results'
+import { useLoaded } from '../hooks/useLoaded'
 import {
   boardWords,
   matchOutcome,
@@ -17,6 +13,7 @@ import {
 } from '../game/match'
 import type { ScoredWord } from '../game/round'
 import { EndPanel } from './EndPanel'
+import { StatusBlock } from './StatusBlock'
 import { WordList } from './WordList'
 import './MatchResults.css'
 
@@ -43,44 +40,25 @@ type SavedProps = {
 }
 
 export function SavedMatch({ gameId, viewerId, viewerName, rival, onPlayAgain }: SavedProps) {
-  const [round, setRound] = useState<SavedRound | null>(null)
-  const [notice, setNotice] = useState('')
   const [showingPotential, setShowingPotential] = useState(false)
-  const request = useRef(0)
-
-  const reload = useCallback(async () => {
-    const id = ++request.current
-    try {
-      const next = await loadSavedRound(gameId, viewerId)
-      if (request.current !== id) return
-      setRound(next)
-      setNotice('')
-    } catch (error: unknown) {
-      if (request.current !== id) return
-      setNotice(error instanceof Error ? error.message : 'Could not load the results.')
-    }
-  }, [gameId, viewerId])
-
-  useEffect(() => {
-    void reload()
-    return () => {
-      request.current += 1
-    }
-  }, [reload])
+  const saved = useLoaded(
+    () => loadSavedRound(gameId, viewerId),
+    null as SavedRound | null,
+    'Could not load the results.',
+    [gameId, viewerId],
+  )
+  const round = saved.data
 
   if (!round) {
     return (
       <section className="match match-loading">
-        {notice ? (
-          <div className="match-alert" role="alert">
-            <p>{notice}</p>
-            <button type="button" className="match-retry" onClick={() => void reload()}>
-              Try again
-            </button>
-          </div>
-        ) : (
-          <p className="match-kicker">Loading results…</p>
-        )}
+        <StatusBlock
+          loading={!saved.notice}
+          loadingLabel="Loading results…"
+          notice={saved.notice}
+          onRetry={saved.reload}
+          statusClassName="match-kicker"
+        />
       </section>
     )
   }
@@ -115,35 +93,18 @@ export function MatchReview({
   onBack,
   onPlayAgain,
 }: ReviewProps) {
-  const [remote, setRemote] = useState<MatchPlayerRow[] | null>(null)
-  const [notice, setNotice] = useState('')
-  const request = useRef(0)
-
-  const reload = useCallback(async () => {
-    const id = ++request.current
-    try {
-      const next = await loadMatchPlayers(gameId)
-      if (request.current !== id) return
-      setRemote(next)
-      setNotice('')
-    } catch (error: unknown) {
-      if (request.current !== id) return
-      setNotice(error instanceof Error ? error.message : 'Could not load the results.')
-    }
-  }, [gameId])
+  const { data: remote, notice, reload } = useLoaded(
+    () => loadMatchPlayers(gameId),
+    null as MatchPlayerRow[] | null,
+    'Could not load the results.',
+    [gameId],
+  )
 
   useEffect(() => {
-    return () => {
-      request.current += 1
-    }
-  }, [])
-
-  useEffect(() => {
-    void reload()
     let stop = () => {}
     try {
       stop = watchMatchResults(gameId, () => {
-        void reload()
+        reload()
       })
     } catch {
       // Polling still asks for the other player's result.
@@ -168,7 +129,7 @@ export function MatchReview({
   useEffect(() => {
     if (remote === null || !waiting) return
     const timer = window.setInterval(() => {
-      void reload()
+      reload()
     }, 3000)
     return () => window.clearInterval(timer)
   }, [remote, waiting, reload])
@@ -193,7 +154,7 @@ export function MatchReview({
     <MatchResults
       players={players}
       notice={notice}
-      onRetry={() => void reload()}
+      onRetry={reload}
       onShowPotential={onShowPotential}
     />
   )
@@ -222,16 +183,7 @@ export function MatchResults({ players, notice = '', onRetry, onShowPotential }:
             See potential words
           </button>
         </div>
-        {notice && (
-          <div className="match-alert" role="alert">
-            <p>{notice}</p>
-            {onRetry && (
-              <button type="button" className="match-retry" onClick={onRetry}>
-                Try again
-              </button>
-            )}
-          </div>
-        )}
+        <StatusBlock notice={notice} onRetry={onRetry} />
       </div>
 
       <div className={players.length > 2 ? 'match-columns many' : 'match-columns'}>

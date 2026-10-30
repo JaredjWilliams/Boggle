@@ -1,16 +1,13 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { loadLeaderboard, type LeaderboardBoard } from '../data/leaderboard'
+import { loadLeaderboard } from '../api/leaderboard'
+import type { LeaderboardBoard } from '../domain/leaderboard'
 import { LeaderboardScreen, PlayerLeaderboard } from './LeaderboardScreen'
 
-vi.mock('../data/leaderboard', async () => {
-  const actual = await vi.importActual<typeof import('../data/leaderboard')>('../data/leaderboard')
-  return {
-    ...actual,
-    loadLeaderboard: vi.fn(),
-  }
-})
+vi.mock('../api/leaderboard', () => ({
+  loadLeaderboard: vi.fn(),
+}))
 
 const boards: LeaderboardBoard[] = [
   {

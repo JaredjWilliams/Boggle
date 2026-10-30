@@ -16,7 +16,7 @@ import {
   type ActiveGame,
   type ActiveSeat,
   type HeadScore,
-} from './activeGames'
+} from './lobby'
 
 const now = Date.parse('2026-10-22T21:00:00.000Z')
 

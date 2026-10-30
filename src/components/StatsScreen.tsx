@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { loadPlayerStats } from '../api/stats'
 import { SIDE } from '../game/dice'
-import { loadPlayerStats } from '../data/stats'
+import { useLoaded } from '../hooks/useLoaded'
 import {
   averages,
   formatAverage,
@@ -23,6 +24,7 @@ import {
   type GameStat,
 } from '../stats/series'
 import { PieChart, ScatterPlot } from './StatCharts'
+import { StatusBlock } from './StatusBlock'
 import './StatsScreen.css'
 
 type Props = {
@@ -34,37 +36,17 @@ type Props = {
 }
 
 export function PlayerStats({ playerId, playerName }: { playerId: string; playerName: string }) {
-  const [games, setGames] = useState<GameStat[]>([])
-  const [loading, setLoading] = useState(true)
-  const [notice, setNotice] = useState('')
-  const [attempt, setAttempt] = useState(0)
-
-  useEffect(() => {
-    let cancel = false
-    setLoading(true)
-    setNotice('')
-    void loadPlayerStats(playerId)
-      .then((next) => {
-        if (!cancel) setGames(next)
-      })
-      .catch((error: unknown) => {
-        if (!cancel) setNotice(error instanceof Error ? error.message : 'Could not load your stats.')
-      })
-      .finally(() => {
-        if (!cancel) setLoading(false)
-      })
-    return () => {
-      cancel = true
-    }
-  }, [attempt, playerId])
+  const stats = useLoaded(() => loadPlayerStats(playerId), [] as GameStat[], 'Could not load your stats.', [
+    playerId,
+  ])
 
   return (
     <StatsScreen
       playerName={playerName}
-      games={games}
-      loading={loading}
-      notice={notice}
-      onRetry={() => setAttempt((current) => current + 1)}
+      games={stats.data}
+      loading={stats.loading}
+      notice={stats.notice}
+      onRetry={stats.reload}
     />
   )
 }
@@ -90,29 +72,23 @@ export function StatsScreen({ playerName, games, loading, notice, onRetry }: Pro
   const scorePoints = visible.map((game) => ({ id: game.id, playedOn: game.playedOn, value: game.score }))
 
   return (
-    <main className="stats">
+    <main className="page stats">
       <p className="stats-player">
         <span>Your stats</span>
         <strong>{playerName}</strong>
       </p>
       <h1>Every game, plotted.</h1>
-      <p className="stats-lede">
+      <p className="page-lede">
         Each dot is one game on the day you played it. Choose a player to see that same record
         head to head.
       </p>
 
-      {loading && <p className="stats-status">Loading your games…</p>}
-
-      {notice && (
-        <div className="stats-alert" role="alert">
-          <p>{notice}</p>
-          {onRetry && (
-            <button type="button" className="stats-retry" onClick={onRetry}>
-              Try again
-            </button>
-          )}
-        </div>
-      )}
+      <StatusBlock
+        loading={loading}
+        loadingLabel="Loading your games…"
+        notice={notice}
+        onRetry={onRetry}
+      />
 
       {!loading && !notice && (
         <>

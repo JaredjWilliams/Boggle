@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { START_CELLS } from '../stats/series'
-import { playedOn } from './play'
+import { playedOn } from './dates'
 import { historyGames, resultGames } from './stats'
 
 function cells(marks: Record<number, number>): number[] {

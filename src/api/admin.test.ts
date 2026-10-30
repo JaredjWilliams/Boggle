@@ -1,20 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AdminGame } from './admin'
+import { blankQuery, queryChain, type RecordedQuery } from '../test/queryChain'
+import { deletePlayedGame, loadProfileGames, loadProfiles } from './admin'
 import {
   assembleAdminGames,
   deleteLabel,
-  deletePlayedGame,
   orderGames,
-  loadProfileGames,
-  loadProfiles,
   profileChoices,
   opponentLine,
   scoreLine,
+  type AdminGame,
   type ArchivedGame,
   type PlayedGameInfo,
   type PlayedScore,
   type PlayedSeat,
-} from './admin'
+} from '../domain/admin'
 
 const games: PlayedGameInfo[] = [
   { gameId: 'daily', createdAt: '2026-10-22T12:00:00.000Z', dailyOn: '2026-10-22' },
@@ -96,17 +95,8 @@ describe('assembleAdminGames', () => {
   })
 })
 
-type Filter = { op: 'eq' | 'in'; column: string; value: unknown }
-
-type Query = {
-  table: string
-  select?: string
-  filters: Filter[]
-  maybe?: boolean
-}
-
 const supabase = vi.hoisted(() => {
-  const calls: Query[] = []
+  const calls: RecordedQuery[] = []
   const rpc = vi.fn(
     async (): Promise<{ data: null; error: { message: string } | null }> => ({
       data: null,
@@ -115,33 +105,9 @@ const supabase = vi.hoisted(() => {
   )
 
   function from(table: string) {
-    const query: Query = { table, filters: [] }
+    const query = blankQuery(table)
     calls.push(query)
-    const chain = {
-      select(columns: string) {
-        query.select = columns
-        return chain
-      },
-      eq(column: string, value: unknown) {
-        query.filters.push({ op: 'eq', column, value })
-        return chain
-      },
-      in(column: string, value: unknown) {
-        query.filters.push({ op: 'in', column, value })
-        return chain
-      },
-      maybeSingle() {
-        query.maybe = true
-        return Promise.resolve(answer(query))
-      },
-      then(
-        onFulfilled: (value: { data: unknown; error: { message: string } | null }) => unknown,
-        onRejected?: (reason: unknown) => unknown,
-      ) {
-        return Promise.resolve(answer(query)).then(onFulfilled, onRejected)
-      },
-    }
-    return chain
+    return queryChain(query, () => answer(query))
   }
 
   return { calls, from, rpc }
@@ -151,7 +117,7 @@ vi.mock('../lib/supabase', () => ({
   getSupabase: () => ({ from: supabase.from, rpc: supabase.rpc }),
 }))
 
-function answer(query: Query): { data: unknown; error: { message: string } | null } {
+function answer(query: RecordedQuery): { data: unknown; error: { message: string } | null } {
   if (query.table === 'profiles') {
     return {
       data: [

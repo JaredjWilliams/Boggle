@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import type { AdminGame } from '../data/admin'
+import type { AdminGame } from '../domain/admin'
 import { AdminScreen } from './AdminScreen'
 
 const daily: AdminGame = {

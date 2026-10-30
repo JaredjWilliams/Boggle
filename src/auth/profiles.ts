@@ -3,7 +3,7 @@ import {
   endRemoteSession,
   matchRemoteProfile,
   restorePlayer,
-} from './remote'
+} from '../api/auth'
 
 const PROFILES_KEY = 'boggle.profiles'
 const SESSION_KEY = 'boggle.session'

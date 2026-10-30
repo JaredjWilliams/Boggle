@@ -1,10 +1,10 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { loadDailyStandings } from '../data/daily'
+import { loadDailyStandings } from '../api/daily'
 import { DailyBoardResults, DailyResults } from './DailyResults'
 
-vi.mock('../data/daily', () => ({
+vi.mock('../api/daily', () => ({
   loadDailyStandings: vi.fn(),
 }))
 

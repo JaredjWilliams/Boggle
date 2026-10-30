@@ -1,3 +1,27 @@
+import type { Board } from '../game/dice'
+
+export type Friend = {
+  id: string
+  name: string
+  username: string
+}
+
+export type Invite = {
+  gameId: string
+  hostId: string
+  hostName: string
+  board: Board
+  /** Whole days left before this invitation is deleted. */
+  daysLeft?: number
+}
+
+export type Lobby = {
+  friends: Friend[]
+  invites: Invite[]
+  games: ActiveGame[]
+  lastScore: number | null
+}
+
 export type ActiveGame = {
   gameId: string
   opponentId: string

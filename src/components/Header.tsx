@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { completedGameKey, type ActiveGame } from '../data/activeGames'
-import type { Invite } from '../data/matches'
+import { completedGameKey, type ActiveGame, type Invite } from '../domain/lobby'
+import { InviteActions } from './InviteActions'
 import './Header.css'
 
 type Panel = 'notices' | 'menu'
@@ -190,26 +190,12 @@ export function Header({
                     {incoming.map((invite) => (
                       <li key={invite.gameId}>
                         <p>{invite.hostName} invited you.</p>
-                        <button
-                          type="button"
-                          aria-label={`Play with ${invite.hostName}`}
-                          onClick={() => {
-                            setPanel(null)
-                            onAcceptInvite(invite)
-                          }}
-                        >
-                          Play
-                        </button>
-                        <button
-                          type="button"
-                          aria-label={`Decline invitation from ${invite.hostName}`}
-                          onClick={() => {
-                            setPanel(null)
-                            onDeclineInvite(invite)
-                          }}
-                        >
-                          Decline
-                        </button>
+                        <InviteActions
+                          invite={invite}
+                          onAccept={onAcceptInvite}
+                          onDecline={onDeclineInvite}
+                          onDone={() => setPanel(null)}
+                        />
                       </li>
                     ))}
                   </ul>

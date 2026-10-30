@@ -1,4 +1,4 @@
-import { accountEmail } from '../data/play'
+import { accountEmail } from '../auth/account'
 import { getSupabase } from '../lib/supabase'
 
 type Credentials = {
