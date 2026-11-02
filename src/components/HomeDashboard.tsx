@@ -27,6 +27,14 @@ type Props = {
   invites?: readonly Invite[]
   onAcceptInvite?: (invite: Invite) => void
   onDeclineInvite?: (invite: Invite) => void
+  openRound?: { secondsLeft: number; opponents: readonly string[]; score: number } | null
+  onResume?: () => void
+}
+
+function formatTime(seconds: number): string {
+  const minutes = Math.floor(seconds / 60)
+  const rest = seconds % 60
+  return `${minutes}:${rest.toString().padStart(2, '0')}`
 }
 
 export function HomeDashboard({
@@ -46,6 +54,8 @@ export function HomeDashboard({
   invites = [],
   onAcceptInvite,
   onDeclineInvite,
+  openRound = null,
+  onResume,
 }: Props) {
   const inProgress = selectActiveGames(games)
   const finished = selectCompletedGames(games)
@@ -94,6 +104,21 @@ export function HomeDashboard({
         <button type="button" className="stats-open" onClick={onOpenStats}>
           Your stats
           <span aria-hidden="true">→</span>
+        </button>
+      )}
+
+      {openRound && onResume && (
+        <button
+          type="button"
+          className="resume-round"
+          onClick={onResume}
+          aria-label={`Continue ${openRound.opponents.join(', ') || 'Solo'}, ${openRound.score.toLocaleString('en-US')} points, ${formatTime(openRound.secondsLeft)} left`}
+        >
+          <span className="resume-round-copy">
+            <span className="resume-round-name">{openRound.opponents.join(', ') || 'Solo'}</span>
+            <span className="resume-round-score">{openRound.score.toLocaleString('en-US')}</span>
+          </span>
+          <strong>{formatTime(openRound.secondsLeft)}</strong>
         </button>
       )}
 

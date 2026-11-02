@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { ROUND_SECONDS } from '../game/round'
 import { accountEmail } from '../auth/account'
-import { secondsRemaining } from './clock'
+import { secondsRemaining, secondsUntil } from './clock'
 import { playedOn } from './dates'
 
 describe('accountEmail', () => {
@@ -22,5 +22,12 @@ describe('secondsRemaining', () => {
     const later = Date.parse(started) + 30_000
     expect(secondsRemaining(started, later)).toBe(ROUND_SECONDS - 30)
     expect(secondsRemaining(started, Date.parse(started) + ROUND_SECONDS * 1000 + 5000)).toBe(0)
+  })
+
+  it('counts down to a deadline and will not run past one round', () => {
+    const now = Date.parse('2026-10-19T20:00:00.000Z')
+    expect(secondsUntil(now + 30_000, now)).toBe(30)
+    expect(secondsUntil(now - 5_000, now)).toBe(0)
+    expect(secondsUntil(now + (ROUND_SECONDS + 40) * 1000, now)).toBe(ROUND_SECONDS)
   })
 })

@@ -6,7 +6,9 @@ import {
   useState,
   type PointerEvent,
 } from 'react'
+import { secondsUntil } from '../domain/clock'
 import { shakeBoard, turnBoard as rotateBoard, type Board } from '../game/dice'
+import type { OpenRound } from '../storage/openRound'
 import { loadDictionary, type Dictionary, type Trie } from '../game/dictionary'
 import {
   judgeWord,
@@ -72,6 +74,7 @@ export function useRound() {
   const pathRef = useRef(path)
   const secondsRef = useRef(secondsLeft)
   const gestureRef = useRef<Gesture | null>(null)
+  const endsAtRef = useRef<number | null>(null)
   const attemptSeq = useRef(0)
 
   boardRef.current = board
@@ -96,6 +99,7 @@ export function useRound() {
     setMissed([])
     setMessage('')
     setFeedback(null)
+    endsAtRef.current = Date.now() + ROUND_SECONDS * 1000
     setSecondsLeft(ROUND_SECONDS)
     setRound((current) => current + 1)
     setPhase('playing')
@@ -108,6 +112,39 @@ export function useRound() {
     setFeedback(null)
     setPhase('ready')
   }, [clearPath])
+
+  const pause = useCallback(() => {
+    if (phaseRef.current !== 'playing') return
+    clearPath()
+    setPhase('paused')
+  }, [clearPath])
+
+  const resume = useCallback(() => {
+    if (phaseRef.current !== 'paused') return
+    setPhase('playing')
+  }, [])
+
+  const restoreRound = useCallback(
+    (saved: OpenRound) => {
+      if (!dictRef.current) return false
+      if (phaseRef.current === 'playing' || phaseRef.current === 'paused') return false
+      clearPath()
+      boardRef.current = saved.board
+      foundRef.current = saved.found
+      setBoard(saved.board)
+      setFound(saved.found)
+      setMissed([])
+      setMessage('')
+      setFeedback(null)
+      endsAtRef.current = saved.endsAt
+      const remaining = secondsUntil(saved.endsAt)
+      setSecondsLeft(remaining)
+      setRound((current) => current + 1)
+      setPhase(remaining === 0 ? 'ended' : saved.phase)
+      return true
+    },
+    [clearPath],
+  )
 
   const turnBoard = useCallback(() => {
     if (phaseRef.current !== 'playing') return
@@ -141,7 +178,7 @@ export function useRound() {
         dictRef.current = dictionary
         setTrie(dictionary.trie)
         setWords(dictionary.words)
-        setPhase('ready')
+        setPhase((current) => (current === 'loading' ? 'ready' : current))
       })
       .catch(() => {
         if (!cancel) setLoadError(true)
@@ -152,15 +189,20 @@ export function useRound() {
   }, [])
 
   useEffect(() => {
-    if (phase !== 'playing') return
+    if (phase !== 'playing' && phase !== 'paused') return
+    if (endsAtRef.current == null) {
+      endsAtRef.current = Date.now() + secondsRef.current * 1000
+    }
+    const endsAt = endsAtRef.current
     const timer = window.setInterval(() => {
-      setSecondsLeft((current) => (current <= 1 ? 0 : current - 1))
+      setSecondsLeft(secondsUntil(endsAt))
     }, 1000)
     return () => window.clearInterval(timer)
   }, [phase, round])
 
   useEffect(() => {
-    if (phase === 'playing' && secondsLeft === 0) setPhase('ended')
+    if (phase !== 'playing' && phase !== 'paused') return
+    if (secondsLeft === 0) setPhase('ended')
   }, [phase, secondsLeft])
 
   useEffect(() => {
@@ -321,10 +363,14 @@ export function useRound() {
     loadError,
     lastScore,
     trie,
+    endsAt: endsAtRef.current,
     score: totalScore(found),
     traced: pathWord(board, path),
     startRound,
     goHome,
+    pause,
+    resume,
+    restoreRound,
     turnBoard,
     onPointerDown,
     onPointerMove,

@@ -4,7 +4,7 @@ import { canFormWord, compareWords, findAllWords, scoreWord, type Cell } from '.
 
 export const ROUND_SECONDS = 180
 
-export type Phase = 'loading' | 'ready' | 'playing' | 'ended'
+export type Phase = 'loading' | 'ready' | 'playing' | 'paused' | 'ended'
 
 export type ScoredWord = {
   word: string

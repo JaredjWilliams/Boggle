@@ -56,13 +56,14 @@ vi.mock('./game/dictionary', async () => {
 })
 
 beforeEach(() => {
+  localStorage.removeItem('boggle.openRound')
   writeSession({ name: 'Ada Lovelace', username: 'ada' })
 })
 
 describe('end of round', () => {
   beforeEach(() => {
     boards.queue = [firstBoard, nextBoard]
-    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] })
   })
 
   afterEach(() => {
@@ -492,7 +493,7 @@ describe('home dashboard', () => {
   })
 
   it('does not run the clock on the dashboard', async () => {
-    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] })
     render(<App />)
     expect(await screen.findByRole('button', { name: 'Play solo' })).toBeEnabled()
 
@@ -515,10 +516,38 @@ describe('home dashboard', () => {
 
     expect(screen.getByRole('region', { name: 'Often missed' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Turn' })).not.toBeInTheDocument()
+    const resume = screen.getByRole('button', { name: /Continue Solo, [\d,]+ points, \d:\d{2} left/ })
+
+    await user.click(resume)
+
+    expect(screen.getByRole('button', { name: 'Turn' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Continue Solo/ })).not.toBeInTheDocument()
+    expect(vi.mocked(shakeBoard)).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps a paused round after a refresh', async () => {
+    const user = userEvent.setup()
+    const view = render(<App />)
+    await leaveHome()
+    const input = await screen.findByRole('textbox', { name: 'Type a word' })
+    await user.type(input, 'cat')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+    await user.click(screen.getByRole('button', { name: 'Home' }))
+    expect(screen.getByRole('button', { name: /Continue Solo, [\d,]+ points, \d:\d{2} left/ })).toBeInTheDocument()
+
+    view.unmount()
+    render(<App />)
+
+    const resume = await screen.findByRole('button', { name: /Continue Solo, [\d,]+ points, \d:\d{2} left/ })
+    await user.click(resume)
+
+    expect(screen.getByRole('button', { name: 'Turn' })).toBeInTheDocument()
+    expect(screen.getByText('Score').closest('p')).toHaveTextContent(/100/)
+    expect(vi.mocked(shakeBoard)).toHaveBeenCalledTimes(1)
   })
 
   it('returns home after a finished round', async () => {
-    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] })
     const user = userEvent.setup()
     render(<App />)
     await leaveHome()

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PointerEvent } from 'react'
 import { shakeBoard } from '../game/dice'
 import { ROUND_SECONDS } from '../game/round'
+import type { OpenRound } from '../storage/openRound'
 import { useRound } from './useRound'
 
 const firstBoard = [
@@ -71,11 +72,96 @@ describe('home', () => {
     expect(round.result.current.lastScore).toBeNull()
   })
 
+  it('keeps the clock running after leaving the board', async () => {
+    const round = renderHook(() => useRound())
+    await waitFor(() => expect(round.result.current.phase).toBe('ready'))
+
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] })
+    act(() => {
+      round.result.current.startRound()
+    })
+    act(() => {
+      round.result.current.onDraftChange('cat')
+    })
+    act(() => {
+      round.result.current.onSubmit()
+    })
+    await act(async () => {
+      vi.advanceTimersByTime(5_000)
+    })
+
+    act(() => {
+      round.result.current.pause()
+    })
+    await act(async () => {
+      vi.advanceTimersByTime(10_000)
+    })
+
+    expect(round.result.current.phase).toBe('paused')
+    expect(round.result.current.secondsLeft).toBe(ROUND_SECONDS - 15)
+    expect(round.result.current.score).toBe(100)
+    expect(round.result.current.board).toEqual(firstBoard)
+    expect(shakeBoard).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      round.result.current.resume()
+    })
+    expect(round.result.current.phase).toBe('playing')
+    await act(async () => {
+      vi.advanceTimersByTime(1_000)
+    })
+    expect(round.result.current.secondsLeft).toBe(ROUND_SECONDS - 16)
+    expect(round.result.current.score).toBe(100)
+  })
+
+  it('ends the round when time runs out away from the board', async () => {
+    const round = renderHook(() => useRound())
+    await waitFor(() => expect(round.result.current.phase).toBe('ready'))
+
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] })
+    act(() => {
+      round.result.current.startRound()
+    })
+    act(() => {
+      round.result.current.pause()
+    })
+    await act(async () => {
+      vi.advanceTimersByTime(ROUND_SECONDS * 1000)
+    })
+
+    expect(round.result.current.phase).toBe('ended')
+    expect(round.result.current.secondsLeft).toBe(0)
+  })
+
+  it('restores a saved round onto the same board', async () => {
+    const round = renderHook(() => useRound())
+    await waitFor(() => expect(round.result.current.phase).toBe('ready'))
+    const saved: OpenRound = {
+      board: firstBoard,
+      found: [{ word: 'cat', points: 100 }],
+      endsAt: Date.now() + 42_000,
+      phase: 'paused',
+      matchId: 'game-1',
+      rivals: [{ id: 'grace', name: 'Grace Hopper' }],
+      daily: false,
+    }
+
+    act(() => {
+      expect(round.result.current.restoreRound(saved)).toBe(true)
+    })
+
+    expect(round.result.current.phase).toBe('paused')
+    expect(round.result.current.secondsLeft).toBe(42)
+    expect(round.result.current.score).toBe(100)
+    expect(round.result.current.board).toEqual(firstBoard)
+    expect(shakeBoard).not.toHaveBeenCalled()
+  })
+
   it('keeps a finished score after returning home', async () => {
     const round = renderHook(() => useRound())
     await waitFor(() => expect(round.result.current.phase).toBe('ready'))
 
-    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] })
     act(() => {
       round.result.current.startRound()
     })
@@ -104,7 +190,7 @@ describe('home', () => {
     const round = renderHook(() => useRound())
     await waitFor(() => expect(round.result.current.phase).toBe('ready'))
 
-    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] })
     act(() => {
       round.result.current.startRound()
     })

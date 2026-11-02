@@ -84,6 +84,57 @@
   line-height: 1;
 }
 
+.resume-round {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 72px;
+  margin-top: 22px;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--accent);
+  color: white;
+  font: inherit;
+  text-align: left;
+}
+
+.resume-round:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
+.resume-round-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.resume-round-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 18px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resume-round-score {
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+.resume-round strong {
+  flex: none;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
 .home-error {
   margin: 12px 0 0;
   color: var(--bad);

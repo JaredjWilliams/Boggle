@@ -151,6 +151,25 @@ describe('HomeDashboard', () => {
     random.mockRestore()
   })
 
+  it('shows a paused round and resumes it', async () => {
+    const onResume = vi.fn()
+    render(
+      <HomeDashboard
+        {...props}
+        openRound={{ secondsLeft: 95, opponents: ['Grace Hopper'], score: 1200 }}
+        onResume={onResume}
+      />,
+    )
+
+    const card = screen.getByRole('button', { name: 'Continue Grace Hopper, 1,200 points, 1:35 left' })
+    expect(card).toHaveTextContent('Grace Hopper')
+    expect(card).toHaveTextContent('1,200')
+    expect(card).toHaveTextContent('1:35')
+
+    await userEvent.click(card)
+    expect(onResume).toHaveBeenCalledOnce()
+  })
+
   it('starts a game from the dashboard', async () => {
     const onStart = vi.fn()
     render(<HomeDashboard {...props} onStart={onStart} />)

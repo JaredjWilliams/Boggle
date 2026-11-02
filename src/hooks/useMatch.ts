@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { hasPlayedDaily, loadDailyBoard } from '../api/daily'
 import { answerInvite, createMatch, saveResult } from '../api/matches'
 import { playedOn } from '../domain/dates'
@@ -10,6 +10,7 @@ import type { Rival } from '../game/match'
 import type { Phase, ScoredWord } from '../game/round'
 import { findAllWords, scoreWord } from '../game/words'
 import { errorMessage } from '../lib/errorMessage'
+import type { OpenRound } from '../storage/openRound'
 
 type Input = {
   playerId: string | undefined
@@ -79,6 +80,14 @@ export function useMatch({
     setRivals([])
     setShowPotential(false)
   }
+
+  const restoreMatch = useCallback((saved: OpenRound) => {
+    setMatchId(saved.matchId)
+    setRivals(saved.rivals)
+    setShowPotential(false)
+    dailyRound.current = saved.daily
+    savedMatch.current = null
+  }, [])
 
   async function begin(source: 'shake' | 'daily', inviteIds: readonly string[] = []) {
     if (startingRef.current) return
@@ -158,9 +167,11 @@ export function useMatch({
     setShowPotential,
     starting,
     dailyPlayed,
+    daily: dailyRound.current,
     begin,
     accept,
     decline,
     clearRound,
+    restoreMatch,
   }
 }

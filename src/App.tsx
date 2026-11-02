@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { isAdmin } from './auth/admin'
 import { endSession, readSession, restorePlayer, type Player } from './auth/profiles'
 import { AdminPage } from './components/AdminScreen'
@@ -19,6 +19,7 @@ import { SettingsScreen } from './components/SettingsScreen'
 import { StatusBar } from './components/StatusBar'
 import { WordForm } from './components/WordForm'
 import { completedGameKey, playedBackNotices, type ActiveGame } from './domain/lobby'
+import { clearOpenRound, loadOpenRound, saveOpenRound } from './storage/openRound'
 import { loadReadGames, saveReadGames } from './storage/readGames'
 import { useLobby } from './hooks/useLobby'
 import { useMatch } from './hooks/useMatch'
@@ -124,6 +125,51 @@ function PlayerGame({
     closeOpenGame: () => setOpenGame(null),
   })
   const notices = playedBackNotices(lobby.games, readKeys)
+  const restoredRound = useRef(false)
+  const playerKey = player.id ?? player.username
+
+  useEffect(() => {
+    if (round.phase === 'loading') return
+
+    if (round.phase === 'ready') {
+      if (restoredRound.current) return
+      restoredRound.current = true
+      const saved = loadOpenRound(playerKey)
+      if (!saved) return
+      if (!round.restoreRound(saved)) return
+      match.restoreMatch(saved)
+      return
+    }
+
+    if (round.phase === 'playing' || round.phase === 'paused') {
+      restoredRound.current = true
+      if (round.endsAt == null) return
+      saveOpenRound(playerKey, {
+        board: round.board,
+        found: round.found,
+        endsAt: round.endsAt,
+        phase: round.phase,
+        matchId: match.matchId,
+        rivals: match.rivals,
+        daily: match.daily,
+      })
+      return
+    }
+
+    clearOpenRound(playerKey)
+  }, [
+    playerKey,
+    round.phase,
+    round.board,
+    round.found,
+    round.secondsLeft,
+    round.endsAt,
+    round.restoreRound,
+    match.matchId,
+    match.rivals,
+    match.daily,
+    match.restoreMatch,
+  ])
 
   function markCompletedRead(game: ActiveGame) {
     if (!game.playedBack || !game.hosted) return
@@ -143,6 +189,11 @@ function PlayerGame({
   }
 
   function leaveRound() {
+    if (round.phase === 'playing') {
+      round.pause()
+      setView('home')
+      return
+    }
     setOpenGame(null)
     match.clearRound()
     setView('home')
@@ -275,6 +326,16 @@ function PlayerGame({
         onOpenGame={openSavedGame}
         onAcceptInvite={(invite) => void match.accept(invite)}
         onDeclineInvite={(invite) => void match.decline(invite)}
+        openRound={
+          round.phase === 'paused'
+            ? {
+                secondsLeft: round.secondsLeft,
+                opponents: match.rivals.map((rival) => rival.name),
+                score: round.score,
+              }
+            : null
+        }
+        onResume={round.resume}
       />
     ),
     daily: player.id ? <DailyBoardResults playerId={player.id} /> : null,
