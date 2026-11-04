@@ -31,14 +31,17 @@
 
 .match-heading {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: flex-start;
+  justify-content: space-between;
   gap: 14px;
   width: 100%;
 }
 
 .match-outcome {
   margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
   font-family: Georgia, 'Palatino Linotype', Palatino, serif;
   font-size: 36px;
   font-weight: 700;
@@ -69,7 +72,8 @@
 }
 
 .see-words {
-  align-self: flex-end;
+  flex: none;
+  align-self: flex-start;
   border: 0;
   background: var(--ink);
   color: var(--cream);

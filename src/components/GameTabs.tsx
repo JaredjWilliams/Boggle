@@ -15,6 +15,7 @@ import {
   type Invite,
 } from '../domain/lobby'
 import { InviteActions } from './InviteActions'
+import { playerInitials } from './initials'
 import './GameTabs.css'
 
 type GameTab = 'active' | 'invited' | 'completed'
@@ -178,20 +179,25 @@ function GameList({
               aria-label={gameButtonLabel(game, unread, result)}
               onClick={() => onOpenGame?.(game)}
             >
-              <span className="active-game-top">
-                <span className="active-game-name">{game.opponentName}</span>
-                {result && (
-                  <span className={`active-game-result is-${result}`}>{matchResultLabel(result)}</span>
-                )}
-                {typeof game.daysLeft === 'number' && (
-                  <span className={game.daysLeft <= 1 ? 'active-game-deadline is-soon' : 'active-game-deadline'}>
-                    {daysLeftLabel(game.daysLeft)}
-                  </span>
-                )}
+              <span className="opponent-avatar" aria-hidden="true">
+                {playerInitials(game.opponentName)}
               </span>
-              <span className="active-game-record">
-                <strong>{formatMatchScore(game.yourScore, game.opponentScore)}</strong>
-                <span className="active-game-tally">{formatRecord(game.wins, game.losses)}</span>
+              <span className="active-game-copy">
+                <span className="active-game-top">
+                  <span className="active-game-name">{game.opponentName}</span>
+                  {result && (
+                    <span className={`active-game-result is-${result}`}>{matchResultLabel(result)}</span>
+                  )}
+                  {typeof game.daysLeft === 'number' && (
+                    <span className={game.daysLeft <= 1 ? 'active-game-deadline is-soon' : 'active-game-deadline'}>
+                      {daysLeftLabel(game.daysLeft)}
+                    </span>
+                  )}
+                </span>
+                <span className="active-game-record">
+                  <strong>{formatMatchScore(game.yourScore, game.opponentScore)}</strong>
+                  <span className="active-game-tally">{formatRecord(game.wins, game.losses)}</span>
+                </span>
               </span>
             </button>
           </li>
@@ -254,16 +260,12 @@ function TabName({ label, badge = 0 }: { label: string; badge?: number }) {
   return (
     <span className="game-tab-label">
       <span className="game-tab-title">{title}</span>
-      {detail ? (
-        <span className="game-tab-detail">
-          {detail}
-          {badge > 0 && (
-            <span className="game-tab-badge" aria-hidden="true">
-              {badge > 9 ? '9+' : badge}
-            </span>
-          )}
+      {detail ? <span className="game-tab-extra">{detail}</span> : null}
+      {badge > 0 && (
+        <span className="game-tab-badge" aria-hidden="true">
+          {badge > 9 ? '9+' : badge}
         </span>
-      ) : null}
+      )}
     </span>
   )
 }

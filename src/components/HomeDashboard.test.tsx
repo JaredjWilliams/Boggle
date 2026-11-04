@@ -179,6 +179,34 @@ describe('HomeDashboard', () => {
     expect(onStart).toHaveBeenCalledOnce()
   })
 
+  it('shows initials for the first two players on the friends card', () => {
+    const waiting = (name: string, id: string): ActiveGame => ({
+      gameId: id,
+      opponentId: id,
+      opponentName: name,
+      playedBack: false,
+      hosted: false,
+      wins: 1,
+      losses: 0,
+      yourScore: null,
+      opponentScore: null,
+    })
+    render(
+      <HomeDashboard
+        {...props}
+        onPlayWithFriends={vi.fn()}
+        games={[waiting('Eric Williams', 'eric'), waiting('Emilie Gist', 'emilie')]}
+        friends={[{ id: 'andrea', name: 'Andrea', username: 'andrea' }]}
+      />,
+    )
+
+    const card = screen.getByRole('button', { name: 'Play with friends' })
+    expect(card).toHaveTextContent('EW')
+    expect(card).toHaveTextContent('EG')
+    expect(card).not.toHaveTextContent('Andrea')
+    expect(card).not.toHaveTextContent('Eric Williams')
+  })
+
   it('opens friends without listing players on the dashboard', async () => {
     const onStart = vi.fn()
     const onPlayWithFriends = vi.fn()
@@ -223,7 +251,7 @@ describe('HomeDashboard', () => {
     expect(screen.queryByRole('switch', { name: 'Sample games' })).not.toBeInTheDocument()
   })
 
-  it('shows today\'s results under the daily board and above active games after it has been played', async () => {
+  it('shows today\'s results beside Today after the daily board has been played', async () => {
     const onDailyResults = vi.fn()
     const game = {
       gameId: 'g-new',
@@ -263,9 +291,12 @@ describe('HomeDashboard', () => {
     const results = screen.getByRole('button', { name: "Today's results" })
     const stats = screen.getByRole('button', { name: 'Your stats' })
     const games = screen.getByRole('list', { name: 'Active games' })
+    const today = screen.getByText('Today')
     expect(board).toBeDisabled()
-    expect(board.compareDocumentPosition(results) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(results.compareDocumentPosition(stats) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(today.parentElement?.parentElement).toContainElement(results)
+    expect(today.compareDocumentPosition(results) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(results.compareDocumentPosition(board) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(board.compareDocumentPosition(stats) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(stats.compareDocumentPosition(games) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
     await userEvent.click(results)
@@ -330,8 +361,10 @@ describe('HomeDashboard', () => {
     const results = screen.getByRole('button', { name: "Today's results" })
     const stats = screen.getByRole('button', { name: 'Your stats' })
     const games = screen.getByRole('list', { name: 'Active games' })
-    expect(board.compareDocumentPosition(results) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(results.compareDocumentPosition(stats) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const today = screen.getByText('Today')
+    expect(today.parentElement?.parentElement).toContainElement(results)
+    expect(results.compareDocumentPosition(board) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(board.compareDocumentPosition(stats) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(stats.compareDocumentPosition(games) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
     const buttons = within(games).getAllByRole('button')

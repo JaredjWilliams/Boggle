@@ -2,45 +2,93 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 12px 20px calc(24px + env(safe-area-inset-bottom));
+  padding: 24px 20px 32px;
 }
 
-.home-lede {
-  margin: 12px 0 0;
-  color: var(--muted);
-  font-size: 16px;
-}
-
-.play-choices {
+.welcome-row {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 22px;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 22px;
 }
 
-.start-game,
-.friends-game {
-  width: 100%;
-  min-height: 52px;
-  border: 0;
-  border-radius: 14px;
-  font: inherit;
-  font-size: 18px;
+.welcome-row p,
+.section-heading p,
+.section-kicker {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 11px;
   font-weight: 700;
+  letter-spacing: 0.9px;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
-.start-game {
-  background: var(--accent);
+.welcome-row .welcome-title,
+.section-heading .section-title,
+.today-layout .section-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.35px;
+  line-height: 1.12;
+  text-transform: none;
+}
+
+.welcome-row .welcome-title {
+  font-size: 28px;
+  letter-spacing: -0.8px;
+}
+
+.play-section,
+.today-section,
+.games-section {
+  margin-top: 30px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.play-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 0.9fr;
+  gap: 10px;
+}
+
+.play-grid:has(> :only-child) {
+  grid-template-columns: 1fr;
+}
+
+.solo-card,
+.friends-card {
+  min-width: 0;
+  border: 0;
+  border-radius: 22px;
+  font: inherit;
+  text-align: left;
+  transition: transform 140ms ease, filter 140ms ease;
+}
+
+.solo-card {
+  position: relative;
+  display: flex;
+  min-height: 178px;
+  flex-direction: column;
+  align-items: flex-start;
+  overflow: hidden;
+  padding: 18px;
+  background: linear-gradient(145deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 78%, black) 100%);
+  box-shadow: 0 16px 36px color-mix(in srgb, var(--accent) 22%, transparent);
   color: white;
 }
 
-.friends-game {
-  background: var(--ink);
-  color: var(--cream);
-}
-
-.start-game:disabled,
-.friends-game:disabled,
+.solo-card:disabled,
+.friends-card:disabled,
 .daily-game:disabled {
   opacity: 0.45;
 }
@@ -50,89 +98,238 @@
   color: var(--muted);
 }
 
-.daily-game,
-.stats-open,
-.daily-results-open {
-  width: 100%;
-  min-height: 52px;
-  margin-top: 10px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--tile);
-  color: var(--ink);
-  font: inherit;
-  font-size: 18px;
+.play-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.solo-card > strong {
+  width: 110px;
+  margin-top: 8px;
+  font-size: 22px;
+  line-height: 1.05;
+  letter-spacing: -0.5px;
+}
+
+.play-cta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  font-size: 13px;
   font-weight: 700;
 }
 
-.daily-game {
-  margin-top: 22px;
+.play-cta b {
+  font-size: 18px;
 }
 
-.stats-open,
-.daily-results-open {
+.letter-orbit {
+  position: absolute;
+  right: -22px;
+  bottom: -18px;
+  width: 112px;
+  height: 112px;
+  border: 1px solid rgb(255 255 255 / 24%);
+  border-radius: 50%;
+}
+
+.letter-orbit span {
+  position: absolute;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 16%);
+  font-size: 12px;
+  font-weight: 900;
+  transform: rotate(-8deg);
+}
+
+.letter-orbit span:nth-child(1) {
+  top: 4px;
+  left: 20px;
+}
+
+.letter-orbit span:nth-child(2) {
+  top: 40px;
+  left: 3px;
+}
+
+.letter-orbit span:nth-child(3) {
+  top: 45px;
+  left: 40px;
+}
+
+.friends-card {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
+  min-height: 178px;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 16px;
+  border: 1px solid var(--line);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--tile) 88%, white) 0%, var(--tile) 100%);
+  color: var(--ink);
 }
 
-.stats-open span,
-.daily-results-open span {
-  color: var(--accent);
-  font-size: 20px;
+.friend-avatars {
+  display: flex;
+  margin-bottom: auto;
+}
+
+.friend-avatars span {
+  display: grid;
+  width: 33px;
+  height: 33px;
+  place-items: center;
+  margin-right: -8px;
+  border: 2px solid var(--tile);
+  border-radius: 50%;
+  background: var(--line);
+  color: var(--ink);
+  font-size: 9px;
+  font-weight: 700;
   line-height: 1;
 }
 
-.resume-round {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  min-height: 72px;
-  margin-top: 22px;
-  padding: 14px 16px;
-  border: 0;
-  border-radius: 14px;
+.friend-avatars span:nth-child(2) {
+  background: color-mix(in srgb, var(--muted) 55%, var(--tile));
+}
+
+.friend-avatars span:nth-child(3) {
   background: var(--accent);
   color: white;
+  font-size: 14px;
+}
+
+.friends-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.friends-copy strong {
+  font-size: 16px;
+  line-height: 1.1;
+}
+
+.friends-copy small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.card-arrow {
+  margin-top: 9px;
+  color: var(--accent);
+  font-size: 20px;
+}
+
+.today-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.today-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.today-heading .section-kicker,
+.today-heading .section-title {
+  margin: 0;
+}
+
+.today-heading .section-kicker {
+  margin-bottom: 4px;
+}
+
+.today-results {
+  display: flex;
+  flex: none;
+  align-items: flex-end;
+  min-height: 44px;
+  padding: 0 0 1px;
+  border: 0;
+  background: transparent;
+  color: var(--warn);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.metric-row {
+  display: flex;
+  gap: 8px;
+}
+
+.metric {
+  display: flex;
+  min-width: 0;
+  min-height: 78px;
+  flex: 1 1 0;
+  flex-direction: column;
+  justify-content: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: color-mix(in srgb, var(--tile) 74%, transparent);
+  color: var(--ink);
   font: inherit;
   text-align: left;
 }
 
-.resume-round:focus-visible {
-  outline: 2px solid white;
-  outline-offset: 2px;
-}
-
-.resume-round-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.resume-round-name {
-  min-width: 0;
+.metric-value {
   overflow: hidden;
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
+  line-height: 1.2;
   text-overflow: ellipsis;
+}
+
+.metric-value.accent {
+  color: var(--warn);
+}
+
+.metric-label {
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.resume-round {
+  position: relative;
+}
+
+.resume-extra {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
   white-space: nowrap;
+  border: 0;
 }
 
-.resume-round-score {
-  font-size: 14px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.04em;
+.solo-card:focus-visible,
+.friends-card:focus-visible,
+.metric:focus-visible,
+.today-results:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
-.resume-round strong {
-  flex: none;
-  font-size: 18px;
-  font-variant-numeric: tabular-nums;
+.solo-card:active,
+.friends-card:active,
+.metric:active {
+  transform: scale(0.98);
 }
 
 .home-error {
@@ -140,4 +337,45 @@
   color: var(--bad);
   font-size: 15px;
   font-weight: 700;
+}
+
+.games-section .game-shelf {
+  margin-top: 0;
+}
+
+@media (hover: hover) {
+  .solo-card:hover,
+  .friends-card:hover,
+  .metric:hover {
+    filter: brightness(1.08);
+  }
+}
+
+@media (max-width: 360px) {
+  .home {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .play-grid {
+    grid-template-columns: 1.15fr 0.85fr;
+  }
+
+  .solo-card,
+  .friends-card,
+  .metric {
+    padding: 14px;
+  }
+
+  .metric-value {
+    font-size: 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .solo-card,
+  .friends-card,
+  .metric {
+    transition: none;
+  }
 }

@@ -3,6 +3,7 @@ import { isAdmin } from './auth/admin'
 import { endSession, readSession, restorePlayer, type Player } from './auth/profiles'
 import { AdminPage } from './components/AdminScreen'
 import { Board } from './components/Board'
+import { BottomNav, type AppNav } from './components/BottomNav'
 import { BuiltWord } from './components/BuiltWord'
 import { DailyBoardResults } from './components/DailyResults'
 import { EndPanel } from './components/EndPanel'
@@ -11,7 +12,9 @@ import { MatchReview, SavedMatch } from './components/MatchResults'
 import { Header } from './components/Header'
 import { PlayerLeaderboard } from './components/LeaderboardScreen'
 import { LearnScreen } from './components/LearnScreen'
+import { GamesScreen } from './components/GamesScreen'
 import { HomeDashboard } from './components/HomeDashboard'
+import { ProfileScreen } from './components/ProfileScreen'
 import { PlayerStats } from './components/StatsScreen'
 import { LoginPage } from './components/LoginPage'
 import { ScreenFrame } from './components/ScreenFrame'
@@ -26,11 +29,27 @@ import { useMatch } from './hooks/useMatch'
 import { useRound, type AttemptFeedback } from './hooks/useRound'
 import { useTheme } from './theme/useTheme'
 import type { Theme } from './theme/theme'
+import './components/page.css'
 import './App.css'
 
 const testing = import.meta.env.MODE === 'test'
 
-type View = 'home' | 'stats' | 'daily' | 'friends' | 'learn' | 'leaderboard' | 'settings' | 'admin'
+type View = 'home' | 'games' | 'stats' | 'daily' | 'friends' | 'learn' | 'leaderboard' | 'settings' | 'admin' | 'profile'
+
+function navFor(view: View): AppNav {
+  if (view === 'games') return 'games'
+  if (view === 'stats') return 'stats'
+  if (
+    view === 'profile' ||
+    view === 'settings' ||
+    view === 'learn' ||
+    view === 'leaderboard' ||
+    view === 'admin'
+  ) {
+    return 'profile'
+  }
+  return 'home'
+}
 
 function App() {
   const [player, setPlayer] = useState<Player | null>(() => (testing ? readSession() : null))
@@ -210,6 +229,8 @@ function PlayerGame({
         onSettings={includeSignOut ? () => setView('settings') : undefined}
         onAdmin={includeSignOut && isAdmin(player) ? () => setView('admin') : undefined}
         onSignOut={includeSignOut ? onSignOut : undefined}
+        onProfile={includeSignOut ? () => setView('profile') : undefined}
+        playerName={player.name}
         invites={lobby.invites}
         playedBack={notices}
         onAcceptInvite={(invite) => void match.accept(invite)}
@@ -220,7 +241,6 @@ function PlayerGame({
   }
 
   const wordsUnavailable = round.phase === 'loading' || round.loadError
-  const home = () => setView('home')
 
   if (round.phase === 'ended' && match.rivals.length > 0 && match.matchId && player.id) {
     return (
@@ -324,6 +344,7 @@ function PlayerGame({
         games={lobby.games}
         readKeys={readKeys}
         invites={lobby.invites}
+        friends={lobby.friends}
         onOpenGame={openSavedGame}
         onAcceptInvite={(invite) => void match.accept(invite)}
         onDeclineInvite={(invite) => void match.decline(invite)}
@@ -341,7 +362,34 @@ function PlayerGame({
     ),
     daily: player.id ? <DailyBoardResults playerId={player.id} /> : null,
     leaderboard: <PlayerLeaderboard viewerId={player.id ?? ''} />,
-    stats: player.id ? <PlayerStats playerId={player.id} playerName={player.name} /> : null,
+    games: (
+      <GamesScreen
+        games={lobby.games}
+        readKeys={readKeys}
+        invites={lobby.invites}
+        onOpenGame={openSavedGame}
+        onAcceptInvite={(invite) => void match.accept(invite)}
+        onDeclineInvite={(invite) => void match.decline(invite)}
+      />
+    ),
+    stats: player.id ? (
+      <PlayerStats playerId={player.id} playerName={player.name} />
+    ) : (
+      <main className="page">
+        <h1>Stats</h1>
+        <p className="page-lede">Play a few saved games and your record will show up here.</p>
+      </main>
+    ),
+    profile: (
+      <ProfileScreen
+        name={player.name}
+        onSettings={() => setView('settings')}
+        onHelp={() => setView('learn')}
+        onLeaderboard={() => setView('leaderboard')}
+        onAdmin={isAdmin(player) ? () => setView('admin') : undefined}
+        onSignOut={onSignOut}
+      />
+    ),
     learn: <LearnScreen />,
     admin: isAdmin(player) ? <AdminPage /> : null,
     settings: <SettingsScreen theme={theme} onThemeChange={onThemeChange} />,
@@ -358,8 +406,18 @@ function PlayerGame({
 
   const shown = pages[view] ? view : 'home'
 
+  function openNav(item: AppNav) {
+    if (item === 'home') setView('home')
+    if (item === 'games') setView('games')
+    if (item === 'stats') setView('stats')
+    if (item === 'profile') setView('profile')
+  }
+
   return (
-    <ScreenFrame header={signedInHeader(shown === 'home' ? undefined : home)}>
+    <ScreenFrame
+      header={signedInHeader()}
+      footer={<BottomNav active={navFor(shown)} onChange={openNav} />}
+    >
       {pages[shown]}
     </ScreenFrame>
   )

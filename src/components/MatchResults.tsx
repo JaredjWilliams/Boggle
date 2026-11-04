@@ -182,7 +182,6 @@ export function MatchResults({ players, notice = '', onRetry, onShowPotential }:
   return (
     <section className="match">
       <div className="match-top">
-        <p className="match-kicker">Time's up</p>
         <div className="match-heading">
           <h1 className={outcomeClass(outcome)} aria-live="polite">
             {outcomeLabel(outcome)}

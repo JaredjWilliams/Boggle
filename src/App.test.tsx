@@ -388,6 +388,31 @@ describe('home dashboard', () => {
     vi.unstubAllGlobals()
   })
 
+  it('opens games, stats, and profile from the tab bar', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(await screen.findByRole('button', { name: 'Games' }))
+    expect(screen.getByRole('heading', { name: 'Your games' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Often missed' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Stats' }))
+    expect(screen.getByRole('heading', { name: 'Stats' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Profile' }))
+    expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Settings' }))
+    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Profile' }))
+    await user.click(screen.getByRole('button', { name: 'Help & support' }))
+    expect(screen.getByRole('heading', { name: 'Learn' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Home' }))
+    expect(screen.getByRole('region', { name: 'Often missed' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page')
+  })
+
   it('opens friends from home and keeps the player list off the dashboard', async () => {
     const user = userEvent.setup()
     render(<App />)
@@ -480,7 +505,7 @@ describe('home dashboard', () => {
 
     expect(screen.getByRole('region', { name: 'Often missed' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Home' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page')
     expect(vi.mocked(shakeBoard)).not.toHaveBeenCalled()
 
     await leaveHome()

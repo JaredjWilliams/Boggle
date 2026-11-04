@@ -1,0 +1,114 @@
+.bottom-nav {
+  display: grid;
+  flex: none;
+  grid-template-columns: repeat(4, 1fr);
+  min-height: 68px;
+  margin: 0 12px max(10px, env(safe-area-inset-bottom));
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--page);
+  box-shadow: 0 18px 50px var(--shadow);
+}
+
+.nav-item {
+  display: flex;
+  min-height: 44px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.nav-item-active {
+  background: var(--tile);
+  color: var(--ink);
+}
+
+.nav-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.nav-mark {
+  position: relative;
+  width: 18px;
+  height: 18px;
+}
+
+.nav-mark::before,
+.nav-mark::after {
+  position: absolute;
+  border: 2px solid currentColor;
+  content: '';
+}
+
+.nav-mark-home::before {
+  inset: 4px 3px 2px;
+  border-radius: 3px;
+}
+
+.nav-mark-home::after {
+  top: 1px;
+  left: 4px;
+  width: 10px;
+  height: 10px;
+  border-right: 0;
+  border-bottom: 0;
+  border-radius: 2px;
+  transform: rotate(45deg);
+}
+
+.nav-mark-games::before {
+  inset: 3px 1px;
+  border-radius: 7px;
+}
+
+.nav-mark-games::after {
+  top: 8px;
+  left: 5px;
+  width: 8px;
+  border-width: 1px;
+}
+
+.nav-mark-stats::before {
+  right: 2px;
+  bottom: 2px;
+  left: 2px;
+  height: 13px;
+  border-top: 0;
+  border-right: 0;
+}
+
+.nav-mark-stats::after {
+  top: 4px;
+  left: 6px;
+  width: 8px;
+  height: 7px;
+  border-right: 0;
+  border-bottom: 0;
+  transform: skewY(-30deg);
+}
+
+.nav-mark-profile::before {
+  top: 1px;
+  left: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.nav-mark-profile::after {
+  right: 2px;
+  bottom: 1px;
+  left: 2px;
+  height: 8px;
+  border-radius: 9px 9px 4px 4px;
+}

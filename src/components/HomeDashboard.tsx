@@ -2,9 +2,11 @@ import {
   selectActiveGames,
   selectCompletedGames,
   type ActiveGame,
+  type Friend,
   type Invite,
 } from '../domain/lobby'
 import { GameTabs } from './GameTabs'
+import { playerInitials } from './initials'
 import { WORD_ROTATE_MS, WordSpotlight } from './WordSpotlight'
 import './HomeDashboard.css'
 
@@ -25,10 +27,28 @@ type Props = {
   readKeys?: ReadonlySet<string>
   onOpenGame?: (game: ActiveGame) => void
   invites?: readonly Invite[]
+  friends?: readonly Friend[]
   onAcceptInvite?: (invite: Invite) => void
   onDeclineInvite?: (invite: Invite) => void
   openRound?: { secondsLeft: number; opponents: readonly string[]; score: number } | null
   onResume?: () => void
+}
+
+function previewNames(
+  active: readonly ActiveGame[],
+  friends: readonly Friend[],
+  finished: readonly ActiveGame[],
+): string[] {
+  const names: string[] = []
+  const add = (name: string) => {
+    const trimmed = name.trim()
+    if (!trimmed || names.includes(trimmed) || names.length >= 2) return
+    names.push(trimmed)
+  }
+  for (const game of active) add(game.opponentName)
+  for (const friend of friends) add(friend.name)
+  for (const game of finished) add(game.opponentName)
+  return names
 }
 
 function formatTime(seconds: number): string {
@@ -52,6 +72,7 @@ export function HomeDashboard({
   readKeys,
   onOpenGame,
   invites = [],
+  friends = [],
   onAcceptInvite,
   onDeclineInvite,
   openRound = null,
@@ -61,76 +82,148 @@ export function HomeDashboard({
   const finished = selectCompletedGames(games)
   const showGames = inProgress.length > 0 || invites.length > 0 || finished.length > 0
   const unavailable = loading || loadError || starting
+  const showToday = Boolean(onDaily || onOpenStats || (openRound && onResume))
+  const resumeLabel = openRound
+    ? `Continue ${openRound.opponents.join(', ') || 'Solo'}, ${openRound.score.toLocaleString('en-US')} points, ${formatTime(openRound.secondsLeft)} left`
+    : ''
+  const faces = previewNames(inProgress, friends, finished)
 
   return (
     <main className="home">
+      <section className="welcome-row">
+        <div>
+          <p>Welcome back</p>
+          <p className="welcome-title">Ready to play?</p>
+        </div>
+      </section>
+
       <WordSpotlight />
 
-      <div className="play-choices">
-        <button type="button" className="start-game" onClick={onStart} disabled={unavailable}>
-          {loading ? 'Loading words…' : 'Play solo'}
-        </button>
-        {onPlayWithFriends && (
+      <section className="play-section" aria-labelledby="play-title">
+        <div className="section-heading">
+          <div>
+            <p>Pick a mode</p>
+            <p className="section-title" id="play-title">
+              Start playing
+            </p>
+          </div>
+        </div>
+        <div className="play-grid">
           <button
             type="button"
-            className="friends-game"
-            onClick={onPlayWithFriends}
+            className="solo-card"
+            onClick={onStart}
             disabled={unavailable}
+            aria-label={loading ? 'Loading words…' : 'Play solo'}
           >
-            Play with friends
+            <span className="play-label">Solo game</span>
+            <strong>{loading ? 'Loading words…' : 'Beat your best'}</strong>
+            <span className="play-cta">
+              Play now <b aria-hidden="true">→</b>
+            </span>
+            <span className="letter-orbit" aria-hidden="true">
+              <span>B</span>
+              <span>G</span>
+              <span>L</span>
+            </span>
           </button>
-        )}
-      </div>
+          {onPlayWithFriends && (
+            <button
+              type="button"
+              className="friends-card"
+              onClick={onPlayWithFriends}
+              disabled={unavailable}
+              aria-label="Play with friends"
+            >
+              <span className="friend-avatars" aria-hidden="true">
+                <span>{faces[0] ? playerInitials(faces[0]) : ''}</span>
+                <span>{faces[1] ? playerInitials(faces[1]) : ''}</span>
+                <span>+</span>
+              </span>
+              <span className="friends-copy">
+                <strong>Play together</strong>
+                <small>Invite friends</small>
+              </span>
+              <b className="card-arrow" aria-hidden="true">
+                →
+              </b>
+            </button>
+          )}
+        </div>
+      </section>
 
-      {onDaily && (
-        <button
-          type="button"
-          className={dailyPlayed ? 'daily-game is-played' : 'daily-game'}
-          onClick={onDaily}
-          disabled={unavailable || dailyPlayed}
-        >
-          {dailyPlayed ? 'Played today' : "Today's board"}
-        </button>
-      )}
-
-      {onDaily && dailyPlayed && onDailyResults && (
-        <button type="button" className="daily-results-open" onClick={onDailyResults}>
-          Today's results
-          <span aria-hidden="true">→</span>
-        </button>
-      )}
-
-      {onOpenStats && (
-        <button type="button" className="stats-open" onClick={onOpenStats}>
-          Your stats
-          <span aria-hidden="true">→</span>
-        </button>
-      )}
-
-      {openRound && onResume && (
-        <button
-          type="button"
-          className="resume-round"
-          onClick={onResume}
-          aria-label={`Continue ${openRound.opponents.join(', ') || 'Solo'}, ${openRound.score.toLocaleString('en-US')} points, ${formatTime(openRound.secondsLeft)} left`}
-        >
-          <span className="resume-round-copy">
-            <span className="resume-round-name">{openRound.opponents.join(', ') || 'Solo'}</span>
-            <span className="resume-round-score">{openRound.score.toLocaleString('en-US')}</span>
-          </span>
-          <strong>{formatTime(openRound.secondsLeft)}</strong>
-        </button>
+      {showToday && (
+        <section className="today-section" aria-labelledby="today-title">
+          <div className="today-layout">
+            <div className="today-heading">
+              <div>
+                <p className="section-kicker">Your progress</p>
+                <p className="section-title" id="today-title">
+                  Today
+                </p>
+              </div>
+              {onDaily && dailyPlayed && onDailyResults && (
+                <button
+                  type="button"
+                  className="today-results"
+                  onClick={onDailyResults}
+                  aria-label="Today's results"
+                >
+                  View results
+                </button>
+              )}
+            </div>
+            <div className="metric-row">
+            {onDaily && (
+              <button
+                type="button"
+                className={dailyPlayed ? 'metric daily-game is-played' : 'metric daily-game'}
+                onClick={onDaily}
+                disabled={unavailable || dailyPlayed}
+                aria-label={dailyPlayed ? 'Played today' : "Today's board"}
+              >
+                <span className="metric-value">{dailyPlayed ? 'Done' : 'Play'}</span>
+                <span className="metric-label">Daily game</span>
+              </button>
+            )}
+            {onOpenStats && (
+              <button type="button" className="metric stats-open" onClick={onOpenStats} aria-label="Your stats">
+                <span className="metric-value">—</span>
+                <span className="metric-label">Best score</span>
+              </button>
+            )}
+            {openRound && onResume && (
+              <button type="button" className="metric resume-round" onClick={onResume} aria-label={resumeLabel}>
+                <span className="metric-value accent">{formatTime(openRound.secondsLeft)}</span>
+                <span className="metric-label">Game left</span>
+                <span className="resume-extra">{openRound.opponents.join(', ') || 'Solo'}</span>
+                <span className="resume-extra">{openRound.score.toLocaleString('en-US')}</span>
+              </button>
+            )}
+            </div>
+          </div>
+        </section>
       )}
 
       {showGames && (
-        <GameTabs
-          games={games}
-          readKeys={readKeys}
-          invites={invites}
-          onOpenGame={onOpenGame}
-          onAcceptInvite={onAcceptInvite}
-          onDeclineInvite={onDeclineInvite}
-        />
+        <section className="games-section" aria-labelledby="games-title">
+          <div className="section-heading">
+            <div>
+              <p>Keep it going</p>
+              <p className="section-title" id="games-title">
+                Your games
+              </p>
+            </div>
+          </div>
+          <GameTabs
+            games={games}
+            readKeys={readKeys}
+            invites={invites}
+            onOpenGame={onOpenGame}
+            onAcceptInvite={onAcceptInvite}
+            onDeclineInvite={onDeclineInvite}
+          />
+        </section>
       )}
 
       {notice && (

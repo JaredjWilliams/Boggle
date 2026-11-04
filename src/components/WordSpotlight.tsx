@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type AnimationEvent } from 'react'
-import { pickMissedWord, wordKindLabel, type MissedWord } from '../learn/missedWords'
+import { MISSED_SIXES, pickMissedWord, wordKindLabel, type MissedWord } from '../learn/missedWords'
 import './WordSpotlight.css'
 
 export const WORD_ROTATE_MS = 7000
@@ -9,7 +9,7 @@ type LeavingWord = {
   word: MissedWord
 }
 
-const DEFINITION_SIZE = 16
+const DEFINITION_SIZE = 14
 const DEFINITION_MIN = 8
 
 export function WordSpotlight() {
@@ -41,7 +41,7 @@ export function WordSpotlight() {
   return (
     <section className="missed-word" aria-label="Often missed">
       <div className="missed-word-bar">
-        <p className="missed-word-kicker">Often missed</p>
+        <p className="missed-word-kicker">Daily discovery</p>
         <button type="button" className="missed-word-next" onClick={showAnotherWord}>
           New word
         </button>
@@ -81,14 +81,22 @@ function MissedWordBody({ word, heading = false }: { word: MissedWord; heading?:
   }, [word.definition])
 
   return (
-    <>
-      <Title className="missed-word-title">{word.word}</Title>
-      <p className="missed-word-kind">{wordKindLabel(word.kind)}</p>
-      <p ref={definitionRef} className="missed-word-def">
-        {word.definition}
-      </p>
-    </>
+    <div className="missed-word-body">
+      <p className="missed-word-index">{wordIndex(word.word)}</p>
+      <div>
+        <Title className="missed-word-title">{word.word}</Title>
+        <p className="missed-word-kind">{wordKindLabel(word.kind)}</p>
+        <p ref={definitionRef} className="missed-word-def">
+          {word.definition}
+        </p>
+      </div>
+    </div>
   )
+}
+
+function wordIndex(word: string): string {
+  const index = MISSED_SIXES.findIndex((item) => item.word === word)
+  return String((index < 0 ? 0 : index) + 1).padStart(2, '0')
 }
 
 function fitDefinition(el: HTMLElement) {

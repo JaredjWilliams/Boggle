@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { completedGameKey, type ActiveGame, type Invite } from '../domain/lobby'
 import { InviteActions } from './InviteActions'
+import { playerInitials } from './initials'
 import './Header.css'
 
 type Panel = 'notices' | 'menu'
@@ -17,6 +18,8 @@ type Props = {
   onAcceptInvite?: (invite: Invite) => void
   onDeclineInvite?: (invite: Invite) => void
   onOpenPlayedBack?: (game: ActiveGame) => void
+  onProfile?: () => void
+  playerName?: string
 }
 
 export function Header({
@@ -31,6 +34,8 @@ export function Header({
   onAcceptInvite,
   onDeclineInvite,
   onOpenPlayedBack,
+  onProfile,
+  playerName,
 }: Props) {
   const [panel, setPanel] = useState<Panel | null>(null)
   const panelRef = useRef<HTMLElement>(null)
@@ -64,8 +69,10 @@ export function Header({
   return (
     <div className="app-bar">
       <header className="app-header">
-        <GridIcon />
-        <Wordmark />
+        <div className="brand">
+          <img src="/assets/942c6.svg" alt="" width={36} height={36} />
+          <span className="brand-name">Boggle</span>
+        </div>
         {(showNotifications || onHome || showMenu) && (
           <div className="header-actions">
             {showNotifications && (
@@ -77,7 +84,7 @@ export function Header({
                 aria-label={notificationLabel(noticeCount)}
                 onClick={() => togglePanel('notices')}
               >
-                <BellIcon />
+                <img src="/assets/e1d89.svg" alt="" width={22} height={22} />
                 {noticeCount > 0 && (
                   <span className="header-bell-count" aria-hidden="true">
                     {noticeCount > 9 ? '9+' : noticeCount}
@@ -88,13 +95,17 @@ export function Header({
             {showMenu && (
               <button
                 type="button"
-                className="header-menu"
+                className={playerName ? 'header-menu header-avatar' : 'header-menu'}
                 aria-expanded={panel === 'menu'}
                 aria-haspopup="true"
                 aria-label="Menu"
                 onClick={() => togglePanel('menu')}
               >
-                <MenuIcon />
+                {playerName ? (
+                  playerInitials(playerName)
+                ) : (
+                  <img src="/assets/062d9.svg" alt="" width={22} height={22} />
+                )}
               </button>
             )}
             {onHome && (
@@ -114,6 +125,23 @@ export function Header({
       </header>
       {panel === 'menu' && (
         <nav ref={panelRef} className="menu-pop" aria-label="Menu" tabIndex={-1}>
+          {playerName && onProfile && (
+            <button
+              type="button"
+              className="profile-summary"
+              aria-label="View profile"
+              onClick={() => {
+                setPanel(null)
+                onProfile()
+              }}
+            >
+              <span aria-hidden="true">{playerInitials(playerName)}</span>
+              <p>
+                <strong>{playerName}</strong>
+                <small>View profile</small>
+              </p>
+            </button>
+          )}
           {onLeaderboard && (
             <button
               type="button"
@@ -244,64 +272,3 @@ function notificationLabel(count: number): string {
   return `Notifications, ${count} new`
 }
 
-function GridIcon() {
-  return (
-    <svg className="brand-icon" viewBox="0 0 32 32" aria-hidden="true">
-      <rect x="1" y="1" width="13" height="13" rx="3" fill="#fffaf3" />
-      <rect x="18" y="1" width="13" height="13" rx="3" fill="#fffaf3" />
-      <rect x="1" y="18" width="13" height="13" rx="3" fill="#fffaf3" />
-      <rect x="18" y="18" width="13" height="13" rx="3" fill="#e15a2d" />
-    </svg>
-  )
-}
-
-function Wordmark() {
-  return (
-    <svg className="brand-logo" viewBox="0 0 148 40" role="img" aria-label="Boggle">
-      <text
-        x="0"
-        y="31"
-        fill="currentColor"
-        fontFamily="Georgia, 'Palatino Linotype', Palatino, serif"
-        fontSize="34"
-        fontWeight="700"
-      >
-        Boggle
-      </text>
-    </svg>
-  )
-}
-
-function MenuIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M4 7h16M4 12h16M4 17h16"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
-
-function BellIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M12 3.5a5 5 0 0 0-5 5v2.1c0 .7-.2 1.3-.6 1.9L4.7 15a1 1 0 0 0 .8 1.6h13a1 1 0 0 0 .8-1.6l-1.7-2.5a3 3 0 0 1-.6-1.9V8.5a5 5 0 0 0-5-5Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      />
-      <path
-        d="M9.5 16.6a2.5 2.5 0 0 0 5 0"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
