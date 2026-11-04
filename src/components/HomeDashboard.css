@@ -9,7 +9,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  margin-bottom: 22px;
+  margin-bottom: 14px;
 }
 
 .welcome-row p,
@@ -44,7 +44,7 @@
 .play-section,
 .today-section,
 .games-section {
-  margin-top: 30px;
+  margin-top: 18px;
 }
 
 .section-heading {

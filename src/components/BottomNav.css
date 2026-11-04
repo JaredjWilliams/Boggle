@@ -2,9 +2,9 @@
   display: grid;
   flex: none;
   grid-template-columns: repeat(4, 1fr);
-  min-height: 68px;
+  min-height: 58px;
   margin: 0 12px max(10px, env(safe-area-inset-bottom));
-  padding: 7px;
+  padding: 6px;
   border: 1px solid var(--line);
   border-radius: 22px;
   background: var(--page);
