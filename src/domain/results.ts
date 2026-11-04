@@ -1,4 +1,5 @@
 import { scoredWords } from '../api/rows'
+import type { Board } from '../game/dice'
 import type { ScoredWord } from '../game/round'
 import { compareWords } from '../game/words'
 
@@ -6,6 +7,7 @@ export type SavedRound = {
   score: number | null
   words: ScoredWord[] | null
   missed: ScoredWord[]
+  board: Board
 }
 
 export type MatchPlayerRow = {

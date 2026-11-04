@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { loadMatchPlayers, loadSavedRound, watchMatchResults } from '../api/results'
 import type { MatchPlayerRow, SavedRound } from '../domain/results'
 import { useLoaded } from '../hooks/useLoaded'
+import type { Board as LetterBoard } from '../game/dice'
 import {
   boardWords,
   matchOutcome,
@@ -12,6 +13,8 @@ import {
   type Rival,
 } from '../game/match'
 import type { ScoredWord } from '../game/round'
+import { emptyHighlight, wordHighlight } from '../game/words'
+import { Board } from './Board'
 import { EndPanel } from './EndPanel'
 import { StatusBlock } from './StatusBlock'
 import { WordList } from './WordList'
@@ -24,6 +27,7 @@ type ReviewProps = {
   score: number | null
   words: readonly ScoredWord[] | null
   missed: ScoredWord[]
+  board?: LetterBoard
   rivals: readonly Rival[]
   showingPotential: boolean
   onShowPotential: () => void
@@ -71,6 +75,7 @@ export function SavedMatch({ gameId, viewerId, viewerName, rival, onPlayAgain }:
       score={round.score}
       words={round.words}
       missed={round.missed}
+      board={round.board}
       rivals={[rival]}
       showingPotential={showingPotential}
       onShowPotential={() => setShowingPotential(true)}
@@ -87,6 +92,7 @@ export function MatchReview({
   score,
   words,
   missed,
+  board = [],
   rivals,
   showingPotential,
   onShowPotential,
@@ -147,7 +153,9 @@ export function MatchReview({
   }
 
   if (showingPotential) {
-    return <PotentialWords words={boardWords(words ?? [], missed)} onBack={onBack} />
+    return (
+      <PotentialWords words={boardWords(words ?? [], missed)} board={board} onBack={onBack} />
+    )
   }
 
   return (
@@ -260,14 +268,24 @@ function outcomeClass(outcome: MatchOutcome): string {
   return 'match-outcome is-waiting'
 }
 
+const idlePointer = () => {}
+
 export function PotentialWords({
   words,
+  board,
   onBack,
 }: {
   words: readonly ScoredWord[]
+  board: LetterBoard
   onBack: () => void
 }) {
   const backRef = useRef<HTMLButtonElement>(null)
+  const [selected, setSelected] = useState<string | null>(null)
+  const highlight = useMemo(
+    () => (selected ? wordHighlight(board, selected) : emptyHighlight),
+    [board, selected],
+  )
+  const selectedPoints = words.find((item) => item.word === selected)?.points
 
   useEffect(() => {
     backRef.current?.focus()
@@ -279,17 +297,53 @@ export function PotentialWords({
         <button type="button" className="potential-back" onClick={onBack} ref={backRef}>
           Back
         </button>
-        <div>
+        <div className="potential-heading">
           <h1>Potential words</h1>
-          <p className="potential-lede">Every word that could be found on this board.</p>
+          <p className="potential-lede">Tap a word to see how it was formed.</p>
         </div>
       </div>
-      <div className="potential-scroll">
-        {words.length === 0 ? (
-          <p className="match-empty">No words on this board.</p>
-        ) : (
-          <WordList words={[...words]} flat />
-        )}
+      <div className="potential-stage">
+        <div className="potential-scroll">
+          {words.length === 0 ? (
+            <p className="match-empty">No words on this board.</p>
+          ) : (
+            <WordList
+              words={[...words]}
+              flat
+              scores={false}
+              selected={selected}
+              onSelect={(word) => setSelected((current) => (current === word ? null : word))}
+            />
+          )}
+        </div>
+        <div className="potential-board">
+          <p className={selected ? 'potential-trace is-word' : 'potential-trace'} aria-live="polite">
+            {selected ? (
+              <>
+                <span className="potential-trace-word">{selected}</span>
+                <span className="potential-trace-points">{selectedPoints}</span>
+              </>
+            ) : (
+              'The board from this game'
+            )}
+          </p>
+          {board.length > 0 ? (
+            <Board
+              board={board}
+              path={[]}
+              highlight={highlight}
+              drag={null}
+              locked
+              review
+              onPointerDown={idlePointer}
+              onPointerMove={idlePointer}
+              onPointerUp={idlePointer}
+              onPointerCancel={idlePointer}
+            />
+          ) : (
+            <p className="match-empty">This board was not saved.</p>
+          )}
+        </div>
       </div>
     </section>
   )

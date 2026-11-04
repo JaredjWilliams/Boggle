@@ -209,29 +209,116 @@
   padding: 12px 12px 8px;
 }
 
-.match-scroll,
-.potential-scroll {
-  flex: 1;
+.match-scroll {
+  flex: 1 1 0%;
   min-height: 0;
   overflow: auto;
   padding-bottom: calc(12px + env(safe-area-inset-bottom));
 }
 
-.match-scroll .word-list,
-.potential-scroll .word-list {
+.potential-stage {
+  display: flex;
+  flex: 1 1 0%;
+  flex-direction: row;
+  min-width: 0;
+  min-height: 0;
+  border-top: 1px solid var(--line);
+}
+
+.potential-board {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 2;
+  flex-shrink: 1;
+  flex-basis: 0%;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  padding: 12px 10px;
+}
+
+.potential-trace {
+  flex: none;
+  max-width: 100%;
+  margin: 0;
+  min-height: 1.3em;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.potential-trace.is-word {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  color: var(--ink);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.potential-trace-word {
+  letter-spacing: 0.14em;
+}
+
+.potential-trace-points {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+.potential-scroll {
+  flex-grow: 1;
+  flex-shrink: 1;
+  flex-basis: 0%;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  border-right: 1px solid var(--line);
+}
+
+.match-scroll .word-list {
   padding: 0 12px;
 }
 
-.match-scroll .word-list li,
-.potential-scroll .word-list li {
+.potential-scroll .word-list {
+  padding: 4px 4px 0;
+}
+
+.match-scroll .word-list li {
   gap: 8px;
   font-size: 14px;
 }
 
-.match-scroll .word-list .word,
-.potential-scroll .word-list .word {
+.potential-scroll .word-pick {
+  container-type: inline-size;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 6px;
+  letter-spacing: 0;
+}
+
+.match-scroll .word-list .word {
   white-space: normal;
   overflow-wrap: anywhere;
+}
+
+/* 9.2cqw keeps 15 letters on one line inside the word button. */
+.potential-scroll .word-list .word {
+  font-size: 9px;
+  letter-spacing: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@supports (font-size: 1cqw) {
+  .potential-scroll .word-list .word {
+    font-size: min(14px, 9.2cqw);
+  }
 }
 
 .match-empty {
@@ -241,24 +328,27 @@
 }
 
 .potential-top {
+  flex-direction: row;
+  align-items: center;
   gap: 14px;
+}
+
+.potential-heading {
+  min-width: 0;
 }
 
 .potential h1 {
   margin: 0;
   font-family: Georgia, 'Palatino Linotype', Palatino, serif;
-  font-size: 32px;
+  font-size: 26px;
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.05;
 }
 
 .potential-lede {
-  margin: 6px 0 0;
+  margin: 2px 0 0;
   color: var(--muted);
-  font-size: 16px;
-}
-
-.potential-scroll {
-  border-top: 1px solid var(--line);
+  font-size: 14px;
+  line-height: 1.3;
 }

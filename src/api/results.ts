@@ -4,6 +4,7 @@ import {
   type MatchPlayerRow,
   type SavedRound,
 } from '../domain/results'
+import { parseBoard } from '../game/dice'
 import { getSupabase } from '../lib/supabase'
 import { scoredWords, unwrap } from './rows'
 
@@ -60,7 +61,7 @@ export function watchMatchResults(gameId: string, onChange: () => void): () => v
 export async function loadSavedRound(gameId: string, playerId: string): Promise<SavedRound> {
   const supabase = getSupabase()
   const [game, result] = await Promise.all([
-    supabase.from('games').select('possible_words').eq('id', gameId).maybeSingle(),
+    supabase.from('games').select('board, possible_words').eq('id', gameId).maybeSingle(),
     supabase
       .from('results')
       .select('score, words')
@@ -76,5 +77,6 @@ export async function loadSavedRound(gameId: string, playerId: string): Promise<
     score: result.data ? (result.data.score as number) : null,
     words: found,
     missed: unplayedWords(scoredWords(game.data?.possible_words), found ?? []),
+    board: parseBoard(game.data?.board),
   }
 }

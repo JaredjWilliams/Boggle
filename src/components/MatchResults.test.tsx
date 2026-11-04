@@ -124,6 +124,14 @@ describe('MatchResults', () => {
   })
 })
 
+const playedBoard = [
+  ['C', 'A', 'T', 'S', 'X'],
+  ['R', 'E', 'N', 'O', 'P'],
+  ['D', 'I', 'L', 'M', 'B'],
+  ['F', 'G', 'H', 'J', 'K'],
+  ['U', 'V', 'W', 'Y', 'Qu'],
+]
+
 describe('PotentialWords', () => {
   it('lists every word and returns to the results', async () => {
     const onBack = vi.fn()
@@ -133,16 +141,24 @@ describe('PotentialWords', () => {
           { word: 'cats', points: 400 },
           { word: 'cat', points: 100 },
         ]}
+        board={playedBoard}
         onBack={onBack}
       />,
     )
 
     expect(screen.getByRole('heading', { name: 'Potential words' })).toBeInTheDocument()
-    expect(screen.getByText('Every word that could be found on this board.')).toBeInTheDocument()
-    expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
-      'cats400',
-      'cat100',
-    ])
+    expect(screen.getByText('Tap a word to see how it was formed.')).toBeInTheDocument()
+    expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['cats', 'cat'])
+    expect(screen.queryByText('400')).not.toBeInTheDocument()
+    expect(styleOf('.potential-stage').flexDirection).toBe('row')
+    expect(styleOf('.potential-board').flexGrow).toBe('2')
+    expect(styleOf('.potential-scroll').flexGrow).toBe('1')
+    expect(styleOf('.word-pick').minHeight).toBe('44px')
+    expect(styleOf('.potential-scroll .word-list .word').fontSize).toBe('9px')
+    expect(document.querySelector('.grid')).toHaveClass('review')
+    expect(tile(0, 3)).toHaveAttribute('data-letter', 'S')
+    expect(tile(0, 0)).not.toHaveClass('selected')
+
     const back = screen.getByRole('button', { name: 'Back' })
     expect(back).toHaveFocus()
     expect(styleOf('.potential-back').minHeight).toBe('44px')
@@ -151,9 +167,54 @@ describe('PotentialWords', () => {
     expect(onBack).toHaveBeenCalledOnce()
   })
 
+  it('traces the chosen word on the board and clears it on a second tap', async () => {
+    render(
+      <PotentialWords
+        words={[
+          { word: 'cats', points: 400 },
+          { word: 'cat', points: 100 },
+        ]}
+        board={playedBoard}
+        onBack={vi.fn()}
+      />,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'cats' }))
+    expect(screen.getByRole('button', { name: 'cats' })).toHaveAttribute('aria-pressed', 'true')
+    expect(document.querySelector('.potential-trace')).toHaveTextContent('cats400')
+    expect(document.querySelector('.potential-trace-points')).toHaveTextContent('400')
+    expect(document.querySelector('.potential-trace')).toHaveClass('is-word')
+    expect(stepAt(0, 0)).toBe('1')
+    expect(stepAt(0, 1)).toBe('2')
+    expect(stepAt(0, 2)).toBe('3')
+    expect(stepAt(0, 3)).toBe('4')
+    expect(tile(0, 4)).not.toHaveClass('selected')
+
+    await userEvent.click(screen.getByRole('button', { name: 'cat' }))
+    expect(document.querySelector('.potential-trace-points')).toHaveTextContent('100')
+    expect(screen.getByRole('button', { name: 'cats' })).toHaveAttribute('aria-pressed', 'false')
+    expect(stepAt(0, 0)).toBe('1')
+    expect(stepAt(0, 2)).toBe('3')
+    expect(tile(0, 3)).not.toHaveClass('selected')
+
+    await userEvent.click(screen.getByRole('button', { name: 'cat' }))
+    expect(screen.getByRole('button', { name: 'cat' })).toHaveAttribute('aria-pressed', 'false')
+    expect(tile(0, 0)).not.toHaveClass('selected')
+    expect(screen.getByText('The board from this game')).toBeInTheDocument()
+  })
+
   it('explains a board with no words', () => {
-    render(<PotentialWords words={[]} onBack={vi.fn()} />)
+    render(<PotentialWords words={[]} board={playedBoard} onBack={vi.fn()} />)
     expect(screen.getByText('No words on this board.')).toBeInTheDocument()
+    expect(tile(0, 0)).toHaveAttribute('data-letter', 'C')
+  })
+
+  it('explains a game whose board was not saved', () => {
+    render(
+      <PotentialWords words={[{ word: 'cat', points: 100 }]} board={[]} onBack={vi.fn()} />,
+    )
+    expect(screen.getByText('This board was not saved.')).toBeInTheDocument()
+    expect(document.querySelector('.grid')).not.toBeInTheDocument()
   })
 })
 
@@ -198,6 +259,47 @@ describe('MatchReview', () => {
     expect(score(column('Ada Lovelace'))).toBe('200')
     expect(items(column('Ada Lovelace'))).toEqual([{ word: 'cat', points: '100' }])
     expect(items(column('Grace Hopper'))).toEqual([{ word: 'cats', points: '400' }])
+  })
+
+  it('traces a potential word on the board from that game', async () => {
+    mocks.loadSavedRound.mockResolvedValue({
+      score: 100,
+      words: [{ word: 'cat', points: 100 }],
+      missed: [{ word: 'eat', points: 100 }],
+      board: [
+        ['C', 'A', 'T', 'X', 'Y'],
+        ['E', 'B', 'D', 'F', 'G'],
+        ['H', 'I', 'J', 'K', 'L'],
+        ['M', 'N', 'O', 'P', 'Q'],
+        ['R', 'S', 'U', 'V', 'W'],
+      ],
+    })
+    mocks.loadMatchPlayers.mockResolvedValue([
+      {
+        playerId: 'grace',
+        name: 'Grace Hopper',
+        score: 0,
+        words: [],
+      },
+    ])
+
+    render(
+      <SavedMatch
+        gameId="game-1"
+        viewerId="ada"
+        viewerName="Ada Lovelace"
+        rival={{ id: 'grace', name: 'Grace Hopper' }}
+        onPlayAgain={vi.fn()}
+      />,
+    )
+
+    await userEvent.click(await screen.findByRole('button', { name: 'See potential words' }))
+    expect(tile(0, 0)).not.toHaveClass('selected')
+    await userEvent.click(screen.getByRole('button', { name: 'eat' }))
+    expect(stepAt(1, 0)).toBe('1')
+    expect(stepAt(0, 1)).toBe('2')
+    expect(stepAt(0, 2)).toBe('3')
+    expect(tile(0, 0)).not.toHaveClass('selected')
   })
 
   it('keeps your words and fills in the opponent when their result arrives', async () => {
@@ -259,10 +361,7 @@ describe('MatchReview', () => {
     )
 
     expect(screen.getByRole('heading', { name: 'Potential words' })).toBeInTheDocument()
-    expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
-      'cat100',
-      'eat100',
-    ])
+    expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['cat', 'eat'])
     await userEvent.click(screen.getByRole('button', { name: 'Back' }))
     expect(onBack).toHaveBeenCalledOnce()
   })
@@ -413,6 +512,16 @@ function items(section: HTMLElement) {
       const [word, points] = [...item.querySelectorAll('span')].map((span) => span.textContent)
       return { word, points }
     })
+}
+
+function tile(row: number, col: number) {
+  const element = document.querySelector(`[data-row="${row}"][data-col="${col}"]`)
+  if (!(element instanceof HTMLElement)) throw new Error(`Missing tile ${row},${col}`)
+  return element
+}
+
+function stepAt(row: number, col: number) {
+  return tile(row, col).querySelector('.step')?.textContent
 }
 
 function styleOf(selector: string) {

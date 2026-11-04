@@ -232,6 +232,7 @@ function PlayerGame({
           score={round.score}
           words={round.found}
           missed={round.missed}
+          board={round.board}
           rivals={match.rivals}
           showingPotential={match.showPotential}
           onShowPotential={() => match.setShowPotential(true)}

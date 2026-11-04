@@ -15,6 +15,7 @@ type Props = {
   highlight?: LetterHighlight
   drag: DragAim | null
   locked: boolean
+  review?: boolean
   onPointerDown: (event: PointerEvent<HTMLDivElement>) => void
   onPointerMove: (event: PointerEvent<HTMLDivElement>) => void
   onPointerUp: (event: PointerEvent<HTMLDivElement>) => void
@@ -39,6 +40,7 @@ export function Board({
   highlight = emptyHighlight,
   drag,
   locked,
+  review = false,
   onPointerDown,
   onPointerMove,
   onPointerUp,
@@ -59,7 +61,7 @@ export function Board({
   return (
     <div
       ref={gridRef}
-      className={locked ? 'grid locked' : 'grid'}
+      className={['grid', locked ? 'locked' : '', review ? 'review' : ''].filter(Boolean).join(' ')}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -87,12 +89,13 @@ export function Board({
           const typedStep = highlight.steps[`${rowIndex},${colIndex}`]
           const step = dragStep >= 0 ? dragStep : (typedStep ?? -1)
           const selected = dragStep >= 0 || lit.has(`${rowIndex},${colIndex}`)
+          const label = review && step >= 0 ? `${letter}, step ${step + 1}` : letter
           return (
             <div
               key={`${rowIndex}-${colIndex}`}
               className={selected ? 'tile selected' : 'tile'}
-              role="button"
-              aria-label={letter}
+              role={review ? 'img' : 'button'}
+              aria-label={label}
               data-row={rowIndex}
               data-col={colIndex}
               data-letter={letter}

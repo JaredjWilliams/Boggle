@@ -5,6 +5,7 @@ import {
   scoreStep,
   scoreWord,
   typedHighlight,
+  wordHighlight,
   type LetterHighlight,
 } from './words'
 
@@ -92,6 +93,23 @@ const threeThe = [
   ['L', 'M', 'N', 'O', 'P'],
   ['T', 'H', 'E', 'Q', 'R'],
 ]
+
+describe('wordHighlight', () => {
+  it('lights one route and numbers the tiles in order', () => {
+    const highlight = wordHighlight(threeThe, 'the')
+    expect(cellKeys(highlight)).toEqual(['0,0', '0,1', '0,2'])
+    expect(highlight.steps).toEqual({ '0,0': 0, '0,1': 1, '0,2': 2 })
+    expect(highlight.links).toEqual([
+      { from: { row: 0, col: 0 }, to: { row: 0, col: 1 } },
+      { from: { row: 0, col: 1 }, to: { row: 0, col: 2 } },
+    ])
+  })
+
+  it('leaves the board dark when the word is not on it', () => {
+    expect(wordHighlight(threeThe, 'cat')).toBe(emptyHighlight)
+    expect(wordHighlight(threeThe, 'th!')).toBe(emptyHighlight)
+  })
+})
 
 describe('typedHighlight', () => {
   const dictionary = new Set(['the'])

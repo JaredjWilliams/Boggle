@@ -137,6 +137,13 @@ export const emptyHighlight: LetterHighlight = {
   steps: {},
 }
 
+// One route for a word already known to be on the board.
+export function wordHighlight(board: Board, word: string): LetterHighlight {
+  const target = word.trim().toLowerCase()
+  if (!/^[a-z]+$/.test(target)) return emptyHighlight
+  return highlightFromPaths(collectPaths(board, target, 1))
+}
+
 // A dictionary word lights one route. A prefix lights every route on the board.
 export function typedHighlight(
   board: Board,

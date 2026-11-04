@@ -53,6 +53,18 @@ export function shakeBoard(): Board {
   )
 }
 
+export function parseBoard(value: unknown): Board {
+  if (!Array.isArray(value) || value.length === 0) return []
+  const width = value.length
+  const board: Board = []
+  for (const row of value) {
+    if (!Array.isArray(row) || row.length !== width) return []
+    if (!row.every((cell) => typeof cell === 'string' && cell.length > 0)) return []
+    board.push([...row])
+  }
+  return board
+}
+
 // Each letter moves one quarter-turn clockwise and stays upright.
 export function turnBoard(board: Board): Board {
   const size = board.length

@@ -69,8 +69,39 @@ describe('loadSavedRound', () => {
       score: 0,
       words: [{ word: 'cat', points: 100 }],
       missed: [{ word: 'eat', points: 100 }],
+      board: [],
     })
     expect(supabase.calls.map((call) => call.table)).toEqual(['games', 'results'])
+    expect(supabase.calls.find((call) => call.table === 'games')?.select).toBe(
+      'board, possible_words',
+    )
+  })
+
+  it('keeps the board the game was played on', async () => {
+    const board = [
+      ['C', 'A', 'T', 'S', 'X'],
+      ['R', 'E', 'N', 'O', 'P'],
+      ['D', 'I', 'L', 'M', 'B'],
+      ['F', 'G', 'H', 'J', 'K'],
+      ['U', 'V', 'W', 'Y', 'Qu'],
+    ]
+    supabase.setGame({
+      data: { possible_words: [{ word: 'cat', points: 100 }], board },
+      error: null,
+    })
+    supabase.setResult({ data: { score: 100, words: [] }, error: null })
+
+    await expect(loadSavedRound('game-1', 'ada')).resolves.toMatchObject({ board })
+  })
+
+  it('drops a board that is not a square of letters', async () => {
+    supabase.setGame({
+      data: { possible_words: [], board: [['C'], ['A', 'T']] },
+      error: null,
+    })
+    supabase.setResult({ data: null, error: null })
+
+    await expect(loadSavedRound('game-1', 'ada')).resolves.toMatchObject({ board: [] })
   })
 
   it('keeps an unfinished round empty', async () => {
@@ -81,6 +112,7 @@ describe('loadSavedRound', () => {
       score: null,
       words: null,
       missed: [{ word: 'cat', points: 100 }],
+      board: [],
     })
   })
 

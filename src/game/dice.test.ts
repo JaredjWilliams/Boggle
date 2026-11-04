@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { turnBoard } from './dice'
+import { parseBoard, turnBoard } from './dice'
 
 const board = [
   ['C', 'A', 'T', 'S', 'X'],
@@ -8,6 +8,19 @@ const board = [
   ['F', 'G', 'H', 'J', 'K'],
   ['U', 'V', 'W', 'Y', 'Qu'],
 ]
+
+describe('parseBoard', () => {
+  it('keeps a square board of letters', () => {
+    expect(parseBoard(board)).toEqual(board)
+    expect(parseBoard(board)).not.toBe(board)
+  })
+
+  it('rejects anything that is not a square of letters', () => {
+    expect(parseBoard(null)).toEqual([])
+    expect(parseBoard([['C'], ['A', 'T']])).toEqual([])
+    expect(parseBoard([['C', '']])).toEqual([])
+  })
+})
 
 describe('turnBoard', () => {
   it('rotates every letter 90 degrees clockwise', () => {
