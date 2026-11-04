@@ -341,6 +341,7 @@ function PlayerGame({
         dailyPlayed={match.dailyPlayed}
         onDailyResults={player.id ? () => setView('daily') : undefined}
         onOpenStats={player.id ? () => setView('stats') : undefined}
+        bestScore={lobby.bestScore}
         games={lobby.games}
         readKeys={readKeys}
         invites={lobby.invites}

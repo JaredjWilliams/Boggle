@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   activeGameLabel,
   assembleActiveGames,
+  bestScoreOnDay,
   completedGameKey,
   daysLeftLabel,
   daysLeftToPlay,
@@ -24,6 +25,31 @@ const names = [
   { id: 'grace', name: ' Grace Hopper ' },
   { id: 'mina', name: '   ' },
 ]
+
+describe('bestScoreOnDay', () => {
+  it('keeps the highest score played on that day', () => {
+    expect(
+      bestScoreOnDay(
+        [
+          { score: 40, playedOn: '2026-11-04' },
+          { score: 900, playedOn: '2026-11-03' },
+          { score: 120, playedOn: '2026-11-04' },
+          { score: 0, playedOn: '2026-11-04' },
+        ],
+        '2026-11-04',
+      ),
+    ).toBe(120)
+  })
+
+  it('returns null when nothing was saved that day', () => {
+    expect(bestScoreOnDay([{ score: 10, playedOn: '2026-11-03' }], '2026-11-04')).toBeNull()
+    expect(bestScoreOnDay([], '2026-11-04')).toBeNull()
+  })
+
+  it('keeps a zero when that is the only score today', () => {
+    expect(bestScoreOnDay([{ score: 0, playedOn: '2026-11-04' }], '2026-11-04')).toBe(0)
+  })
+})
 
 describe('assembleActiveGames', () => {
   it('lists an accepted game with the record against that person', () => {

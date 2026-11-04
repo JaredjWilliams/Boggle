@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { playedOn } from '../domain/dates'
 import { blankQuery, queryChain, type RecordedQuery } from '../test/queryChain'
 import { loadLobby } from './lobby'
 
@@ -7,6 +8,13 @@ type Filter = { op: 'eq' | 'neq' | 'in'; column: string; value: unknown }
 const recent = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
 const older = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
 const expired = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString()
+
+function localNoon(dayOffset: number): string {
+  const date = new Date()
+  date.setDate(date.getDate() + dayOffset)
+  date.setHours(12, 0, 0, 0)
+  return date.toISOString()
+}
 
 const supabase = vi.hoisted(() => {
   const calls: RecordedQuery[] = []
@@ -56,8 +64,9 @@ function answer(query: RecordedQuery): { data: unknown; error: { message: string
   if (query.table === 'match_history') {
     return {
       data: [
-        { opponent_id: 'grace', score: 30, opponent_score: 10 },
-        { opponent_id: null, score: 15, opponent_score: null },
+        { opponent_id: 'grace', score: 120, opponent_score: 10, played_on: playedOn() },
+        { opponent_id: null, score: 15, opponent_score: null, played_on: '2020-01-01' },
+        { opponent_id: 'mina', score: 400, opponent_score: 10 },
       ],
       error: null,
     }
@@ -85,6 +94,10 @@ function answer(query: RecordedQuery): { data: unknown; error: { message: string
       data: [
         { game_id: 'g1', score: 80, games: { created_at: recent } },
         { game_id: 'old', score: 20, games: { created_at: older } },
+        { game_id: 'today', score: 45, games: { created_at: localNoon(0) } },
+        { game_id: 'yesterday', score: 900, games: { created_at: localNoon(-1) } },
+        { game_id: 'blank', score: 70, games: { created_at: 'not-a-date' } },
+        { game_id: 'missing', score: 60, games: null },
       ],
       error: null,
     }
@@ -106,7 +119,8 @@ beforeEach(() => {
 describe('loadLobby active games', () => {
   it('loads who you are playing and the record from saved and kept results', async () => {
     await expect(loadLobby('ada')).resolves.toMatchObject({
-      lastScore: 80,
+      lastScore: 45,
+      bestScore: 120,
       invites: [{ gameId: 'fresh-invite', daysLeft: 3 }],
       games: [
         {
@@ -123,6 +137,9 @@ describe('loadLobby active games', () => {
       ],
     })
     expect(supabase.rpc).toHaveBeenCalledWith('expire_stale_games')
+    expect(supabase.calls.find((call) => call.table === 'match_history')?.select).toBe(
+      'opponent_id, score, opponent_score, played_on',
+    )
 
     const rivalScores = supabase.calls.find(
       (call) => call.table === 'results' && has(call, 'neq', 'player_id', 'ada'),

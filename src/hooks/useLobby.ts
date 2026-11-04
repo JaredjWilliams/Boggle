@@ -3,7 +3,7 @@ import { loadLobby, watchLobby } from '../api/lobby'
 import type { ActiveGame, Friend, Invite, Lobby } from '../domain/lobby'
 import { errorMessage } from '../lib/errorMessage'
 
-const EMPTY: Lobby = { friends: [], invites: [], games: [], lastScore: null }
+const EMPTY: Lobby = { friends: [], invites: [], games: [], lastScore: null, bestScore: null }
 
 export const LOBBY_REFRESH_MS = 3000
 
@@ -64,6 +64,7 @@ export function useLobby(playerId: string | undefined) {
     invites: lobby.invites,
     games: lobby.games,
     savedScore: lobby.lastScore,
+    bestScore: lobby.bestScore,
     notice,
     setNotice,
     refresh,

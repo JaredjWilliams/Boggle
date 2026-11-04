@@ -20,6 +20,20 @@ export type Lobby = {
   invites: Invite[]
   games: ActiveGame[]
   lastScore: number | null
+  /** Highest saved score from games played on the current local day. */
+  bestScore: number | null
+}
+
+export function bestScoreOnDay(
+  scores: readonly { score: number; playedOn: string }[],
+  day: string,
+): number | null {
+  let best: number | null = null
+  for (const row of scores) {
+    if (row.playedOn !== day) continue
+    if (best === null || row.score > best) best = row.score
+  }
+  return best
 }
 
 export type ActiveGame = {

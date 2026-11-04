@@ -39,6 +39,7 @@ function lobby(playedBack: boolean) {
     friends: [],
     invites: [],
     lastScore: null,
+    bestScore: null,
     games: [
       {
         gameId: 'g1',

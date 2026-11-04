@@ -245,10 +245,30 @@ describe('HomeDashboard', () => {
     const onOpenStats = vi.fn()
     render(<HomeDashboard {...props} onOpenStats={onOpenStats} />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Your stats' }))
+    const stats = screen.getByRole('button', { name: 'Your stats' })
+    expect(stats).toHaveTextContent('—')
+    expect(stats).toHaveTextContent('Best score')
+
+    await userEvent.click(stats)
 
     expect(onOpenStats).toHaveBeenCalledOnce()
     expect(screen.queryByRole('switch', { name: 'Sample games' })).not.toBeInTheDocument()
+  })
+
+  it('shows the best score saved today', async () => {
+    const onOpenStats = vi.fn()
+    const { rerender } = render(<HomeDashboard {...props} onOpenStats={onOpenStats} bestScore={0} />)
+
+    const zero = screen.getByRole('button', { name: 'Your stats, best score 0' })
+    expect(zero).toHaveTextContent('0')
+    expect(zero).toHaveTextContent('Best score')
+
+    rerender(<HomeDashboard {...props} onOpenStats={onOpenStats} bestScore={1250} />)
+
+    const stats = screen.getByRole('button', { name: 'Your stats, best score 1,250' })
+    expect(stats).toHaveTextContent('1,250')
+    await userEvent.click(stats)
+    expect(onOpenStats).toHaveBeenCalledOnce()
   })
 
   it('shows today\'s results beside Today after the daily board has been played', async () => {

@@ -23,6 +23,7 @@ type Props = {
   dailyPlayed?: boolean
   onDailyResults?: () => void
   onOpenStats?: () => void
+  bestScore?: number | null
   games?: readonly ActiveGame[]
   readKeys?: ReadonlySet<string>
   onOpenGame?: (game: ActiveGame) => void
@@ -51,6 +52,11 @@ function previewNames(
   return names
 }
 
+function formatScore(score: number | null): string {
+  if (score === null) return '—'
+  return score.toLocaleString('en-US')
+}
+
 function formatTime(seconds: number): string {
   const minutes = Math.floor(seconds / 60)
   const rest = seconds % 60
@@ -68,6 +74,7 @@ export function HomeDashboard({
   dailyPlayed = false,
   onDailyResults,
   onOpenStats,
+  bestScore = null,
   games = [],
   readKeys,
   onOpenGame,
@@ -187,8 +194,13 @@ export function HomeDashboard({
               </button>
             )}
             {onOpenStats && (
-              <button type="button" className="metric stats-open" onClick={onOpenStats} aria-label="Your stats">
-                <span className="metric-value">—</span>
+              <button
+                type="button"
+                className="metric stats-open"
+                onClick={onOpenStats}
+                aria-label={bestScore === null ? 'Your stats' : `Your stats, best score ${formatScore(bestScore)}`}
+              >
+                <span className="metric-value">{formatScore(bestScore)}</span>
                 <span className="metric-label">Best score</span>
               </button>
             )}

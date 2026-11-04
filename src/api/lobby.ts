@@ -1,5 +1,7 @@
+import { playedOn } from '../domain/dates'
 import {
   assembleActiveGames,
+  bestScoreOnDay,
   daysLeftToPlay,
   gameIsExpired,
   type ActiveGame,
@@ -28,6 +30,7 @@ type KeptRow = {
   opponent_id: string | null
   score: number
   opponent_score: number | null
+  played_on?: string | null
 }
 
 type ScoreListRow = {
@@ -75,12 +78,13 @@ export async function loadLobby(playerId: string): Promise<Lobby> {
       .eq('status', 'accepted'),
     supabase
       .from('match_history')
-      .select('opponent_id, score, opponent_score')
+      .select('opponent_id, score, opponent_score, played_on')
       .eq('player_id', playerId),
   ])
 
   const friends = (unwrap(profiles) ?? []) as Friend[]
   const scoreRows = (unwrap(scores) ?? []) as ScoreListRow[]
+  const historyRows = (unwrap(history) ?? []) as KeptRow[]
   const viewerScores = scoreRows.flatMap((row) =>
     row.game_id ? [{ gameId: row.game_id, playerId, score: row.score }] : [],
   )
@@ -98,7 +102,7 @@ export async function loadLobby(playerId: string): Promise<Lobby> {
       (unwrap(accepted) ?? []) as AcceptedRow[],
       viewerScores,
       friends,
-      keptMatches((unwrap(history) ?? []) as KeptRow[]),
+      keptMatches(historyRows),
     ),
   ])
   const hostNames = new Map((unwrap(hosts) ?? []).map((host) => [host.id as string, host.name as string]))
@@ -130,7 +134,27 @@ export async function loadLobby(playerId: string): Promise<Lobby> {
     invites,
     games,
     lastScore: ranked[0]?.score ?? null,
+    bestScore: bestScoreOnDay(datedScores(scoreRows, historyRows), playedOn()),
   }
+}
+
+function datedScores(
+  scoreRows: readonly ScoreListRow[],
+  historyRows: readonly KeptRow[],
+): { score: number; playedOn: string }[] {
+  const fromResults = scoreRows.flatMap((row) => {
+    const created = first(row.games)?.created_at
+    if (!created) return []
+    const parsed = Date.parse(created)
+    if (Number.isNaN(parsed)) return []
+    return [{ score: row.score, playedOn: playedOn(new Date(parsed)) }]
+  })
+  const fromHistory = historyRows.flatMap((row) => {
+    const day = row.played_on?.trim()
+    if (!day) return []
+    return [{ score: row.score, playedOn: day }]
+  })
+  return [...fromResults, ...fromHistory]
 }
 
 export function watchLobby(playerId: string, onChange: () => void): () => void {
