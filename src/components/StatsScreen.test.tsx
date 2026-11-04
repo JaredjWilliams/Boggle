@@ -48,17 +48,26 @@ const props = {
 }
 
 describe('StatsScreen', () => {
-  it('plots words and score by date and shows the win rate', () => {
+  it('plots words and score by date and shows the win rate', async () => {
     render(<StatsScreen {...props} />)
 
     expect(screen.getByRole('heading', { name: 'Every game, plotted.' })).toBeInTheDocument()
     expect(screen.getByText('Ada Lovelace')).toBeInTheDocument()
+    expect(screen.getByText('days of wordplay').closest('p')).toHaveTextContent('3')
 
     const words = section('Words a game')
     expect(figure('Words a game')).toHaveTextContent('6')
     expect(words).toHaveTextContent('Up about 1 word a week.')
     expect(within(words).getByRole('img', { name: 'Words found on each date' })).toBeInTheDocument()
     expect(within(words).getAllByTestId('trend-line')).toHaveLength(1)
+
+    const wins = section('Win rate')
+    expect(wins).toHaveTextContent('33%')
+    expect(wins).toHaveTextContent('3 games with another player.')
+    expect(within(wins).getByRole('img', { name: 'Win rate. 1 wins, 1 losses, 1 ties.' })).toBeInTheDocument()
+    expect(within(wins).getByText('Wins').closest('li')).toHaveTextContent('1 · 33%')
+
+    await openTab('Word insights')
 
     expect(figure('Longest word')).toHaveTextContent('quartz')
     expect(section('Longest word')).toHaveTextContent('6 letters, found Oct 8 against Jonah Park.')
@@ -80,16 +89,12 @@ describe('StatsScreen', () => {
     expect(within(started).getByText(/star extended to starch, 1,400 points/)).toBeInTheDocument()
     expect(within(started).getByText(/late extended to later, 800 points/)).toBeInTheDocument()
 
+    await openTab('Point insights')
+
     const score = section('Points a game')
     expect(figure('Points a game')).toHaveTextContent('1,500')
     expect(score).toHaveTextContent('Up about 250 points a week.')
     expect(within(score).getAllByTestId('trend-line')).toHaveLength(1)
-
-    const wins = section('Win rate')
-    expect(wins).toHaveTextContent('33%')
-    expect(wins).toHaveTextContent('3 games with another player.')
-    expect(within(wins).getByRole('img', { name: 'Win rate. 1 wins, 1 losses, 1 ties.' })).toBeInTheDocument()
-    expect(within(wins).getByText('Wins').closest('li')).toHaveTextContent('1 · 33%')
   })
 
   it('filters every chart to one player', async () => {
@@ -98,6 +103,12 @@ describe('StatsScreen', () => {
     await userEvent.click(screen.getByRole('radio', { name: 'Mina Chen' }))
 
     expect(figure('Words a game')).toHaveTextContent('5')
+    expect(section('Win rate')).toHaveTextContent('50%')
+    expect(section('Win rate')).toHaveTextContent('Wins')
+    expect(screen.getByRole('img', { name: 'Win rate. 1 wins, 0 losses, 1 ties.' })).toBeInTheDocument()
+
+    await openTab('Word insights')
+
     expect(figure('Longest word')).toHaveTextContent('cats')
     expect(section('Longest word')).toHaveTextContent('4 letters, found Oct 15 against Mina Chen.')
     expect(section('Words by length')).toHaveTextContent('10 words across these games.')
@@ -107,15 +118,18 @@ describe('StatsScreen', () => {
     expect(section('Words you had started')).toHaveTextContent('Worth 800 points still on the board.')
     expect(section('Words you had started')).toHaveTextContent('cat extended to catch, 800 points')
     expect(section('Words you had started')).not.toHaveTextContent('starch')
-    expect(figure('Points a game')).toHaveTextContent('1,250')
-    expect(section('Win rate')).toHaveTextContent('50%')
-    expect(section('Win rate')).toHaveTextContent('Wins')
-    expect(screen.getByRole('img', { name: 'Win rate. 1 wins, 0 losses, 1 ties.' })).toBeInTheDocument()
 
+    await openTab('Point insights')
+    expect(figure('Points a game')).toHaveTextContent('1,250')
+
+    await openTab('Word insights')
     await userEvent.click(screen.getByRole('radio', { name: 'Jonah Park' }))
 
     expect(figure('Words you had started')).toHaveTextContent('2')
     expect(section('Words you had started')).toHaveTextContent('Worth 2,200 points still on the board.')
+
+    await openTab('Overview')
+
     expect(section('Words a game')).toHaveTextContent('Play another game to see a trend.')
     expect(screen.queryAllByTestId('trend-line')).toHaveLength(0)
     expect(section('Win rate')).toHaveTextContent('0%')
@@ -125,7 +139,13 @@ describe('StatsScreen', () => {
     const onRetry = vi.fn()
     const { rerender } = render(<StatsScreen {...props} games={[]} />)
 
-    expect(screen.getAllByText('No games yet')).toHaveLength(2)
+    expect(screen.getByRole('img', { name: 'Words found on each date. No games.' })).toBeInTheDocument()
+    expect(figure('Words a game')).toHaveTextContent('—')
+    expect(section('Win rate')).toHaveTextContent('—')
+    expect(section('Win rate')).toHaveTextContent('No head-to-head games yet.')
+
+    await openTab('Word insights')
+
     expect(figure('Longest word')).toHaveTextContent('—')
     expect(section('Longest word')).toHaveTextContent('No games in this view.')
     expect(section('Words by length')).toHaveTextContent('No games in this view.')
@@ -134,8 +154,10 @@ describe('StatsScreen', () => {
     expect(figure('Words you had started')).toHaveTextContent('—')
     expect(section('Words you had started')).toHaveTextContent('No games in this view.')
     expect(lengthCount('3+')).toHaveTextContent('0')
-    expect(section('Win rate')).toHaveTextContent('—')
-    expect(section('Win rate')).toHaveTextContent('No head-to-head games yet.')
+
+    await openTab('Point insights')
+    expect(screen.getByRole('img', { name: 'Score on each date. No games.' })).toBeInTheDocument()
+    expect(figure('Points a game')).toHaveTextContent('—')
 
     rerender(<StatsScreen {...props} notice="Could not load your stats." onRetry={onRetry} />)
     expect(screen.getByRole('alert')).toHaveTextContent('Could not load your stats.')
@@ -154,6 +176,8 @@ describe('StatsScreen', () => {
         ]}
       />,
     )
+
+    await openTab('Word insights')
 
     const where = section('Where you start')
     const heat = within(where).getByRole('figure', { name: 'Where traced words started' })
@@ -195,6 +219,10 @@ describe('StatsScreen', () => {
     )
   })
 })
+
+async function openTab(name: string) {
+  await userEvent.click(screen.getByRole('tab', { name }))
+}
 
 function cells(marks: Record<number, number>): number[] {
   const grid = Array.from({ length: START_CELLS }, () => 0)

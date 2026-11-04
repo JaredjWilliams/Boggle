@@ -191,8 +191,8 @@ export function ScatterPlot({
 
 const SLICE_COLORS = {
   wins: '#e15a2d',
-  losses: '#1b2838',
-  ties: '#c6a15a',
+  losses: '#52657b',
+  ties: '#d7b375',
 } as const
 
 export function PieChart({ record }: { record: HeadToHead }) {
@@ -235,6 +235,7 @@ export function PieChart({ record }: { record: HeadToHead }) {
               fill={SLICE_COLORS[slice.key]}
             />
           ))}
+        {total > 0 && <circle cx={PIE / 2} cy={PIE / 2} r="31" className="pie-hole" />}
       </svg>
       <ul className="legend">
         {slices.map((slice) => {
