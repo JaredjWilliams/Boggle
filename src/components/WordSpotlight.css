@@ -33,7 +33,9 @@
 
 .missed-word-stage {
   display: grid;
+  align-items: start;
   overflow: hidden;
+  margin-top: 8px;
 }
 
 .missed-word-card {
@@ -85,19 +87,7 @@
 }
 
 .missed-word-body {
-  display: grid;
-  grid-template-columns: 40px 1fr;
-  gap: 12px;
-  margin-top: 22px;
-}
-
-.missed-word-index {
   margin: 0;
-  padding-top: 8px;
-  border-top: 2px solid var(--accent);
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 700;
 }
 
 .missed-word-bar {
@@ -140,16 +130,13 @@
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.9px;
+  line-height: 1;
   text-transform: uppercase;
 }
 
 .missed-word-def {
-  max-width: 250px;
   margin: 5px 0 0;
-  height: 22px;
-  overflow: hidden;
   color: var(--ink);
   font-size: 14px;
-  line-height: 22px;
-  white-space: nowrap;
+  line-height: 1.35;
 }

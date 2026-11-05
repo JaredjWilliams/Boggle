@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type AnimationEvent } from 'react'
-import { MISSED_SIXES, pickMissedWord, wordKindLabel, type MissedWord } from '../learn/missedWords'
+import { useCallback, useEffect, useRef, useState, type AnimationEvent } from 'react'
+import { pickMissedWord, wordKindLabel, type MissedWord } from '../learn/missedWords'
 import './WordSpotlight.css'
 
 export const WORD_ROTATE_MS = 7000
@@ -8,9 +8,6 @@ type LeavingWord = {
   id: number
   word: MissedWord
 }
-
-const DEFINITION_SIZE = 14
-const DEFINITION_MIN = 8
 
 export function WordSpotlight() {
   const [spotlight, setSpotlight] = useState<MissedWord>(() => pickMissedWord())
@@ -41,7 +38,7 @@ export function WordSpotlight() {
   return (
     <section className="missed-word" aria-label="Often missed">
       <div className="missed-word-bar">
-        <p className="missed-word-kicker">Daily discovery</p>
+        <p className="missed-word-kicker">Commonly missed</p>
         <button type="button" className="missed-word-next" onClick={showAnotherWord}>
           New word
         </button>
@@ -67,51 +64,14 @@ export function WordSpotlight() {
 
 function MissedWordBody({ word, heading = false }: { word: MissedWord; heading?: boolean }) {
   const Title = heading ? 'h1' : 'p'
-  const definitionRef = useRef<HTMLParagraphElement>(null)
-
-  useLayoutEffect(() => {
-    const el = definitionRef.current
-    if (!el) return
-    const fit = () => fitDefinition(el)
-    fit()
-    if (typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(fit)
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [word.definition])
 
   return (
     <div className="missed-word-body">
-      <p className="missed-word-index">{wordIndex(word.word)}</p>
-      <div>
-        <Title className="missed-word-title">{word.word}</Title>
-        <p className="missed-word-kind">{wordKindLabel(word.kind)}</p>
-        <p ref={definitionRef} className="missed-word-def">
-          {word.definition}
-        </p>
-      </div>
+      <Title className="missed-word-title">{word.word}</Title>
+      <p className="missed-word-kind">{wordKindLabel(word.kind)}</p>
+      <p className="missed-word-def">{word.definition}</p>
     </div>
   )
-}
-
-function wordIndex(word: string): string {
-  const index = MISSED_SIXES.findIndex((item) => item.word === word)
-  return String((index < 0 ? 0 : index) + 1).padStart(2, '0')
-}
-
-function fitDefinition(el: HTMLElement) {
-  const available = el.clientWidth
-  if (available <= 0) return
-  el.style.fontSize = `${DEFINITION_SIZE}px`
-  if (el.scrollWidth <= available) return
-
-  const ratio = available / el.scrollWidth
-  let size = Math.max(DEFINITION_MIN, Math.floor(DEFINITION_SIZE * ratio * 10) / 10)
-  el.style.fontSize = `${size}px`
-  while (el.scrollWidth > available && size > DEFINITION_MIN) {
-    size = Math.round((size - 0.5) * 10) / 10
-    el.style.fontSize = `${size}px`
-  }
 }
 
 function canAnimate(): boolean {
