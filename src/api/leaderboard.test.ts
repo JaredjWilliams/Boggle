@@ -5,7 +5,6 @@ import {
   buildLeaderboard,
   placeLabel,
   type LeaderboardResult,
-  type LeaderboardSeat,
 } from '../domain/leaderboard'
 
 const supabase = vi.hoisted(() => {
@@ -43,7 +42,6 @@ function result(row: Partial<LeaderboardResult> & Pick<LeaderboardResult, 'game_
 
 function rows(
   id:
-    | 'daily'
     | 'points'
     | 'bestScore'
     | 'words'
@@ -51,8 +49,6 @@ function rows(
     | 'wins'
     | 'friends'
     | 'outgoing'
-    | 'days'
-    | 'solo'
     | 'averageWords'
     | 'averagePoints',
 ) {
@@ -64,8 +60,6 @@ function rows(
       ...fillers('mina', 'Mina Chen', 10),
       ...fillers('jonah', 'Jonah Park', 10),
     ],
-    sampleSeats(),
-    new Date('2026-10-30T12:00:00.000Z'),
   ).find((item) => item.id === id)
   if (!board) throw new Error(`Missing ${id}`)
   return board.rows
@@ -172,21 +166,6 @@ function sampleResults(): LeaderboardResult[] {
   ]
 }
 
-function sampleSeats(): LeaderboardSeat[] {
-  return [
-    { game_id: 'daily-ada-late', player_id: 'ada', status: 'accepted' },
-    { game_id: 'daily-grace', player_id: 'grace', status: 'accepted' },
-    { game_id: 'daily-mina', player_id: 'mina', status: 'accepted' },
-    { game_id: 'match', player_id: 'ada', status: 'accepted' },
-    { game_id: 'match', player_id: 'grace', status: 'accepted' },
-    { game_id: 'match', player_id: 'jonah', status: 'accepted' },
-    { game_id: 'waiting', player_id: 'grace', status: 'accepted' },
-    { game_id: 'waiting', player_id: 'mina', status: 'invited' },
-    { game_id: 'declined', player_id: 'ada', status: 'accepted' },
-    { game_id: 'declined', player_id: 'jonah', status: 'declined' },
-  ]
-}
-
 beforeEach(() => {
   supabase.calls.length = 0
   supabase.queues.clear()
@@ -206,92 +185,6 @@ describe('place labels', () => {
 })
 
 describe('leaderboard records', () => {
-  it('gives a finished daily board only to the unique high score, using the latest play that day', () => {
-    expect(rows('daily')).toEqual([
-      { playerId: 'mina', name: 'Mina Chen', rank: 1, value: 1, figure: '1', caption: '' },
-      { playerId: 'ada', name: 'Ada Lovelace', rank: 2, value: 0, figure: '0', caption: '' },
-      { playerId: 'grace', name: 'Grace Hopper', rank: 2, value: 0, figure: '0', caption: '' },
-    ])
-  })
-
-  it('awards the daily point when the day ends, and ignores a score saved after that', () => {
-    const day = '2026-10-28'
-    const open = new Date('2026-10-29T11:59:59.000Z')
-    const closed = new Date('2026-10-29T12:00:00.000Z')
-    const plays = [
-      ...fillers('ada', 'Ada Lovelace', 10),
-      ...fillers('grace', 'Grace Hopper', 10),
-      result({
-        game_id: 'ada-leads',
-        player_id: 'ada',
-        score: 100,
-        words: [],
-        profiles: { name: 'Ada Lovelace' },
-        games: { daily_on: day, created_at: '2026-10-28T15:00:00.000Z' },
-      }),
-      result({
-        game_id: 'grace-trails',
-        player_id: 'grace',
-        score: 80,
-        words: [],
-        profiles: { name: 'Grace Hopper' },
-        games: { daily_on: day, created_at: '2026-10-28T16:00:00.000Z' },
-      }),
-      result({
-        game_id: 'grace-late',
-        player_id: 'grace',
-        score: 500,
-        words: [],
-        profiles: { name: 'Grace Hopper' },
-        games: { daily_on: day, created_at: '2026-10-29T12:00:00.000Z' },
-      }),
-    ]
-
-    const daily = (now: Date) =>
-      buildLeaderboard(plays, [], now).find((board) => board.id === 'daily')?.rows
-
-    expect(daily(open)).toEqual([
-      { playerId: 'ada', name: 'Ada Lovelace', rank: 1, value: 0, figure: '0', caption: '' },
-      { playerId: 'grace', name: 'Grace Hopper', rank: 1, value: 0, figure: '0', caption: '' },
-    ])
-    expect(daily(closed)).toEqual([
-      { playerId: 'ada', name: 'Ada Lovelace', rank: 1, value: 1, figure: '1', caption: '' },
-      { playerId: 'grace', name: 'Grace Hopper', rank: 2, value: 0, figure: '0', caption: '' },
-    ])
-  })
-
-  it('gives a finished day to the player who is ahead at the end, not whoever led earlier', () => {
-    const day = '2026-10-28'
-    const plays = [
-      ...fillers('ada', 'Ada Lovelace', 10),
-      ...fillers('grace', 'Grace Hopper', 10),
-      result({
-        game_id: 'ada-leads',
-        player_id: 'ada',
-        score: 100,
-        words: [],
-        profiles: { name: 'Ada Lovelace' },
-        games: { daily_on: day, created_at: '2026-10-28T15:00:00.000Z' },
-      }),
-      result({
-        game_id: 'grace-passes',
-        player_id: 'grace',
-        score: 120,
-        words: [],
-        profiles: { name: 'Grace Hopper' },
-        games: { daily_on: day, created_at: '2026-10-28T20:00:00.000Z' },
-      }),
-    ]
-
-    expect(
-      buildLeaderboard(plays, [], new Date('2026-10-29T12:00:00.000Z')).find((board) => board.id === 'daily')
-        ?.rows,
-    ).toEqual([
-      { playerId: 'grace', name: 'Grace Hopper', rank: 1, value: 1, figure: '1', caption: '' },
-      { playerId: 'ada', name: 'Ada Lovelace', rank: 2, value: 0, figure: '0', caption: '' },
-    ])
-  })
-
   it('totals points from every finished game', () => {
     expect(rows('points')).toEqual([
       { playerId: 'ada', name: 'Ada Lovelace', rank: 1, value: 220, figure: '220', caption: '' },
@@ -397,15 +290,6 @@ describe('leaderboard records', () => {
     ])
   })
 
-  it('counts a solo play when nobody else is still in the match', () => {
-    expect(rows('solo').map((row) => [row.name, row.figure, row.rank])).toEqual([
-      ['Mina Chen', '11', 1],
-      ['Ada Lovelace', '10', 2],
-      ['Jonah Park', '10', 2],
-      ['Grace Hopper', '9', 4],
-    ])
-  })
-
   it('averages words and points across every finished game', () => {
     expect(rows('averageWords').find((row) => row.playerId === 'ada')).toMatchObject({
       value: 0.5,
@@ -459,7 +343,6 @@ describe('leaderboard records', () => {
         ...together('m4', 'ada', 'Ada Lovelace', 3, 'mina', 'Mina Chen', 9),
         ...together('m5', 'ada', 'Ada Lovelace', 8, 'jonah', 'Jonah Park', 1),
       ],
-      [],
     ).find((board) => board.id === 'friends')
 
     expect(friends?.rows).toEqual([
@@ -490,14 +373,6 @@ describe('leaderboard records', () => {
     ])
   })
 
-  it('counts each distinct daily board, including a day played more than once', () => {
-    expect(rows('days')).toEqual([
-      { playerId: 'ada', name: 'Ada Lovelace', rank: 1, value: 1, figure: '1', caption: '' },
-      { playerId: 'grace', name: 'Grace Hopper', rank: 1, value: 1, figure: '1', caption: '' },
-      { playerId: 'mina', name: 'Mina Chen', rank: 1, value: 1, figure: '1', caption: '' },
-    ])
-  })
-
   it('credits invitations that finish', () => {
     const career = (id: string, name: string, count: number) =>
       Array.from({ length: count }, (_, index) =>
@@ -520,7 +395,6 @@ describe('leaderboard records', () => {
       name: string,
       hostId: string,
       words: readonly string[] = [],
-      dailyOn: string | null = null,
     ) =>
       result({
         game_id: gameId,
@@ -528,7 +402,7 @@ describe('leaderboard records', () => {
         score: 1,
         words: words.map((word) => ({ word, points: 1 })),
         profiles: { name },
-        games: { daily_on: dailyOn, created_at: '2026-10-21T12:00:00.000Z', host_id: hostId },
+        games: { daily_on: null, created_at: '2026-10-21T12:00:00.000Z', host_id: hostId },
       })
 
     const boards = buildLeaderboard(
@@ -548,28 +422,14 @@ describe('leaderboard records', () => {
         played('waiting', 'mina', 'Mina Chen', 'mina'),
         played('declined', 'jonah', 'Jonah Park', 'jonah'),
         played('solo', 'ada', 'Ada Lovelace', 'ada'),
-        played('day-1', 'ada', 'Ada Lovelace', 'ada', [], '2026-10-01'),
-        played('day-2-early', 'ada', 'Ada Lovelace', 'ada', [], '2026-10-02'),
-        played('day-2-late', 'ada', 'Ada Lovelace', 'ada', [], '2026-10-02'),
         played('apple-grace', 'grace', 'Grace Hopper', 'grace', ['Apple']),
         played('apple-jonah', 'jonah', 'Jonah Park', 'jonah', ['apple']),
         played('mina-quartz', 'mina', 'Mina Chen', 'mina', ['Quartz']),
-      ],
-      [
-        { game_id: 'sat-down', player_id: 'grace', status: 'accepted' },
-        { game_id: 'sat-down', player_id: 'ada', status: 'accepted' },
-        { game_id: 'waiting', player_id: 'mina', status: 'accepted' },
-        { game_id: 'waiting', player_id: 'jonah', status: 'invited' },
-        { game_id: 'declined', player_id: 'jonah', status: 'accepted' },
-        { game_id: 'declined', player_id: 'mina', status: 'declined' },
       ],
     )
 
     expect(boards.find((board) => board.id === 'outgoing')?.rows).toEqual([
       { playerId: 'ada', name: 'Ada Lovelace', rank: 1, value: 4, figure: '4', caption: '' },
-    ])
-    expect(boards.find((board) => board.id === 'days')?.rows).toEqual([
-      { playerId: 'ada', name: 'Ada Lovelace', rank: 1, value: 2, figure: '2', caption: '' },
     ])
   })
 
@@ -592,7 +452,7 @@ describe('leaderboard records', () => {
         profiles: { name: 'Grace Hopper' },
       }),
     )
-    const points = buildLeaderboard([...ten, ...eleven], []).find((board) => board.id === 'points')
+    const points = buildLeaderboard([...ten, ...eleven]).find((board) => board.id === 'points')
     expect(points?.rows.map((row) => row.name)).toEqual(['Grace Hopper'])
   })
 
@@ -603,14 +463,13 @@ describe('leaderboard records', () => {
         result({ game_id: 'g2', player_id: 'ada', score: 2, profiles: { name: 'Ada Lovelace' } }),
         ...fillers('ada', 'Ada Lovelace', 9),
       ],
-      [],
     )
     expect(boards.find((board) => board.id === 'points')?.rows[0].name).toBe('Ada Lovelace')
   })
 })
 
 describe('loadLeaderboard', () => {
-  it('reads every page of results and seats', async () => {
+  it('reads every page of results', async () => {
     const page = Array.from({ length: 1000 }, (_, index) =>
       result({
         game_id: `g${index}`,
@@ -625,28 +484,24 @@ describe('loadLeaderboard', () => {
       data: [result({ game_id: 'last', player_id: 'ada', score: 1, words: [], profiles: { name: 'Ada Lovelace' } })],
       error: null,
     })
-    queue('game_players', { data: [], error: null })
 
     const boards = await loadLeaderboard()
 
     expect(supabase.calls.map((call) => [call.table, call.range])).toEqual([
       ['results', { from: 0, to: 999 }],
-      ['game_players', { from: 0, to: 999 }],
       ['results', { from: 1000, to: 1999 }],
     ])
     expect(supabase.calls[0].select).toBe(
-      'game_id, player_id, score, words, profiles(name), games(daily_on, created_at, host_id)',
+      'game_id, player_id, score, words, profiles(name), games(host_id)',
     )
     expect(boards.find((board) => board.id === 'points')?.rows[0]).toMatchObject({
       name: 'Ada Lovelace',
       figure: '1,001',
     })
-    expect(boards.find((board) => board.id === 'solo')?.rows[0].figure).toBe('1,001')
   })
 
   it('reports a failed read', async () => {
     queue('results', { data: null, error: { message: 'Results are unavailable.' } })
-    queue('game_players', { data: [], error: null })
 
     await expect(loadLeaderboard()).rejects.toThrow('Results are unavailable.')
   })

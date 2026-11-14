@@ -35,7 +35,7 @@ export function PlayerLeaderboard({ viewerId }: { viewerId: string }) {
 }
 
 export function LeaderboardScreen({ viewerId, boards, loading, notice, onRetry }: Props) {
-  const [selected, setSelected] = useState<BoardId>('daily')
+  const [selected, setSelected] = useState<BoardId>('points')
   const board = boards.find((item) => item.id === selected) ?? boards[0]
 
   return (

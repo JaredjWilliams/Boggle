@@ -4,7 +4,6 @@ import { compareWords } from '../game/words'
 import { formatCount } from '../stats/series'
 
 export type BoardId =
-  | 'daily'
   | 'points'
   | 'bestScore'
   | 'words'
@@ -12,8 +11,6 @@ export type BoardId =
   | 'wins'
   | 'friends'
   | 'outgoing'
-  | 'days'
-  | 'solo'
   | 'averageWords'
   | 'averagePoints'
 
@@ -53,12 +50,6 @@ export type LeaderboardResult = {
     | null
 }
 
-export type LeaderboardSeat = {
-  game_id: string
-  player_id: string
-  status: string | null
-}
-
 /** Players with this many finished games or fewer stay off every board. */
 const MINIMUM_FINISHED_GAMES = 10
 
@@ -68,12 +59,6 @@ const BOARDS: readonly {
   note: string
   figureKind: 'count' | 'word'
 }[] = [
-  {
-    id: 'daily',
-    title: 'Daily boards won',
-    note: 'Highest score at the end of that day. A tie is not a win.',
-    figureKind: 'count',
-  },
   {
     id: 'points',
     title: 'Points scored',
@@ -117,18 +102,6 @@ const BOARDS: readonly {
     figureKind: 'count',
   },
   {
-    id: 'days',
-    title: 'Days on the board',
-    note: 'Distinct daily boards you have finished.',
-    figureKind: 'count',
-  },
-  {
-    id: 'solo',
-    title: 'Solo plays',
-    note: 'Finished games with nobody else in the match.',
-    figureKind: 'count',
-  },
-  {
     id: 'averageWords',
     title: 'Average words',
     note: 'Words found per finished game.',
@@ -149,8 +122,6 @@ type Play = {
   score: number
   wordCount: number
   longest: string
-  dailyOn: string | null
-  createdAt: number
   hostId: string | null
 }
 
@@ -165,9 +136,6 @@ type Totals = {
   longest: string
   wins: number
   comparisons: number
-  solo: number
-  dailyStarts: number
-  dailyWins: number
   outgoing: number
 }
 
@@ -197,13 +165,8 @@ export function placeLabel(rank: number): string {
   return `${rank}${suffix}`
 }
 
-export function buildLeaderboard(
-  results: readonly LeaderboardResult[],
-  seats: readonly LeaderboardSeat[],
-  now = new Date(),
-): LeaderboardBoard[] {
+export function buildLeaderboard(results: readonly LeaderboardResult[]): LeaderboardBoard[] {
   const plays = results.flatMap(toPlay)
-  const rivals = activeRivals(seats)
   const byGame = new Map<string, Play[]>()
   for (const play of plays) {
     const group = byGame.get(play.gameId) ?? []
@@ -226,13 +189,8 @@ export function buildLeaderboard(
     for (const other of others) {
       if (play.score > other.score) player.wins += 1
     }
-
-    const seated = rivals.get(play.gameId)
-    const waitingRival = seated ? [...seated].some((id) => id !== play.playerId) : false
-    if (!waitingRival && others.length === 0) player.solo += 1
   }
 
-  awardDaily(plays, totals, now)
   awardGathering(byGame, totals)
   const pairs = tallyPairs(byGame)
   return BOARDS.map((board) => ({
@@ -322,7 +280,6 @@ function rowsFor(id: BoardId, totals: Map<string, Totals>): LeaderboardRow[] {
 
 function draftFor(id: BoardId, player: Totals): Draft | null {
   if (player.games <= MINIMUM_FINISHED_GAMES) return null
-  if (id === 'daily' && player.dailyStarts > 0) return counted(player, player.dailyWins)
   if (id === 'points' && player.games > 0) return counted(player, player.points)
   if (id === 'bestScore' && player.games > 0) return counted(player, player.bestScore)
   if (id === 'words' && player.games > 0) return counted(player, player.bestWords)
@@ -338,8 +295,6 @@ function draftFor(id: BoardId, player: Totals): Draft | null {
   }
   if (id === 'wins' && player.comparisons > 0) return counted(player, player.wins)
   if (id === 'outgoing' && player.outgoing > 0) return counted(player, player.outgoing)
-  if (id === 'days' && player.dailyStarts > 0) return counted(player, player.dailyStarts)
-  if (id === 'solo' && player.solo > 0) return counted(player, player.solo)
   if (id === 'averageWords' && player.games > 0) return averaged(player, player.words / player.games)
   if (id === 'averagePoints' && player.games > 0) return averaged(player, player.points / player.games)
   return null
@@ -381,68 +336,6 @@ function rankRows(drafts: readonly Draft[]): LeaderboardRow[] {
   })
 }
 
-/** The last offset still on a calendar date. Noon UTC the next day is midnight in UTC−12. */
-const DAILY_CLOSE_UTC_HOUR = 12
-
-function awardDaily(plays: readonly Play[], totals: Map<string, Totals>, now: Date) {
-  const latest = new Map<string, Play>()
-  const contenders = new Map<string, Play>()
-  for (const play of plays) {
-    if (!play.dailyOn) continue
-    const key = `${play.dailyOn}\0${play.playerId}`
-    const current = latest.get(key)
-    if (!current || play.createdAt >= current.createdAt) latest.set(key, play)
-
-    const closesAt = dayClosesAt(play.dailyOn)
-    if (closesAt == null || play.createdAt >= closesAt) continue
-    const counted = contenders.get(key)
-    if (!counted || play.createdAt >= counted.createdAt) contenders.set(key, play)
-  }
-
-  const byDay = groupByDay(latest.values())
-  const finalByDay = groupByDay(contenders.values())
-
-  for (const [day, group] of byDay) {
-    for (const play of group) ensure(totals, play).dailyStarts += 1
-    const closesAt = dayClosesAt(day)
-    if (closesAt == null || now.getTime() < closesAt) continue
-    const leaders = uniqueLeaders(finalByDay.get(day) ?? [])
-    if (leaders.length !== 1) continue
-    ensure(totals, leaders[0]).dailyWins += 1
-  }
-}
-
-function groupByDay(plays: Iterable<Play>): Map<string, Play[]> {
-  const byDay = new Map<string, Play[]>()
-  for (const play of plays) {
-    const group = byDay.get(play.dailyOn ?? '') ?? []
-    group.push(play)
-    byDay.set(play.dailyOn ?? '', group)
-  }
-  return byDay
-}
-
-function uniqueLeaders(group: readonly Play[]): Play[] {
-  let best = Number.NEGATIVE_INFINITY
-  for (const play of group) {
-    if (play.score > best) best = play.score
-  }
-  return group.filter((play) => play.score === best)
-}
-
-function dayClosesAt(dailyOn: string): number | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dailyOn)
-  if (!match) return null
-  const year = Number(match[1])
-  const month = Number(match[2])
-  const day = Number(match[3])
-  const start = new Date(Date.UTC(year, month - 1, day))
-  if (start.getUTCFullYear() !== year || start.getUTCMonth() !== month - 1 || start.getUTCDate() !== day) {
-    return null
-  }
-  return Date.UTC(year, month - 1, day + 1, DAILY_CLOSE_UTC_HOUR)
-}
-
 function ensure(totals: Map<string, Totals>, play: Play): Totals {
   const existing = totals.get(play.playerId)
   if (existing) {
@@ -460,9 +353,6 @@ function ensure(totals: Map<string, Totals>, play: Play): Totals {
     longest: '',
     wins: 0,
     comparisons: 0,
-    solo: 0,
-    dailyStarts: 0,
-    dailyWins: 0,
     outgoing: 0,
   }
   totals.set(play.playerId, created)
@@ -480,8 +370,6 @@ function toPlay(row: LeaderboardResult): Play[] {
   if (typeof row.score !== 'number' || !Number.isFinite(row.score)) return []
   const words = scoredWords(row.words, { trim: true })
   const game = first(row.games)
-  const daily = game?.daily_on?.trim() || null
-  const created = Date.parse(game?.created_at ?? '')
   return [
     {
       gameId: row.game_id,
@@ -490,21 +378,7 @@ function toPlay(row: LeaderboardResult): Play[] {
       score: row.score,
       wordCount: words.length,
       longest: longestWord(words),
-      dailyOn: daily,
-      createdAt: Number.isNaN(created) ? 0 : created,
       hostId: game?.host_id?.trim() || null,
     },
   ]
-}
-
-function activeRivals(seats: readonly LeaderboardSeat[]): Map<string, Set<string>> {
-  const rivals = new Map<string, Set<string>>()
-  for (const seat of seats) {
-    if (!seat.game_id || !seat.player_id) continue
-    if (seat.status !== 'accepted' && seat.status !== 'invited') continue
-    const group = rivals.get(seat.game_id) ?? new Set<string>()
-    group.add(seat.player_id)
-    rivals.set(seat.game_id, group)
-  }
-  return rivals
 }

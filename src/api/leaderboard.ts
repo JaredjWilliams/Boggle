@@ -1,23 +1,18 @@
 import { getSupabase } from '../lib/supabase'
 import { unwrap } from './rows'
-import { buildLeaderboard, type LeaderboardBoard, type LeaderboardResult, type LeaderboardSeat } from '../domain/leaderboard'
+import { buildLeaderboard, type LeaderboardBoard, type LeaderboardResult } from '../domain/leaderboard'
 
 const PAGE = 1000
 
 export async function loadLeaderboard(): Promise<LeaderboardBoard[]> {
   const supabase = getSupabase()
-  const [results, seats] = await Promise.all([
-    readPages((from, to) =>
-      supabase
-        .from('results')
-        .select('game_id, player_id, score, words, profiles(name), games(daily_on, created_at, host_id)')
-        .range(from, to),
-    ),
-    readPages((from, to) =>
-      supabase.from('game_players').select('game_id, player_id, status').range(from, to),
-    ),
-  ])
-  return buildLeaderboard(results as LeaderboardResult[], seats as LeaderboardSeat[], new Date())
+  const results = await readPages((from, to) =>
+    supabase
+      .from('results')
+      .select('game_id, player_id, score, words, profiles(name), games(host_id)')
+      .range(from, to),
+  )
+  return buildLeaderboard(results as LeaderboardResult[])
 }
 
 async function readPages(

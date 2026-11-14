@@ -11,16 +11,6 @@ vi.mock('../api/leaderboard', () => ({
 
 const boards: LeaderboardBoard[] = [
   {
-    id: 'daily',
-    title: 'Daily boards won',
-    note: 'Highest score at the end of that day. A tie is not a win.',
-    figureKind: 'count',
-    rows: [
-      { playerId: 'ada', name: 'Ada Lovelace', rank: 1, value: 4, figure: '4', caption: '' },
-      { playerId: 'grace', name: 'Grace Hopper', rank: 2, value: 1, figure: '1', caption: '' },
-    ],
-  },
-  {
     id: 'points',
     title: 'Points scored',
     note: 'Total points from every finished game.',
@@ -65,13 +55,6 @@ const boards: LeaderboardBoard[] = [
     rows: [],
   },
   {
-    id: 'solo',
-    title: 'Solo plays',
-    note: 'Finished games with nobody else in the match.',
-    figureKind: 'count',
-    rows: [],
-  },
-  {
     id: 'averageWords',
     title: 'Average words',
     note: 'Words found per finished game.',
@@ -93,17 +76,16 @@ describe('LeaderboardScreen', () => {
     render(<LeaderboardScreen viewerId="ada" boards={boards} loading={false} notice="" />)
 
     expect(screen.getByRole('heading', { name: 'Leaderboard' })).toBeInTheDocument()
-    const daily = screen.getByRole('radio', { name: /Daily boards won/ })
-    expect(daily).toHaveAttribute('aria-checked', 'true')
-    expect(daily).toHaveTextContent('Ada Lovelace')
-    expect(daily).toHaveTextContent('4')
-    expect(screen.getByRole('radio', { name: /Points scored/ })).toHaveTextContent('1,200')
+    const points = screen.getByRole('radio', { name: /Points scored/ })
+    expect(points).toHaveAttribute('aria-checked', 'true')
+    expect(points).toHaveTextContent('Grace Hopper')
+    expect(points).toHaveTextContent('1,200')
     expect(screen.getByRole('radio', { name: /Highest score/ })).toHaveTextContent('180')
     expect(screen.getByRole('radio', { name: /Longest word/ })).toHaveTextContent('QUARTZ')
 
-    expect(screen.getByRole('heading', { name: 'Daily boards won' })).toBeInTheDocument()
-    expect(screen.getByText('You are 1st of 2.')).toBeInTheDocument()
-    expect(screen.getByText('You')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Points scored' })).toBeInTheDocument()
+    expect(screen.getByText('Total points from every finished game.')).toBeInTheDocument()
+    expect(screen.getByText('You are not ranked here yet.')).toBeInTheDocument()
 
     await user.click(screen.getByRole('radio', { name: /Highest score/ }))
 
@@ -215,8 +197,9 @@ describe('PlayerLeaderboard', () => {
 
     render(<PlayerLeaderboard viewerId="ada" />)
 
-    expect(await screen.findByRole('heading', { name: 'Daily boards won' })).toBeInTheDocument()
-    expect(screen.getByText('You')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Points scored' })).toBeInTheDocument()
+    expect(screen.getByRole('list')).toHaveTextContent('Grace Hopper')
+    expect(screen.getByRole('list')).toHaveTextContent('1,200')
     expect(loadLeaderboard).toHaveBeenCalledOnce()
   })
 
@@ -230,7 +213,7 @@ describe('PlayerLeaderboard', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not load the leaderboard.')
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
 
-    expect(await screen.findByRole('heading', { name: 'Daily boards won' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Points scored' })).toBeInTheDocument()
     expect(loadLeaderboard).toHaveBeenCalledTimes(2)
   })
 
