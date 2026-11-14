@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { loadWordDefinition } from '../api/define'
 import { loadMatchPlayers, loadSavedRound, watchMatchResults } from '../api/results'
 import type { MatchPlayerRow, SavedRound } from '../domain/results'
 import { useLoaded } from '../hooks/useLoaded'
@@ -277,6 +278,12 @@ function outcomeClass(outcome: MatchOutcome): string {
 
 const idlePointer = () => {}
 
+type DefinitionLookup = {
+  word: string
+  status: 'loading' | 'ready' | 'missing'
+  text: string | null
+}
+
 export function PotentialWords({
   words,
   board,
@@ -288,15 +295,37 @@ export function PotentialWords({
 }) {
   const backRef = useRef<HTMLButtonElement>(null)
   const [selected, setSelected] = useState<string | null>(null)
+  const [lookup, setLookup] = useState<DefinitionLookup | null>(null)
   const highlight = useMemo(
     () => (selected ? wordHighlight(board, selected) : emptyHighlight),
     [board, selected],
   )
   const selectedPoints = words.find((item) => item.word === selected)?.points
+  const definition = lookup?.word === selected ? lookup : null
 
   useEffect(() => {
     backRef.current?.focus()
   }, [])
+
+  useEffect(() => {
+    if (!selected) {
+      setLookup(null)
+      return
+    }
+    const word = selected
+    const controller = new AbortController()
+    setLookup({ word, status: 'loading', text: null })
+    loadWordDefinition(word, controller.signal)
+      .then((text) => {
+        if (controller.signal.aborted) return
+        setLookup({ word, status: text ? 'ready' : 'missing', text })
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return
+        setLookup({ word, status: 'missing', text: null })
+      })
+    return () => controller.abort()
+  }, [selected])
 
   return (
     <section className="potential">
@@ -349,6 +378,18 @@ export function PotentialWords({
             />
           ) : (
             <p className="match-empty">This board was not saved.</p>
+          )}
+          {definition && (
+            <p
+              className={
+                definition.status === 'ready' ? 'potential-definition' : 'potential-definition is-pending'
+              }
+              aria-live="polite"
+            >
+              {definition.status === 'loading'
+                ? 'Looking up…'
+                : definition.text ?? 'No definition for this word.'}
+            </p>
           )}
         </div>
       </div>

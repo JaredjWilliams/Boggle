@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   loadMatchPlayers: vi.fn(),
   loadSavedRound: vi.fn(),
   watchMatchResults: vi.fn<(gameId: string, onChange: () => void) => () => void>(() => () => {}),
+  loadWordDefinition: vi.fn<(word: string, signal: AbortSignal) => Promise<string | null>>(),
 }))
 
 vi.mock('../api/results', () => ({
@@ -14,6 +15,15 @@ vi.mock('../api/results', () => ({
   loadSavedRound: mocks.loadSavedRound,
   watchMatchResults: mocks.watchMatchResults,
 }))
+
+vi.mock('../api/define', () => ({
+  loadWordDefinition: mocks.loadWordDefinition,
+}))
+
+beforeEach(() => {
+  mocks.loadWordDefinition.mockReset()
+  mocks.loadWordDefinition.mockResolvedValue(null)
+})
 
 const ada = {
   id: 'ada',
@@ -157,6 +167,7 @@ describe('PotentialWords', () => {
     expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['cats', 'cat'])
     expect(screen.queryByText('400')).not.toBeInTheDocument()
     expect(styleOf('.potential-stage').flexDirection).toBe('row')
+    expect(styleOf('.potential-board').justifyContent).toBe('flex-start')
     expect(styleOf('.potential-board').flexGrow).toBe('2')
     expect(styleOf('.potential-scroll').flexGrow).toBe('1')
     expect(styleOf('.word-pick').minHeight).toBe('44px')
@@ -207,6 +218,71 @@ describe('PotentialWords', () => {
     expect(screen.getByRole('button', { name: 'cat' })).toHaveAttribute('aria-pressed', 'false')
     expect(tile(0, 0)).not.toHaveClass('selected')
     expect(screen.getByText('The board from this game')).toBeInTheDocument()
+    expect(screen.queryByText('No definition for this word.')).not.toBeInTheDocument()
+  })
+
+  it('shows the definition under the board and clears it on a second tap', async () => {
+    const pending = deferred<string | null>()
+    mocks.loadWordDefinition.mockReturnValue(pending.promise)
+    render(
+      <PotentialWords
+        words={[
+          { word: 'cats', points: 400 },
+          { word: 'cat', points: 100 },
+        ]}
+        board={playedBoard}
+        onBack={vi.fn()}
+      />,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'cats' }))
+    expect(screen.getByText('Looking up…')).toBeInTheDocument()
+    expect(mocks.loadWordDefinition).toHaveBeenCalledWith('cats', expect.any(AbortSignal))
+
+    pending.resolve('A small domesticated carnivore.')
+    expect(await screen.findByText('A small domesticated carnivore.')).toBeInTheDocument()
+    expect(document.querySelector('.potential-definition')).not.toHaveClass('is-pending')
+    expect(screen.queryByText('Looking up…')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'cats' }))
+    expect(screen.queryByText('A small domesticated carnivore.')).not.toBeInTheDocument()
+    expect(mocks.loadWordDefinition).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps a slow definition from replacing the word now selected', async () => {
+    const first = deferred<string | null>()
+    const second = deferred<string | null>()
+    mocks.loadWordDefinition.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
+    render(
+      <PotentialWords
+        words={[
+          { word: 'cats', points: 400 },
+          { word: 'cat', points: 100 },
+        ]}
+        board={playedBoard}
+        onBack={vi.fn()}
+      />,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'cats' }))
+    await userEvent.click(screen.getByRole('button', { name: 'cat' }))
+    await act(async () => {
+      second.resolve('A feline.')
+      first.resolve('More than one cat.')
+    })
+    expect(screen.getByText('A feline.')).toBeInTheDocument()
+    expect(screen.queryByText('More than one cat.')).not.toBeInTheDocument()
+  })
+
+  it('explains a word with no definition', async () => {
+    mocks.loadWordDefinition.mockRejectedValue(new Error('offline'))
+    render(
+      <PotentialWords words={[{ word: 'cat', points: 100 }]} board={playedBoard} onBack={vi.fn()} />,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'cat' }))
+    expect(await screen.findByText('No definition for this word.')).toBeInTheDocument()
+    expect(document.querySelector('.potential-definition')).toHaveClass('is-pending')
   })
 
   it('explains a board with no words', () => {
@@ -535,6 +611,14 @@ function tile(row: number, col: number) {
 
 function stepAt(row: number, col: number) {
   return tile(row, col).querySelector('.step')?.textContent
+}
+
+function deferred<T>() {
+  let resolve: (value: T) => void = () => {}
+  const promise = new Promise<T>((settle) => {
+    resolve = settle
+  })
+  return { promise, resolve }
 }
 
 function styleOf(selector: string) {
