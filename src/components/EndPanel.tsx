@@ -15,10 +15,16 @@ export function EndPanel({ score, found, missed, onPlayAgain }: Props) {
       <div className="summary-top">
         <div>
           <p className="summary-kicker">Time's up</p>
-          <p className="summary-score">
-            <span className="label">Score</span>
-            <strong>{score}</strong>
-          </p>
+          <div className="summary-figures">
+            <p className="summary-score">
+              <span className="label">Score</span>
+              <strong>{score}</strong>
+            </p>
+            <p className="summary-score">
+              <span className="label">Words</span>
+              <strong>{found.length}</strong>
+            </p>
+          </div>
         </div>
         <button type="button" className="play-again" onClick={onPlayAgain}>
           Play again

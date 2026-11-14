@@ -22,6 +22,12 @@
   text-transform: uppercase;
 }
 
+.summary-figures {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+}
+
 .summary-score {
   display: flex;
   flex-direction: column;

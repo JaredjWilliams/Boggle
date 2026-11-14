@@ -171,11 +171,21 @@
   text-transform: uppercase;
 }
 
+.match-figures {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
 .match-points {
   display: flex;
   flex-direction: column;
   gap: 2px;
   margin: 10px 0 0;
+}
+
+.match-figures .match-points + .match-points {
+  align-items: flex-end;
 }
 
 .match-points .label,
@@ -189,7 +199,7 @@
 }
 
 .match-points strong {
-  font-size: 32px;
+  font-size: 22px;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }

@@ -48,6 +48,7 @@ describe('MatchResults', () => {
     expect(yours).toHaveTextContent('You')
     expect(yours).not.toHaveTextContent('Winner')
     expect(score(yours)).toBe('200')
+    expect(wordsFound(yours)).toBe('2')
     expect(items(yours)).toEqual([
       { word: 'eat', points: '100' },
       { word: 'cat', points: '100' },
@@ -56,10 +57,13 @@ describe('MatchResults', () => {
     expect(theirs).toHaveTextContent('Winner')
     expect(theirs).toHaveClass('is-winner')
     expect(score(theirs)).toBe('500')
+    expect(wordsFound(theirs)).toBe('1')
     expect(items(theirs)).toEqual([{ word: 'cats', points: '400' }])
 
     expect(styleOf('.match-columns').display).toBe('grid')
     expect(styleOf('.match-columns').gridTemplateColumns).toBe('1fr 1fr')
+    expect(styleOf('.match-figures').justifyContent).toBe('space-between')
+    expect(styleOf('.match-points strong').fontSize).toBe('22px')
   })
 
   it('says when you win or the scores are level', () => {
@@ -95,6 +99,7 @@ describe('MatchResults', () => {
     )
     const theirs = column('Grace Hopper')
     expect(score(theirs)).toBe('Still playing')
+    expect(wordsFound(theirs)).toBeNull()
     expect(theirs).toHaveTextContent('Waiting for their words.')
     expect(within(theirs).queryByRole('list')).not.toBeInTheDocument()
   })
@@ -115,6 +120,7 @@ describe('MatchResults', () => {
     )
 
     expect(column('Ada Lovelace')).toHaveTextContent('None this round.')
+    expect(wordsFound(column('Ada Lovelace'))).toBe('0')
     expect(screen.getByRole('alert')).toHaveTextContent('Could not load the results.')
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(onRetry).toHaveBeenCalledOnce()
@@ -503,6 +509,13 @@ function column(name: string) {
 
 function score(section: HTMLElement) {
   return within(section).getByText('Score').closest('p')?.querySelector('strong')?.textContent
+}
+
+function wordsFound(section: HTMLElement) {
+  const figures = section.querySelector('.match-figures')
+  if (!(figures instanceof HTMLElement)) return null
+  const label = within(figures).queryByText('Words')
+  return label?.closest('p')?.querySelector('strong')?.textContent ?? null
 }
 
 function items(section: HTMLElement) {

@@ -237,14 +237,22 @@ function PlayerColumn({
           {winner && <span className="match-winner">Winner</span>}
           {tied && <span className="match-tie">Tie</span>}
         </div>
-        <p className="match-points">
-          <span className="label">Score</span>
-          {player.score === null ? (
-            <strong className="is-pending">Still playing</strong>
-          ) : (
-            <strong>{player.score}</strong>
+        <div className="match-figures">
+          <p className="match-points">
+            <span className="label">Score</span>
+            {player.score === null ? (
+              <strong className="is-pending">Still playing</strong>
+            ) : (
+              <strong>{player.score}</strong>
+            )}
+          </p>
+          {player.words !== null && (
+            <p className="match-points">
+              <span className="label">Words</span>
+              <strong>{player.words.length}</strong>
+            </p>
           )}
-        </p>
+        </div>
       </div>
       {player.words !== null && <h3>Words</h3>}
       <div className="match-scroll">

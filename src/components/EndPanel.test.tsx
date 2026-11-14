@@ -32,6 +32,7 @@ describe('EndPanel', () => {
 
     expect(screen.getByText("Time's up")).toBeInTheDocument()
     expect(screen.getByText('Score').closest('p')).toHaveTextContent(/^Score2$/)
+    expect(screen.getByText('Words').closest('p')).toHaveTextContent(/^Words2$/)
 
     const yourWords = column('Your words')
     const possible = column('Possible words')
@@ -53,6 +54,7 @@ describe('EndPanel', () => {
     )
 
     expect(screen.getByText('Score').closest('p')).toHaveTextContent(/^Score0$/)
+    expect(screen.getByText('Words').closest('p')).toHaveTextContent(/^Words0$/)
     expect(within(column('Your words')).getByText('None this round.')).toBeInTheDocument()
     expect(
       within(column('Possible words')).getByText('You found every word.'),
