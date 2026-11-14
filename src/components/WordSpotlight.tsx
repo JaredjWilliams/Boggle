@@ -69,7 +69,9 @@ function MissedWordBody({ word, heading = false }: { word: MissedWord; heading?:
     <div className="missed-word-body">
       <Title className="missed-word-title">{word.word}</Title>
       <p className="missed-word-kind">{wordKindLabel(word.kind)}</p>
-      <p className="missed-word-def">{word.definition}</p>
+      <p className="missed-word-def" title={word.definition}>
+        {word.definition}
+      </p>
     </div>
   )
 }
