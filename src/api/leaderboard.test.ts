@@ -34,12 +34,6 @@ vi.mock('../lib/supabase', () => ({
   getSupabase: () => ({ from: supabase.from, rpc: supabase.rpc }),
 }))
 
-function queue(table: string, result: QueryResult) {
-  const list = supabase.queues.get(table) ?? []
-  list.push(result)
-  supabase.queues.set(table, list)
-}
-
 function result(row: Partial<LeaderboardResult> & Pick<LeaderboardResult, 'game_id' | 'player_id'>): LeaderboardResult {
   return {
     score: 0,
