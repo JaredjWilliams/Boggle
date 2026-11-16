@@ -1,0 +1,61 @@
+.stats-pause {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+}
+
+.stats-pause-scrim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: color-mix(in srgb, var(--ink) 32%, transparent);
+}
+
+.stats-pause-card {
+  position: relative;
+  width: min(100%, 398px);
+  padding: 22px 20px 18px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--cream);
+  color: var(--ink);
+  box-shadow: 0 18px 50px var(--shadow);
+}
+
+.stats-pause-card h2 {
+  margin: 0;
+  font-family: Georgia, 'Palatino Linotype', Palatino, serif;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.stats-pause-card p {
+  margin: 12px 0 0;
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.stats-pause-card button {
+  min-height: 44px;
+  margin-top: 18px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: white;
+  font: inherit;
+  font-weight: 700;
+}
+
+.stats-pause-card button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}

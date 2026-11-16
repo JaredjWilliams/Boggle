@@ -17,11 +17,21 @@ const supabase = vi.hoisted(() => {
     return queryChain(query, () => shiftQueue(queues, table))
   }
 
-  return { calls, queues, from }
+  const rpcCalls: string[] = []
+  const rpcQueue: QueryResult[] = []
+
+  function rpc(fn: string) {
+    rpcCalls.push(fn)
+    const next = rpcQueue.shift()
+    if (!next) throw new Error(`No response queued for ${fn}`)
+    return Promise.resolve(next)
+  }
+
+  return { calls, queues, from, rpc, rpcCalls, rpcQueue }
 })
 
 vi.mock('../lib/supabase', () => ({
-  getSupabase: () => ({ from: supabase.from }),
+  getSupabase: () => ({ from: supabase.from, rpc: supabase.rpc }),
 }))
 
 function queue(table: string, result: QueryResult) {
@@ -169,6 +179,8 @@ function sampleResults(): LeaderboardResult[] {
 beforeEach(() => {
   supabase.calls.length = 0
   supabase.queues.clear()
+  supabase.rpcCalls.length = 0
+  supabase.rpcQueue.length = 0
 })
 
 describe('place labels', () => {
@@ -210,6 +222,40 @@ describe('leaderboard records', () => {
       ['Mina Chen', '1', 3],
       ['Jonah Park', '0', 4],
     ])
+  })
+
+  it('counts a kept history game toward the most words found', () => {
+    const boards = buildLeaderboard(
+      [
+        result({
+          game_id: 'live',
+          player_id: 'ada',
+          score: 10,
+          words: [{ word: 'cat' }, { word: 'dog' }],
+          profiles: { name: 'Ada Lovelace' },
+        }),
+        ...fillers('ada', 'Ada Lovelace', 10),
+        ...fillers('grace', 'Grace Hopper', 11),
+      ],
+      [
+        { player_id: 'ada', words_found: 104 },
+        { player_id: 'grace', words_found: 3 },
+        { player_id: 'ada', words_found: Number.NaN },
+        { player_id: '', words_found: 500 },
+        { player_id: 'stranger', words_found: 999 },
+      ],
+    )
+
+    expect(boards.find((board) => board.id === 'words')?.rows.map((row) => [row.name, row.figure])).toEqual([
+      ['Ada Lovelace', '104'],
+      ['Grace Hopper', '3'],
+    ])
+    expect(boards.find((board) => board.id === 'points')?.rows.find((row) => row.playerId === 'ada')).toMatchObject({
+      value: 10,
+    })
+    expect(boards.find((board) => board.id === 'bestScore')?.rows.find((row) => row.playerId === 'ada')).toMatchObject({
+      value: 10,
+    })
   })
 
   it('ranks the longest saved word and shares a rank when the lengths match', () => {
@@ -469,39 +515,47 @@ describe('leaderboard records', () => {
 })
 
 describe('loadLeaderboard', () => {
-  it('reads every page of results', async () => {
-    const page = Array.from({ length: 1000 }, (_, index) =>
-      result({
-        game_id: `g${index}`,
-        player_id: 'ada',
-        score: 1,
-        words: [],
-        profiles: { name: 'Ada Lovelace' },
-      }),
-    )
-    queue('results', { data: page, error: null })
-    queue('results', {
-      data: [result({ game_id: 'last', player_id: 'ada', score: 1, words: [], profiles: { name: 'Ada Lovelace' } })],
+  it('ranks the totals Postgres already added up', async () => {
+    supabase.rpcQueue.push({
+      data: {
+        players: [
+          {
+            playerId: 'ada',
+            name: 'Ada Lovelace',
+            points: 1001,
+            games: 11,
+            words: 4,
+            bestScore: 80,
+            bestWords: 104,
+            longest: 'quartz',
+            wins: 1,
+            comparisons: 2,
+            outgoing: 0,
+          },
+        ],
+        pairs: [],
+      },
       error: null,
     })
 
     const boards = await loadLeaderboard()
 
-    expect(supabase.calls.map((call) => [call.table, call.range])).toEqual([
-      ['results', { from: 0, to: 999 }],
-      ['results', { from: 1000, to: 1999 }],
-    ])
-    expect(supabase.calls[0].select).toBe(
-      'game_id, player_id, score, words, profiles(name), games(host_id)',
-    )
+    expect(supabase.rpcCalls).toEqual(['leaderboard'])
+    expect(boards.find((board) => board.id === 'words')?.rows[0]).toMatchObject({
+      name: 'Ada Lovelace',
+      figure: '104',
+    })
     expect(boards.find((board) => board.id === 'points')?.rows[0]).toMatchObject({
       name: 'Ada Lovelace',
       figure: '1,001',
     })
+    expect(boards.find((board) => board.id === 'longest')?.rows[0]).toMatchObject({
+      figure: 'QUARTZ',
+    })
   })
 
   it('reports a failed read', async () => {
-    queue('results', { data: null, error: { message: 'Results are unavailable.' } })
+    supabase.rpcQueue.push({ data: null, error: { message: 'Results are unavailable.' } })
 
     await expect(loadLeaderboard()).rejects.toThrow('Results are unavailable.')
   })

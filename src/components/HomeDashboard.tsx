@@ -193,17 +193,26 @@ export function HomeDashboard({
                 <span className="metric-label">Daily game</span>
               </button>
             )}
-            {onOpenStats && (
-              <button
-                type="button"
-                className="metric stats-open"
-                onClick={onOpenStats}
-                aria-label={bestScore === null ? 'Your stats' : `Your stats, best score ${formatScore(bestScore)}`}
-              >
-                <span className="metric-value">{formatScore(bestScore)}</span>
-                <span className="metric-label">Best score</span>
-              </button>
-            )}
+            {(onOpenStats || bestScore !== undefined) &&
+              (onOpenStats ? (
+                <button
+                  type="button"
+                  className="metric stats-open"
+                  onClick={onOpenStats}
+                  aria-label={bestScore === null ? 'Your stats' : `Your stats, best score ${formatScore(bestScore)}`}
+                >
+                  <span className="metric-value">{formatScore(bestScore)}</span>
+                  <span className="metric-label">Best score</span>
+                </button>
+              ) : (
+                <div
+                  className="metric"
+                  aria-label={bestScore === null ? 'Best score' : `Best score ${formatScore(bestScore)}`}
+                >
+                  <span className="metric-value">{formatScore(bestScore)}</span>
+                  <span className="metric-label">Best score</span>
+                </div>
+              ))}
             {openRound && onResume && (
               <button type="button" className="metric resume-round" onClick={onResume} aria-label={resumeLabel}>
                 <span className="metric-value accent">{formatTime(openRound.secondsLeft)}</span>

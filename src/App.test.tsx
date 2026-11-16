@@ -397,7 +397,12 @@ describe('home dashboard', () => {
     expect(screen.queryByRole('region', { name: 'Often missed' })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Stats' }))
-    expect(screen.getByRole('heading', { name: 'Stats' })).toBeInTheDocument()
+    const note = screen.getByRole('dialog', { name: 'Stats are taking a break' })
+    expect(note).toHaveTextContent('every word from every game')
+    expect(screen.getByRole('heading', { name: 'Your games' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Got it' }))
+    expect(screen.queryByRole('dialog', { name: 'Stats are taking a break' })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Profile' }))
     expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument()

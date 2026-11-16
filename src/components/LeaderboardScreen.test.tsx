@@ -27,7 +27,7 @@ const boards: LeaderboardBoard[] = [
   {
     id: 'words',
     title: 'Most words in a game',
-    note: 'The highest word count from a single game.',
+    note: 'The highest word count from a single game, including games kept in history.',
     figureKind: 'count',
     rows: [],
   },

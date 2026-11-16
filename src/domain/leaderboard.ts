@@ -53,6 +53,11 @@ export type LeaderboardResult = {
 /** Players with this many finished games or fewer stay off every board. */
 const MINIMUM_FINISHED_GAMES = 10
 
+export type ArchivedWords = {
+  player_id: string
+  words_found: number
+}
+
 const BOARDS: readonly {
   id: BoardId
   title: string
@@ -74,7 +79,7 @@ const BOARDS: readonly {
   {
     id: 'words',
     title: 'Most words in a game',
-    note: 'The highest word count from a single game.',
+    note: 'The highest word count from a single game, including games kept in history.',
     figureKind: 'count',
   },
   {
@@ -125,7 +130,7 @@ type Play = {
   hostId: string | null
 }
 
-type Totals = {
+export type LeaderboardPlayer = {
   playerId: string
   name: string
   points: number
@@ -139,7 +144,7 @@ type Totals = {
   outgoing: number
 }
 
-type PairTally = {
+export type LeaderboardPair = {
   aId: string
   bId: string
   games: number
@@ -147,6 +152,10 @@ type PairTally = {
   bWins: number
   ties: number
 }
+
+type Totals = LeaderboardPlayer
+
+type PairTally = LeaderboardPair
 
 type Draft = {
   playerId: string
@@ -165,7 +174,10 @@ export function placeLabel(rank: number): string {
   return `${rank}${suffix}`
 }
 
-export function buildLeaderboard(results: readonly LeaderboardResult[]): LeaderboardBoard[] {
+export function buildLeaderboard(
+  results: readonly LeaderboardResult[],
+  archived: readonly ArchivedWords[] = [],
+): LeaderboardBoard[] {
   const plays = results.flatMap(toPlay)
   const byGame = new Map<string, Play[]>()
   for (const play of plays) {
@@ -191,8 +203,21 @@ export function buildLeaderboard(results: readonly LeaderboardResult[]): Leaderb
     }
   }
 
+  applyArchivedWords(totals, archived)
   awardGathering(byGame, totals)
-  const pairs = tallyPairs(byGame)
+  return rankLeaderboard([...totals.values()], tallyPairs(byGame))
+}
+
+/** Ranks totals the database already added up, so the word lists never leave Postgres. */
+export function rankLeaderboard(
+  players: readonly LeaderboardPlayer[],
+  pairs: readonly LeaderboardPair[] = [],
+): LeaderboardBoard[] {
+  const totals = new Map<string, Totals>()
+  for (const player of players) {
+    if (!player.playerId || !player.name.trim()) continue
+    totals.set(player.playerId, { ...player })
+  }
   return BOARDS.map((board) => ({
     ...board,
     rows: board.id === 'friends' ? friendRows(pairs, totals) : rowsFor(board.id, totals),
@@ -253,6 +278,16 @@ function friendRows(pairs: readonly PairTally[], totals: ReadonlyMap<string, Tot
     })
   }
   return rankRows(drafts)
+}
+
+function applyArchivedWords(totals: Map<string, Totals>, archived: readonly ArchivedWords[]) {
+  for (const row of archived) {
+    if (!row.player_id) continue
+    if (typeof row.words_found !== 'number' || !Number.isFinite(row.words_found)) continue
+    const player = totals.get(row.player_id)
+    if (!player || row.words_found <= player.bestWords) continue
+    player.bestWords = row.words_found
+  }
 }
 
 function awardGathering(byGame: ReadonlyMap<string, readonly Play[]>, totals: Map<string, Totals>) {
