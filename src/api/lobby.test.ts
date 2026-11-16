@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { playedOn } from '../domain/dates'
 import { blankQuery, queryChain, type RecordedQuery } from '../test/queryChain'
-import { loadLobby } from './lobby'
+import { loadLobby, opponentHasScored } from './lobby'
 
 type Filter = { op: 'eq' | 'neq' | 'in'; column: string; value: unknown }
 
@@ -55,9 +55,44 @@ function answer(query: RecordedQuery): { data: unknown; error: { message: string
       error: null,
     }
   }
-  if (query.table === 'game_players' && has(query, 'eq', 'status', 'accepted')) {
+  if (query.table === 'games' && query.select?.includes('game_players')) {
     return {
-      data: [{ game_id: 'g1', games: { created_at: recent, host_id: 'ada' } }],
+      data: [
+        {
+          id: 'g1',
+          created_at: recent,
+          host_id: 'ada',
+          game_players: [
+            { player_id: 'ada', status: 'accepted' },
+            { player_id: 'grace', status: 'accepted' },
+          ],
+          results: [
+            { player_id: 'ada', score: 80 },
+            { player_id: 'grace', score: 50 },
+          ],
+        },
+      ],
+      error: null,
+    }
+  }
+  if (query.table === 'games') {
+    return {
+      data: [
+        {
+          id: 'g1',
+          results: [
+            { player_id: 'ada', score: 80 },
+            { player_id: 'grace', score: 50 },
+          ],
+        },
+        {
+          id: 'old',
+          results: [
+            { player_id: 'ada', score: 20 },
+            { player_id: 'grace', score: 10 },
+          ],
+        },
+      ],
       error: null,
     }
   }
@@ -71,23 +106,8 @@ function answer(query: RecordedQuery): { data: unknown; error: { message: string
       error: null,
     }
   }
-  if (query.table === 'game_players') {
-    return {
-      data: [
-        { game_id: 'g1', player_id: 'ada', status: 'accepted' },
-        { game_id: 'g1', player_id: 'grace', status: 'accepted' },
-      ],
-      error: null,
-    }
-  }
-  if (query.table === 'results' && has(query, 'neq', 'player_id')) {
-    return {
-      data: [
-        { game_id: 'g1', player_id: 'grace', score: 50 },
-        { game_id: 'old', player_id: 'grace', score: 10 },
-      ],
-      error: null,
-    }
+  if (query.table === 'results' && query.limited) {
+    return { data: [{ game_id: 'g1' }], error: null }
   }
   if (query.table === 'results') {
     return {
@@ -141,14 +161,32 @@ describe('loadLobby active games', () => {
       'opponent_id, score, opponent_score, played_on',
     )
 
-    const rivalScores = supabase.calls.find(
-      (call) => call.table === 'results' && has(call, 'neq', 'player_id', 'ada'),
+    const accepted = supabase.calls.find((call) => call.table === 'games' && call.select?.includes('game_players'))
+    expect(accepted?.filters).toEqual([
+      { op: 'eq', column: 'mine.player_id', value: 'ada' },
+      { op: 'eq', column: 'mine.status', value: 'accepted' },
+    ])
+    const played = supabase.calls.find((call) => call.table === 'games' && call.select?.includes('played:'))
+    expect(played?.filters).toEqual([{ op: 'eq', column: 'played.player_id', value: 'ada' }])
+    expect(supabase.calls.some((call) => call.filters.some((filter) => filter.op === 'in' && filter.column === 'game_id'))).toBe(
+      false,
     )
-    expect(rivalScores?.filters).toEqual(
-      expect.arrayContaining([
-        { op: 'in', column: 'game_id', value: expect.arrayContaining(['g1', 'old']) },
-        { op: 'neq', column: 'player_id', value: 'ada' },
-      ]),
-    )
+  })
+})
+
+describe('opponentHasScored', () => {
+  it('asks only about the games still waiting', async () => {
+    await expect(opponentHasScored('ada', ['g1', 'g1'])).resolves.toBe(true)
+    const query = supabase.calls.find((call) => call.table === 'results' && call.limited)
+    expect(query?.select).toBe('game_id')
+    expect(query?.filters).toEqual([
+      { op: 'in', column: 'game_id', value: ['g1'] },
+      { op: 'neq', column: 'player_id', value: 'ada' },
+    ])
+  })
+
+  it('skips the request when nothing is waiting', async () => {
+    await expect(opponentHasScored('ada', [])).resolves.toBe(false)
+    expect(supabase.calls).toHaveLength(0)
   })
 })

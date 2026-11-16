@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { loadLobby, watchLobby } from '../api/lobby'
+import { loadLobby, opponentHasScored, watchLobby } from '../api/lobby'
 import type { ActiveGame, Friend, Invite, Lobby } from '../domain/lobby'
 import { errorMessage } from '../lib/errorMessage'
 
@@ -48,16 +48,31 @@ export function useLobby(playerId: string | undefined) {
     }
   }, [playerId, refresh])
 
-  const waiting = lobby.games.some((game) => !game.playedBack)
+  const waitingIds = [
+    ...new Set(lobby.games.filter((game) => !game.playedBack).map((game) => game.gameId)),
+  ]
+  const waitingKey = waitingIds.join(',')
 
   useEffect(() => {
-    if (!playerId || !waiting) return
-    // A missed results event still needs to flip the card to "played back".
+    if (!playerId || !waitingKey) return
+    let cancel = false
+    const ids = waitingKey.split(',')
+    // Ask only about games still waiting. Reloading the lobby listed every past game id.
     const timer = window.setInterval(() => {
-      void refresh()
+      if (document.hidden) return
+      void opponentHasScored(playerId, ids)
+        .then((scored) => {
+          if (!cancel && scored) void refresh()
+        })
+        .catch(() => {
+          // The next tick asks again.
+        })
     }, LOBBY_REFRESH_MS)
-    return () => window.clearInterval(timer)
-  }, [playerId, waiting, refresh])
+    return () => {
+      cancel = true
+      window.clearInterval(timer)
+    }
+  }, [playerId, waitingKey, refresh])
 
   return {
     friends: lobby.friends,

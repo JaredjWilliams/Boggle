@@ -4,6 +4,7 @@ import { LOBBY_REFRESH_MS, useLobby } from './useLobby'
 
 const mocks = vi.hoisted(() => ({
   loadLobby: vi.fn(),
+  opponentHasScored: vi.fn(async () => false),
 }))
 
 const channel = vi.hoisted(() => {
@@ -18,15 +19,11 @@ const channel = vi.hoisted(() => {
 
 vi.mock('../api/lobby', () => ({
   loadLobby: mocks.loadLobby,
+  opponentHasScored: mocks.opponentHasScored,
   watchLobby: (playerId: string, onChange: () => void) => {
     channel.on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'game_players', filter: `player_id=eq.${playerId}` },
-      onChange,
-    )
-    channel.on(
-      'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'results' },
       onChange,
     )
     channel.subscribe()
@@ -55,6 +52,8 @@ function lobby(playedBack: boolean) {
 
 beforeEach(() => {
   mocks.loadLobby.mockReset()
+  mocks.opponentHasScored.mockReset()
+  mocks.opponentHasScored.mockResolvedValue(false)
   channel.on.mockClear()
   channel.subscribe.mockClear()
 })
@@ -64,38 +63,42 @@ afterEach(() => {
 })
 
 describe('useLobby', () => {
-  it('updates a waiting game when the other player has played back', async () => {
+  it('reloads a waiting game when an opponent score appears', async () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
-    mocks.loadLobby.mockResolvedValue(lobby(false))
+    mocks.opponentHasScored.mockResolvedValue(true)
+    mocks.loadLobby.mockResolvedValueOnce(lobby(false)).mockResolvedValueOnce(lobby(true))
     const { result } = renderHook(() => useLobby('ada'))
     await flush()
 
     expect(result.current.games[0]?.playedBack).toBe(false)
-    mocks.loadLobby.mockResolvedValue(lobby(true))
+    expect(channel.on.mock.calls.map((call) => (call[1] as { table?: string }).table)).toEqual([
+      'game_players',
+    ])
 
     await act(async () => {
       vi.advanceTimersByTime(LOBBY_REFRESH_MS)
     })
     await flush()
 
+    expect(mocks.opponentHasScored).toHaveBeenCalledWith('ada', ['g1'])
     expect(result.current.games[0]?.playedBack).toBe(true)
   })
 
-  it('reloads when a result is saved', async () => {
-    mocks.loadLobby.mockResolvedValueOnce(lobby(false)).mockResolvedValueOnce(lobby(true))
+  it('does not reload the lobby while the opponent is still playing', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    mocks.loadLobby.mockResolvedValue(lobby(false))
     const { result } = renderHook(() => useLobby('ada'))
+    await flush()
+    const calls = mocks.loadLobby.mock.calls.length
+
+    await act(async () => {
+      vi.advanceTimersByTime(LOBBY_REFRESH_MS * 2)
+    })
     await flush()
 
     expect(result.current.games[0]?.playedBack).toBe(false)
-    const results = channel.on.mock.calls.find((call) => {
-      const filter = call[1] as { table?: string }
-      return filter.table === 'results'
-    })
-    const onInsert = results?.[2] as () => void
-    onInsert()
-    await flush()
-
-    expect(result.current.games[0]?.playedBack).toBe(true)
+    expect(mocks.loadLobby).toHaveBeenCalledTimes(calls)
+    expect(mocks.opponentHasScored).toHaveBeenCalledWith('ada', ['g1'])
   })
 
   it('does not poll once every opponent has played back', async () => {
@@ -112,6 +115,7 @@ describe('useLobby', () => {
     })
 
     expect(mocks.loadLobby).toHaveBeenCalledTimes(calls)
+    expect(mocks.opponentHasScored).not.toHaveBeenCalled()
   })
 })
 
