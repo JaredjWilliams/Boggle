@@ -397,15 +397,16 @@ describe('home dashboard', () => {
     expect(screen.queryByRole('region', { name: 'Often missed' })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Stats' }))
-    const note = screen.getByRole('dialog', { name: 'Stats are taking a break' })
-    expect(note).toHaveTextContent('every word from every game')
-    expect(screen.getByRole('heading', { name: 'Your games' })).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: 'Got it' }))
+    expect(screen.getByRole('heading', { name: 'Every game, plotted.' })).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: 'Stats are taking a break' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Stats' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.queryByRole('heading', { name: 'Your games' })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Profile' }))
     expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument()
+    const updates = screen.getByRole('region', { name: 'Updates' })
+    expect(updates).toHaveTextContent('Words you had started is gone')
+    expect(updates).toHaveTextContent('every possible word from every board')
     await user.click(screen.getByRole('button', { name: 'Settings' }))
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
 

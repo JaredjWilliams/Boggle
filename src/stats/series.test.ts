@@ -8,8 +8,6 @@ import {
   formatAverage,
   gamesAgainst,
   headToHead,
-  leftOnNote,
-  leftOnSummary,
   lengthNote,
   linearTrend,
   startCells,
@@ -22,7 +20,6 @@ import {
   trendNote,
   winRate,
   wordsByLength,
-  wordsLeftOn,
   type GameStat,
 } from './series'
 
@@ -35,7 +32,6 @@ const games: GameStat[] = [
     longest: 'star',
     byLength: { 3: 2, 4: 2 },
     opponents: [{ name: 'Mina Chen', score: 400 }],
-    leftOn: null,
   },
   {
     id: 'b',
@@ -45,7 +41,6 @@ const games: GameStat[] = [
     longest: 'quartz',
     byLength: { 3: 1, 4: 2, 5: 3, 6: 2 },
     opponents: [{ name: 'Jonah Park', score: 2400 }],
-    leftOn: null,
   },
   {
     id: 'c',
@@ -55,7 +50,6 @@ const games: GameStat[] = [
     longest: 'cats',
     byLength: { 3: 3, 4: 2, 5: 1 },
     opponents: [{ name: 'Mina Chen', score: 1500 }],
-    leftOn: null,
   },
 ]
 
@@ -76,7 +70,7 @@ describe('stats series', () => {
     expect(longestFoundNote([])).toBe('No games in this view.')
     expect(
       longestFoundNote([
-        { id: 'old', playedOn: '2026-10-01', words: 1, score: 1, longest: '  ', byLength: {}, opponents: [], leftOn: null },
+        { id: 'old', playedOn: '2026-10-01', words: 1, score: 1, longest: '  ', byLength: {}, opponents: [] },
       ]),
     ).toBe('No word saved in this view.')
     expect(
@@ -89,7 +83,6 @@ describe('stats series', () => {
           longest: 'lint',
           byLength: { 4: 2 },
           opponents: [],
-          leftOn: null,
         },
         {
           id: 'pair',
@@ -102,7 +95,6 @@ describe('stats series', () => {
             { name: 'Mina Chen', score: 1 },
             { name: 'Jonah Park', score: 1 },
           ],
-          leftOn: null,
         },
       ]),
     ).toBe('4 letters, found Oct 2.')
@@ -128,7 +120,6 @@ describe('stats series', () => {
           longest: 'letterings',
           byLength: { 3: 1, 10: 2, 2: 4 },
           opponents: [],
-          leftOn: null,
         },
       ]),
     ).toEqual([
@@ -146,12 +137,12 @@ describe('stats series', () => {
     expect(lengthNote([])).toBe('No games in this view.')
     expect(
       lengthNote([
-        { id: 'old', playedOn: '2026-10-01', words: 9, score: 1, longest: '', byLength: {}, opponents: [], leftOn: null },
+        { id: 'old', playedOn: '2026-10-01', words: 9, score: 1, longest: '', byLength: {}, opponents: [] },
       ]),
     ).toBe('No words saved in this view.')
     expect(
       lengthNote([
-        { id: 'one', playedOn: '2026-10-01', words: 1, score: 1, longest: 'cat', byLength: { 3: 1 }, opponents: [], leftOn: null },
+        { id: 'one', playedOn: '2026-10-01', words: 1, score: 1, longest: 'cat', byLength: { 3: 1 }, opponents: [] },
       ]),
     ).toBe('1 word across these games.')
   })
@@ -192,116 +183,6 @@ describe('stats series', () => {
       'Play another game to see a trend.',
     )
     expect(trendNote([], 'point')).toBe('No games in this view.')
-  })
-
-  it('finds a longer word left on one you already found', () => {
-    expect(
-      wordsLeftOn(
-        [' cat ', 'CATS', 'late', 'star', 'start', 'ear', 'a', 'quartz'],
-        [
-          { word: 'catch', points: 800 },
-          { word: 'CATCH', points: 400 },
-          { word: 'later', points: 800 },
-          { word: 'starting', points: 1800 },
-          { word: 'pear', points: 400 },
-          { word: 'scat', points: 400 },
-          { word: 'cat', points: 100 },
-          { word: '  ', points: 100 },
-          { word: 'quartzite', points: Number.NaN },
-        ],
-      ),
-    ).toEqual([
-      { found: 'start', longer: 'starting', points: 1800 },
-      { found: 'cat', longer: 'catch', points: 800 },
-      { found: 'late', longer: 'later', points: 800 },
-      { found: 'quartz', longer: 'quartzite', points: 0 },
-    ])
-    expect(wordsLeftOn(['cat'], [])).toEqual([])
-
-    const started: GameStat[] = [
-      {
-        id: 'a',
-        playedOn: '2026-10-01',
-        words: 1,
-        score: 100,
-        longest: 'cat',
-        byLength: { 3: 1 },
-        opponents: [],
-        leftOn: [
-          { found: 'cat', longer: 'catch', points: 800 },
-          { found: 'late', longer: 'later', points: 800 },
-        ],
-      },
-      {
-        id: 'b',
-        playedOn: '2026-10-08',
-        words: 1,
-        score: 100,
-        longest: 'star',
-        byLength: { 4: 1 },
-        opponents: [],
-        leftOn: [
-          { found: 'star', longer: 'starch', points: 1400 },
-          { found: 'cat', longer: 'catch', points: 800 },
-          { found: 'tap', longer: 'tape', points: 400 },
-          { found: 'pin', longer: 'pine', points: 400 },
-        ],
-      },
-      {
-        id: 'old',
-        playedOn: '2026-10-09',
-        words: 4,
-        score: 400,
-        longest: '',
-        byLength: {},
-        opponents: [],
-        leftOn: null,
-      },
-    ]
-    const summary = leftOnSummary(started)
-    expect(summary.count).toBe(6)
-    expect(summary.points).toBe(4600)
-    expect(summary.more).toBe(true)
-    expect(summary.examples.map((item) => item.longer)).toEqual(['starch', 'catch', 'later'])
-    expect(leftOnNote(summary)).toBe(
-      'Worth 4,600 points still on the board. The three below are the biggest. 1 game has no saved board.',
-    )
-    expect(leftOnNote(leftOnSummary([]))).toBe('No games in this view.')
-    expect(leftOnNote(leftOnSummary([started[2]]))).toBe('No missed words saved in this view.')
-    expect(
-      leftOnNote(
-        leftOnSummary([
-          {
-            id: 'clear',
-            playedOn: '2026-10-01',
-            words: 1,
-            score: 1,
-            longest: 'cat',
-            byLength: { 3: 1 },
-            opponents: [],
-            leftOn: [],
-          },
-        ]),
-      ),
-    ).toBe('You followed every word you started.')
-    expect(
-      leftOnNote(
-        leftOnSummary([
-          {
-            id: 'one',
-            playedOn: '2026-10-01',
-            words: 1,
-            score: 1,
-            longest: 'late',
-            byLength: { 4: 1 },
-            opponents: [],
-            leftOn: [{ found: 'late', longer: 'later', points: 1 }],
-          },
-          started[2],
-          { ...started[2], id: 'older' },
-        ]),
-      ),
-    ).toBe('Worth 1 point still on the board. 2 games have no saved board.')
   })
 
   it('averages traced starts on the 25 squares', () => {

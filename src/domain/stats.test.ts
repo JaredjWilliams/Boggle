@@ -26,12 +26,6 @@ describe('stats rows', () => {
             ],
             games: {
               created_at: created,
-              possible_words: [
-                { word: 'cat', points: 100 },
-                { word: 'catch', points: 800 },
-                { word: 'quartz', points: 1400 },
-                { word: 'dog', points: 100 },
-              ],
             },
           },
           { game_id: 'g2', score: 50, words: null, games: null },
@@ -54,12 +48,11 @@ describe('stats rows', () => {
           { name: 'Jonah Park', score: 80 },
         ],
         starts: cells({ 0: 1, 12: 1 }),
-        leftOn: [{ found: 'cat', longer: 'catch', points: 800 }],
       },
     ])
   })
 
-  it('leaves the started-word stat empty when the board was not saved', () => {
+  it('leaves traced starts empty when a word has no start cell', () => {
     const created = '2026-10-03T15:00:00.000Z'
     expect(
       resultGames(
@@ -73,7 +66,7 @@ describe('stats rows', () => {
         ],
         [],
       )[0],
-    ).toMatchObject({ leftOn: null, starts: null })
+    ).toMatchObject({ starts: null })
   })
 
   it('keeps a history game when the opponent name is present', () => {
@@ -98,7 +91,6 @@ describe('stats rows', () => {
         byLength: {},
         opponents: [{ name: 'Riley Okonkwo', score: 900 }],
         starts: null,
-        leftOn: null,
       },
     ])
   })
@@ -144,7 +136,6 @@ describe('stats rows', () => {
         byLength: {},
         opponents: [],
         starts: null,
-        leftOn: null,
       },
       {
         id: 'both',
@@ -158,7 +149,6 @@ describe('stats rows', () => {
           { name: 'Jonah Park', score: 900 },
         ],
         starts: null,
-        leftOn: null,
       },
     ])
   })

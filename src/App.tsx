@@ -18,7 +18,7 @@ import { ProfileScreen } from './components/ProfileScreen'
 import { LoginPage } from './components/LoginPage'
 import { ScreenFrame } from './components/ScreenFrame'
 import { SettingsScreen } from './components/SettingsScreen'
-import { StatsPause } from './components/StatsPause'
+import { PlayerStats } from './components/StatsScreen'
 import { StatusBar } from './components/StatusBar'
 import { WordForm } from './components/WordForm'
 import { completedGameKey, playedBackNotices, type ActiveGame } from './domain/lobby'
@@ -127,7 +127,6 @@ function PlayerGame({
   const lobby = useLobby(player.id)
   const { setNotice, refresh } = lobby
   const [view, setView] = useState<View>('home')
-  const [statsPaused, setStatsPaused] = useState(false)
   const [openGame, setOpenGame] = useState<ActiveGame | null>(null)
   const [readKeys, setReadKeys] = useState<ReadonlySet<string>>(() =>
     player.id ? loadReadGames(player.id) : new Set(),
@@ -373,12 +372,7 @@ function PlayerGame({
         onDeclineInvite={(invite) => void match.decline(invite)}
       />
     ),
-    stats: (
-      <main className="page">
-        <h1>Stats</h1>
-        <p className="page-lede">Stats are closed for now.</p>
-      </main>
-    ),
+    stats: <PlayerStats playerId={player.id ?? ''} playerName={player.name} />,
     profile: (
       <ProfileScreen
         name={player.name}
@@ -408,10 +402,7 @@ function PlayerGame({
   function openNav(item: AppNav) {
     if (item === 'home') setView('home')
     if (item === 'games') setView('games')
-    if (item === 'stats') {
-      setStatsPaused(true)
-      return
-    }
+    if (item === 'stats') setView('stats')
     if (item === 'profile') setView('profile')
   }
 
@@ -421,7 +412,6 @@ function PlayerGame({
       footer={<BottomNav active={navFor(shown)} onChange={openNav} />}
     >
       {pages[shown]}
-      {statsPaused && <StatsPause onClose={() => setStatsPaused(false)} />}
     </ScreenFrame>
   )
 }

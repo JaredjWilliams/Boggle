@@ -13,8 +13,6 @@ import {
   formatPlayedOn,
   gamesAgainst,
   headToHead,
-  leftOnNote,
-  leftOnSummary,
   lengthNote,
   linearTrend,
   longestFound,
@@ -52,9 +50,12 @@ const TABS: { id: Tab; label: string; icon: IconName }[] = [
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
 export function PlayerStats({ playerId, playerName }: { playerId: string; playerName: string }) {
-  const stats = useLoaded(() => loadPlayerStats(playerId), [] as GameStat[], 'Could not load your stats.', [
-    playerId,
-  ])
+  const stats = useLoaded(
+    () => (playerId ? loadPlayerStats(playerId) : Promise.resolve([])),
+    [] as GameStat[],
+    'Could not load your stats.',
+    [playerId],
+  )
 
   return (
     <StatsScreen
@@ -82,7 +83,6 @@ export function StatsScreen({ playerName, games, loading, notice, onRetry }: Pro
   const solos = selectedOpponent ? 0 : visible.filter((game) => game.opponents.length === 0).length
   const bestWord = longestFound(visible)
   const lengths = wordsByLength(visible)
-  const started = leftOnSummary(visible)
   const heat = startHeat(visible)
   const wordPoints = visible.map((game) => ({ id: game.id, playedOn: game.playedOn, value: game.words }))
   const scorePoints = visible.map((game) => ({ id: game.id, playedOn: game.playedOn, value: game.score }))
@@ -358,36 +358,6 @@ export function StatsScreen({ playerName, games, loading, notice, onRetry }: Pro
                 </div>
                 <p className="stat-note">{startHeatNote(heat)}</p>
               </section>
-
-              <section className="panel" aria-labelledby="started-heading">
-                <div className="panel-heading">
-                  <h2 id="started-heading">Words you had started</h2>
-                  <Icon name="sparkle" />
-                </div>
-                <p className="card-description">You had the start. Here’s what was still on the board.</p>
-                <p className="stat-figure">{started.count === null ? '—' : formatCount(started.count)}</p>
-                <p className="stat-note">{leftOnNote(started)}</p>
-                {started.examples.length > 0 && (
-                  <ul className="started-list" aria-label="Longer words left on a word you found">
-                    {started.examples.map((item) => (
-                      <li key={item.longer}>
-                        <span className="sr-only">
-                          {item.found} extended to {item.longer}, {formatCount(item.points)} points
-                        </span>
-                        <span className="word-extension" aria-hidden="true">
-                          <span className="started-from">{item.found}</span>
-                          <span className="started-arrow">→</span>
-                          <strong>
-                            {item.found}
-                            <em>{item.longer.slice(item.found.length)}</em>
-                          </strong>
-                        </span>
-                        <small aria-hidden="true">+{formatCount(item.points)}</small>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
             </div>
           )}
 
@@ -477,7 +447,7 @@ function recordNote(record: { wins: number; losses: number; ties: number }, solo
   const result = played === 0 ? 'No head-to-head games yet.' : `${played} games with another player.`
   if (solos === 0) return result
   const soloLabel = solos === 1 ? '1 solo game stays' : `${solos} solo games stay`
-  return `${result} ${soloLabel} on the words, score, longest-word, length, where-you-start, and started-word cards.`
+  return `${result} ${soloLabel} on the words, score, longest-word, length, and where-you-start cards.`
 }
 
 function StartHeat({ cells }: { cells: readonly number[] }) {
@@ -506,7 +476,7 @@ function StartHeat({ cells }: { cells: readonly number[] }) {
   )
 }
 
-type IconName = 'chart' | 'words' | 'trend' | 'flame' | 'trophy' | 'grid' | 'sparkle' | 'check'
+type IconName = 'chart' | 'words' | 'trend' | 'flame' | 'trophy' | 'grid' | 'check'
 
 function Icon({ name }: { name: IconName }) {
   const paths: Record<IconName, ReactNode> = {
@@ -544,7 +514,6 @@ function Icon({ name }: { name: IconName }) {
         <rect x="14" y="14" width="7" height="7" rx="1.5" />
       </>
     ),
-    sparkle: <path d="m12 3 2.3 6.7L21 12l-6.7 2.3L12 21l-2.3-6.7L3 12l6.7-2.3L12 3Z" />,
     check: <path d="m5 12 4 4L19 6" />,
   }
   return (

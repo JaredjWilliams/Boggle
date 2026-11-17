@@ -12,7 +12,7 @@ export async function loadPlayerStats(playerId: string): Promise<GameStat[]> {
       .eq('player_id', playerId),
     supabase
       .from('results')
-      .select('game_id, score, words, games(created_at, possible_words)')
+      .select('game_id, score, words, games(created_at)')
       .eq('player_id', playerId),
   ])
   const mineRows = (unwrap(mine) ?? []) as MineRow[]

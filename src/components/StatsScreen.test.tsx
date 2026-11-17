@@ -13,7 +13,6 @@ const games: GameStat[] = [
     longest: 'star',
     byLength: { 3: 2, 4: 2 },
     opponents: [{ name: 'Mina Chen', score: 400 }],
-    leftOn: [{ found: 'cat', longer: 'catch', points: 800 }],
   },
   {
     id: 'b',
@@ -23,10 +22,6 @@ const games: GameStat[] = [
     longest: 'quartz',
     byLength: { 3: 1, 4: 2, 5: 3, 6: 2 },
     opponents: [{ name: 'Jonah Park', score: 2400 }],
-    leftOn: [
-      { found: 'late', longer: 'later', points: 800 },
-      { found: 'star', longer: 'starch', points: 1400 },
-    ],
   },
   {
     id: 'c',
@@ -36,7 +31,6 @@ const games: GameStat[] = [
     longest: 'cats',
     byLength: { 3: 3, 4: 2, 5: 1 },
     opponents: [{ name: 'Mina Chen', score: 1500 }],
-    leftOn: [],
   },
 ]
 
@@ -81,13 +75,7 @@ describe('StatsScreen', () => {
     expect(lengthCount('5+')).toHaveTextContent('4')
     expect(lengthCount('6+')).toHaveTextContent('2')
     expect(lengthCount('8+')).toHaveTextContent('0')
-
-    const started = section('Words you had started')
-    expect(figure('Words you had started')).toHaveTextContent('3')
-    expect(started).toHaveTextContent('Worth 3,000 points still on the board.')
-    expect(within(started).getByText(/cat extended to catch, 800 points/)).toBeInTheDocument()
-    expect(within(started).getByText(/star extended to starch, 1,400 points/)).toBeInTheDocument()
-    expect(within(started).getByText(/late extended to later, 800 points/)).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Words you had started' })).not.toBeInTheDocument()
 
     await openTab('Point insights')
 
@@ -114,10 +102,6 @@ describe('StatsScreen', () => {
     expect(section('Words by length')).toHaveTextContent('10 words across these games.')
     expect(lengthCount('3+')).toHaveTextContent('5')
     expect(lengthCount('6+')).toHaveTextContent('0')
-    expect(figure('Words you had started')).toHaveTextContent('1')
-    expect(section('Words you had started')).toHaveTextContent('Worth 800 points still on the board.')
-    expect(section('Words you had started')).toHaveTextContent('cat extended to catch, 800 points')
-    expect(section('Words you had started')).not.toHaveTextContent('starch')
 
     await openTab('Point insights')
     expect(figure('Points a game')).toHaveTextContent('1,250')
@@ -125,8 +109,7 @@ describe('StatsScreen', () => {
     await openTab('Word insights')
     await userEvent.click(screen.getByRole('radio', { name: 'Jonah Park' }))
 
-    expect(figure('Words you had started')).toHaveTextContent('2')
-    expect(section('Words you had started')).toHaveTextContent('Worth 2,200 points still on the board.')
+    expect(figure('Longest word')).toHaveTextContent('quartz')
 
     await openTab('Overview')
 
@@ -151,8 +134,7 @@ describe('StatsScreen', () => {
     expect(section('Words by length')).toHaveTextContent('No games in this view.')
     expect(figure('Where you start')).toHaveTextContent('—')
     expect(section('Where you start')).toHaveTextContent('No games in this view.')
-    expect(figure('Words you had started')).toHaveTextContent('—')
-    expect(section('Words you had started')).toHaveTextContent('No games in this view.')
+    expect(screen.queryByRole('heading', { name: 'Words you had started' })).not.toBeInTheDocument()
     expect(lengthCount('3+')).toHaveTextContent('0')
 
     await openTab('Point insights')
@@ -207,7 +189,6 @@ describe('StatsScreen', () => {
             longest: 'zen',
             byLength: { 3: 3 },
             opponents: [],
-            leftOn: [],
           },
         ]}
       />,
@@ -215,7 +196,7 @@ describe('StatsScreen', () => {
 
     expect(figure('Words a game')).toHaveTextContent('5.3')
     expect(section('Win rate')).toHaveTextContent(
-      '1 solo game stays on the words, score, longest-word, length, where-you-start, and started-word cards.',
+      '1 solo game stays on the words, score, longest-word, length, and where-you-start cards.',
     )
   })
 })

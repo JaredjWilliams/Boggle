@@ -1,9 +1,7 @@
 import { first, profileName, scoredWords } from '../api/rows'
 import { longestWord } from '../game/match'
-import type { ScoredWord } from '../game/round'
-import { countByLength, startCells, wordsLeftOn, type GameStat, type OpponentResult } from '../stats/series'
+import { countByLength, startCells, type GameStat, type OpponentResult } from '../stats/series'
 import { playedOn } from './dates'
-import { unplayedWords } from './results'
 
 export type HistoryRow = {
   id: string
@@ -17,7 +15,6 @@ export type HistoryRow = {
 
 type SavedGame = {
   created_at?: string
-  possible_words?: unknown
 }
 
 export type MineRow = {
@@ -57,7 +54,6 @@ export function historyGames(rows: readonly HistoryRow[]): GameStat[] {
       longest: '',
       byLength: {},
       opponents,
-      leftOn: null,
       starts: null,
     }
   })
@@ -79,7 +75,6 @@ export function resultGames(mine: readonly MineRow[], others: readonly OtherRow[
     const parsed = Date.parse(created)
     if (Number.isNaN(parsed)) return []
     const found = scoredWords(row.words, { start: true })
-    const possible = possibleWords(row.games)
     return [
       {
         id: row.game_id,
@@ -90,13 +85,6 @@ export function resultGames(mine: readonly MineRow[], others: readonly OtherRow[
         byLength: countByLength(found.map((item) => item.word)),
         opponents: rivals.get(row.game_id) ?? [],
         starts: startCells(found),
-        leftOn:
-          possible === null
-            ? null
-            : wordsLeftOn(
-                found.map((item) => item.word),
-                unplayedWords(possible, found),
-              ),
       },
     ]
   })
@@ -104,10 +92,4 @@ export function resultGames(mine: readonly MineRow[], others: readonly OtherRow[
 
 function gameCreated(games: MineRow['games']): string {
   return first(games)?.created_at ?? ''
-}
-
-function possibleWords(games: MineRow['games']): ScoredWord[] | null {
-  const game = first(games)
-  if (!game || !Array.isArray(game.possible_words)) return null
-  return scoredWords(game.possible_words, { start: true })
 }
