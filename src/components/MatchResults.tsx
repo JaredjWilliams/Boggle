@@ -16,6 +16,7 @@ import {
 } from '../game/match'
 import type { ScoredWord } from '../game/round'
 import { emptyHighlight, wordHighlight } from '../game/words'
+import { countByLength } from '../stats/series'
 import { Board } from './Board'
 import { EndPanel } from './EndPanel'
 import { StatusBlock } from './StatusBlock'
@@ -242,7 +243,7 @@ export function MatchResults({ players, notice = '', onRetry, onShowPotential, s
         <StatusBlock notice={notice} onRetry={onRetry} />
       </div>
 
-      <div className={players.length > 2 ? 'match-columns many' : 'match-columns'}>
+      <div className="match-columns">
         {players.map((player, index) => (
           <PlayerColumn
             key={player.id || player.name}
@@ -277,6 +278,13 @@ function PlayerColumn({
     .filter(Boolean)
     .join(' ')
 
+  const lengths =
+    player.words === null
+      ? null
+      : Object.entries(countByLength(player.words.map((item) => item.word)))
+          .map(([length, count]) => ({ length: Number(length), count }))
+          .sort((a, b) => a.length - b.length)
+
   return (
     <section className={className} aria-labelledby={headingId}>
       <div className="match-score">
@@ -295,24 +303,28 @@ function PlayerColumn({
               <strong>{player.score}</strong>
             )}
           </p>
-          {player.words !== null && (
-            <p className="match-points">
-              <span className="label">Words</span>
-              <strong>{player.words.length}</strong>
+          {lengths !== null && lengths.length > 0 && (
+            <p className="match-lengths">
+              <span className="label">Lengths</span>
+              <span className="match-length-list">
+                {lengths.map(({ length, count }, index) => (
+                  <span key={length}>
+                    {index > 0 && <span className="match-length-sep" aria-hidden="true"> · </span>}
+                    <span className="match-length">
+                      {length}:{count}
+                    </span>
+                  </span>
+                ))}
+              </span>
             </p>
           )}
         </div>
       </div>
-      {player.words !== null && <h3>Words</h3>}
-      <div className="match-scroll">
-        {player.words === null ? (
-          <p className="match-empty">Waiting for their words.</p>
-        ) : player.words.length === 0 ? (
-          <p className="match-empty">None this round.</p>
-        ) : (
-          <WordList words={player.words} flat />
-        )}
-      </div>
+      {player.words === null ? (
+        <p className="match-empty">Waiting for their words.</p>
+      ) : player.words.length === 0 ? (
+        <p className="match-empty">None this round.</p>
+      ) : null}
     </section>
   )
 }

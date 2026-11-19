@@ -47,7 +47,7 @@ const grace = {
 }
 
 describe('MatchResults', () => {
-  it('shows both scores, both word lists, and the winner', () => {
+  it('shows both scores, length summaries, and the winner', () => {
     render(<MatchResults players={[ada, grace]} onShowPotential={vi.fn()} />)
 
     expect(screen.getByRole('heading', { level: 1, name: 'Grace Hopper wins' })).toHaveClass(
@@ -60,20 +60,17 @@ describe('MatchResults', () => {
     expect(yours).toHaveTextContent('You')
     expect(yours).not.toHaveTextContent('Winner')
     expect(score(yours)).toBe('200')
-    expect(wordsFound(yours)).toBe('2')
-    expect(items(yours)).toEqual([
-      { word: 'eat', points: '100' },
-      { word: 'cat', points: '100' },
-    ])
+    expect(lengthsFound(yours)).toBe('3:2')
+    expect(within(yours).queryByRole('list')).not.toBeInTheDocument()
 
     expect(theirs).toHaveTextContent('Winner')
     expect(theirs).toHaveClass('is-winner')
     expect(score(theirs)).toBe('500')
-    expect(wordsFound(theirs)).toBe('1')
-    expect(items(theirs)).toEqual([{ word: 'cats', points: '400' }])
+    expect(lengthsFound(theirs)).toBe('4:1')
+    expect(within(theirs).queryByRole('list')).not.toBeInTheDocument()
 
-    expect(styleOf('.match-columns').display).toBe('grid')
-    expect(styleOf('.match-columns').gridTemplateColumns).toBe('1fr 1fr')
+    expect(styleOf('.match-columns').display).toBe('flex')
+    expect(styleOf('.match-columns').flexDirection).toBe('column')
     expect(styleOf('.match-figures').justifyContent).toBe('space-between')
     expect(styleOf('.match-points strong').fontSize).toBe('22px')
   })
@@ -111,7 +108,7 @@ describe('MatchResults', () => {
     )
     const theirs = column('Grace Hopper')
     expect(score(theirs)).toBe('Still playing')
-    expect(wordsFound(theirs)).toBeNull()
+    expect(lengthsFound(theirs)).toBeNull()
     expect(theirs).toHaveTextContent('Waiting for their words.')
     expect(within(theirs).queryByRole('list')).not.toBeInTheDocument()
   })
@@ -132,7 +129,7 @@ describe('MatchResults', () => {
     )
 
     expect(column('Ada Lovelace')).toHaveTextContent('None this round.')
-    expect(wordsFound(column('Ada Lovelace'))).toBe('0')
+    expect(lengthsFound(column('Ada Lovelace'))).toBeNull()
     expect(screen.getByRole('alert')).toHaveTextContent('Could not load the results.')
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(onRetry).toHaveBeenCalledOnce()
@@ -342,8 +339,8 @@ describe('MatchReview', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Grace Hopper wins' })).toBeInTheDocument()
     expect(score(column('Ada Lovelace'))).toBe('200')
-    expect(items(column('Ada Lovelace'))).toEqual([{ word: 'cat', points: '100' }])
-    expect(items(column('Grace Hopper'))).toEqual([{ word: 'cats', points: '400' }])
+    expect(lengthsFound(column('Ada Lovelace'))).toBe('3:1')
+    expect(lengthsFound(column('Grace Hopper'))).toBe('4:1')
   })
 
   it('traces a potential word on the board from that game', async () => {
@@ -422,8 +419,8 @@ describe('MatchReview', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Grace Hopper wins' })).toBeInTheDocument()
     expect(score(column('Ada Lovelace'))).toBe('200')
-    expect(items(column('Ada Lovelace'))).toEqual([{ word: 'cat', points: '100' }])
-    expect(items(column('Grace Hopper'))).toEqual([{ word: 'cats', points: '400' }])
+    expect(lengthsFound(column('Ada Lovelace'))).toBe('3:1')
+    expect(lengthsFound(column('Grace Hopper'))).toBe('4:1')
     expect(mocks.watchMatchResults).toHaveBeenCalledWith('game-1', expect.any(Function))
 
     await userEvent.click(screen.getByRole('button', { name: 'See potential words' }))
@@ -511,7 +508,10 @@ describe('MatchReview', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'You win' })).toBeInTheDocument()
     expect(mocks.loadPlayerWords).toHaveBeenCalledTimes(1)
     expect(mocks.loadPlayerWords).toHaveBeenCalledWith('game-1', 'grace')
-    expect(await screen.findByText('eat')).toBeInTheDocument()
+    expect(
+      await within(column('Grace Hopper')).findByText('3:1'),
+    ).toBeInTheDocument()
+    expect(lengthsFound(column('Grace Hopper'))).toBe('3:1')
 
     await act(async () => {
       vi.advanceTimersByTime(3000)
@@ -551,7 +551,7 @@ describe('MatchReview', () => {
     const onChange = mocks.watchMatchResults.mock.calls[0][1]
     onChange()
     expect(await screen.findByRole('heading', { level: 1, name: 'You win' })).toBeInTheDocument()
-    expect(items(column('Grace Hopper'))).toEqual([{ word: 'eat', points: '100' }])
+    expect(lengthsFound(column('Grace Hopper'))).toBe('3:1')
   })
 
   it('returns to a solo summary when nobody else stayed in the game', async () => {
@@ -626,20 +626,9 @@ function score(section: HTMLElement) {
   return within(section).getByText('Score').closest('p')?.querySelector('strong')?.textContent
 }
 
-function wordsFound(section: HTMLElement) {
-  const figures = section.querySelector('.match-figures')
-  if (!(figures instanceof HTMLElement)) return null
-  const label = within(figures).queryByText('Words')
-  return label?.closest('p')?.querySelector('strong')?.textContent ?? null
-}
-
-function items(section: HTMLElement) {
-  return within(section)
-    .getAllByRole('listitem')
-    .map((item) => {
-      const [word, points] = [...item.querySelectorAll('span')].map((span) => span.textContent)
-      return { word, points }
-    })
+function lengthsFound(section: HTMLElement) {
+  const label = within(section).queryByText('Lengths')
+  return label?.closest('p')?.querySelector('.match-length-list')?.textContent ?? null
 }
 
 function tile(row: number, col: number) {
