@@ -31,6 +31,7 @@ describe('EndPanel', () => {
     renderSummary()
 
     expect(screen.getByText("Time's up")).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Send this board' })).not.toBeInTheDocument()
     expect(screen.getByText('Score').closest('p')).toHaveTextContent(/^Score2$/)
     expect(screen.getByText('Words').closest('p')).toHaveTextContent(/^Words2$/)
 

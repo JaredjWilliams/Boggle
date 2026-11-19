@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { loadWordDefinition } from '../api/define'
-import { loadMatchPlayers, loadSavedRound, watchMatchResults } from '../api/results'
+import { loadMatchPlayers, loadPlayerWords, loadSavedRound, watchMatchResults } from '../api/results'
+import { playersNeedingWords } from '../domain/inviteBoard'
 import type { MatchPlayerRow, SavedRound } from '../domain/results'
 import { useLoaded } from '../hooks/useLoaded'
 import type { Board as LetterBoard } from '../game/dice'
@@ -34,6 +35,7 @@ type ReviewProps = {
   onShowPotential: () => void
   onBack: () => void
   onPlayAgain: () => void
+  send?: ReactNode
 }
 
 type SavedProps = {
@@ -42,9 +44,10 @@ type SavedProps = {
   viewerName: string
   rival: Rival
   onPlayAgain: () => void
+  send?: ReactNode
 }
 
-export function SavedMatch({ gameId, viewerId, viewerName, rival, onPlayAgain }: SavedProps) {
+export function SavedMatch({ gameId, viewerId, viewerName, rival, onPlayAgain, send }: SavedProps) {
   const [showingPotential, setShowingPotential] = useState(false)
   const saved = useLoaded(
     () => loadSavedRound(gameId, viewerId),
@@ -82,6 +85,7 @@ export function SavedMatch({ gameId, viewerId, viewerName, rival, onPlayAgain }:
       onShowPotential={() => setShowingPotential(true)}
       onBack={() => setShowingPotential(false)}
       onPlayAgain={onPlayAgain}
+      send={send}
     />
   )
 }
@@ -99,6 +103,7 @@ export function MatchReview({
   onShowPotential,
   onBack,
   onPlayAgain,
+  send,
 }: ReviewProps) {
   const { data: remote, notice, reload } = useLoaded(
     () => loadMatchPlayers(gameId),
@@ -121,13 +126,39 @@ export function MatchReview({
     }
   }, [gameId, reload])
 
+  const loadedWords = useRef(new Set<string>())
+  const inflightWords = useRef(new Set<string>())
+  const [extraWords, setExtraWords] = useState<ReadonlyMap<string, ScoredWord[]>>(new Map())
+
+  useEffect(() => {
+    if (!remote) return
+    const needed = playersNeedingWords(remote, new Set([...loadedWords.current, ...inflightWords.current]))
+      .filter((playerId) => playerId !== viewerId)
+    for (const playerId of needed) {
+      inflightWords.current.add(playerId)
+      void loadPlayerWords(gameId, playerId)
+        .then((found) => {
+          inflightWords.current.delete(playerId)
+          loadedWords.current.add(playerId)
+          setExtraWords((current) => {
+            const next = new Map(current)
+            next.set(playerId, found)
+            return next
+          })
+        })
+        .catch(() => {
+          inflightWords.current.delete(playerId)
+        })
+    }
+  }, [gameId, remote, viewerId])
+
   const roster =
     remote && remote.length > 0
       ? remote.map((player) => ({
           id: player.playerId,
           name: player.name,
           score: player.score,
-          words: player.words,
+          words: player.words ?? extraWords.get(player.playerId) ?? null,
         }))
       : null
   const players = presentMatch(roster, { id: viewerId, name: viewerName, score, words }, rivals)
@@ -149,6 +180,7 @@ export function MatchReview({
         found={words ? [...words] : []}
         missed={missed}
         onPlayAgain={onPlayAgain}
+        send={send}
       />
     )
   }
@@ -160,11 +192,12 @@ export function MatchReview({
   }
 
   return (
-    <MatchResults
+      <MatchResults
       players={players}
       notice={notice}
       onRetry={reload}
       onShowPotential={onShowPotential}
+      send={send}
     />
   )
 }
@@ -174,9 +207,21 @@ type ResultsProps = {
   notice?: string
   onRetry?: () => void
   onShowPotential: () => void
+  send?: ReactNode
 }
 
-export function MatchResults({ players, notice = '', onRetry, onShowPotential }: ResultsProps) {
+function WordsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="4.5" y="3.5" width="15" height="17" rx="2" />
+      <path d="M8 8.5h8" />
+      <path d="M8 12h8" />
+      <path d="M8 15.5h5" />
+    </svg>
+  )
+}
+
+export function MatchResults({ players, notice = '', onRetry, onShowPotential, send }: ResultsProps) {
   const outcome = matchOutcome(players)
   const tied = outcome.kind === 'tie'
 
@@ -187,9 +232,12 @@ export function MatchResults({ players, notice = '', onRetry, onShowPotential }:
           <h1 className={outcomeClass(outcome)} aria-live="polite">
             {outcomeLabel(outcome)}
           </h1>
-          <button type="button" className="see-words" onClick={onShowPotential}>
-            See potential words
-          </button>
+          <div className="match-actions">
+            {send}
+            <button type="button" className="see-words" aria-label="See potential words" onClick={onShowPotential}>
+              <WordsIcon />
+            </button>
+          </div>
         </div>
         <StatusBlock notice={notice} onRetry={onRetry} />
       </div>

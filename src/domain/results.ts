@@ -25,7 +25,7 @@ type SeatRow = {
 type ResultRow = {
   player_id: string
   score: number
-  words: unknown
+  words?: unknown
 }
 
 type NameRow = {
@@ -56,7 +56,7 @@ export function assembleMatchPlayers(
       playerId: result.player_id,
       name: names.get(result.player_id) || rows.get(result.player_id)?.name || 'A player',
       score: result.score,
-      words: scoredWords(result.words),
+      words: result.words === undefined ? null : scoredWords(result.words),
     })
   }
 

@@ -45,6 +45,8 @@ export type LeaderboardResult = {
   score: number
   words: unknown
   profiles: { name?: string } | { name?: string }[] | null
+  /** Who sent this player's seat. Missing on older rows, which still credit the host. */
+  invited_by?: string | null
   games:
     | { daily_on?: string | null; created_at?: string | null; host_id?: string | null }
     | { daily_on?: string | null; created_at?: string | null; host_id?: string | null }[]
@@ -138,6 +140,7 @@ type Play = {
   dailyOn: string | null
   createdAt: number
   hostId: string | null
+  invitedBy: string | null
 }
 
 export type LeaderboardPlayer = {
@@ -318,15 +321,20 @@ function applyArchivedWords(totals: Map<string, Totals>, archived: readonly Arch
 
 function awardGathering(byGame: ReadonlyMap<string, readonly Play[]>, totals: Map<string, Totals>) {
   for (const group of byGame.values()) {
-    const hostId = group.find((play) => play.hostId)?.hostId
-    if (!hostId) continue
-    const host = totals.get(hostId)
-    if (!host) continue
-
-    const finishedOthers = new Set(
-      group.filter((play) => play.playerId !== hostId).map((play) => play.playerId),
-    )
-    host.outgoing += finishedOthers.size
+    const hostId = group.find((play) => play.hostId)?.hostId ?? null
+    const credited = new Map<string, Set<string>>()
+    for (const play of group) {
+      const inviter = play.invitedBy || (hostId && play.playerId !== hostId ? hostId : null)
+      if (!inviter || inviter === play.playerId) continue
+      const people = credited.get(inviter) ?? new Set<string>()
+      people.add(play.playerId)
+      credited.set(inviter, people)
+    }
+    for (const [inviter, people] of credited) {
+      const player = totals.get(inviter)
+      if (!player) continue
+      player.outgoing += people.size
+    }
   }
 }
 
@@ -512,6 +520,7 @@ function toPlay(row: LeaderboardResult): Play[] {
       dailyOn: game?.daily_on?.trim() || null,
       createdAt: playedAt(game?.created_at),
       hostId: game?.host_id?.trim() || null,
+      invitedBy: row.invited_by?.trim() || null,
     },
   ]
 }

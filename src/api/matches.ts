@@ -1,7 +1,13 @@
+import type { InviteBlock, InviteRejection } from '../domain/inviteBoard'
 import type { Board } from '../game/dice'
 import type { ScoredWord } from '../game/round'
 import { getSupabase } from '../lib/supabase'
 import { unwrap } from './rows'
+
+export type InviteBoardResult = {
+  invited: string[]
+  rejected: InviteRejection[]
+}
 
 export async function createMatch(input: {
   hostId: string
@@ -27,18 +33,23 @@ export async function createMatch(input: {
   if (!created) throw new Error('Could not start the game.')
   const gameId = created.id as string
   const inviteIds = input.inviteIds.filter((id) => id !== input.hostId)
+  const sentAt = new Date().toISOString()
   const seats = [
     {
       game_id: gameId,
       player_id: input.hostId,
       status: 'accepted',
-      started_at: new Date().toISOString(),
+      started_at: sentAt,
+      invited_at: sentAt,
+      invited_by: input.hostId,
     },
     ...inviteIds.map((playerId) => ({
       game_id: gameId,
       player_id: playerId,
       status: 'invited',
       started_at: null,
+      invited_at: sentAt,
+      invited_by: input.hostId,
     })),
   ]
   unwrap(await supabase.from('game_players').insert(seats))
@@ -59,6 +70,47 @@ export async function answerInvite(
       .eq('game_id', gameId)
       .eq('player_id', playerId),
   )
+}
+
+export async function inviteToBoard(
+  gameId: string,
+  playerIds: readonly string[],
+): Promise<InviteBoardResult> {
+  const payload = unwrap(
+    await getSupabase().rpc('invite_to_board', {
+      target_game: gameId,
+      player_ids: [...playerIds],
+    }),
+  )
+  return readInviteResult(payload)
+}
+
+function readInviteResult(payload: unknown): InviteBoardResult {
+  const record = payload && typeof payload === 'object' ? (payload as { invited?: unknown; rejected?: unknown }) : {}
+  return {
+    invited: readIds(record.invited),
+    rejected: readRejected(record.rejected),
+  }
+}
+
+function readIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item): item is string => typeof item === 'string' && item.length > 0)
+}
+
+function readRejected(value: unknown): InviteRejection[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item) => {
+    if (!item || typeof item !== 'object') return []
+    const record = item as { id?: unknown; reason?: unknown }
+    if (typeof record.id !== 'string' || !record.id) return []
+    return [{ id: record.id, reason: readBlock(record.reason) }]
+  })
+}
+
+function readBlock(value: unknown): InviteBlock {
+  if (value === 'invited' || value === 'playing') return value
+  return 'played'
 }
 
 export async function saveResult(input: {

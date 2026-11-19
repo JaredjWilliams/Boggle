@@ -1,3 +1,4 @@
+import type { BoardSeat } from '../domain/inviteBoard'
 import {
   assembleMatchPlayers,
   unplayedWords,
@@ -5,6 +6,7 @@ import {
   type SavedRound,
 } from '../domain/results'
 import { parseBoard } from '../game/dice'
+import type { ScoredWord } from '../game/round'
 import { getSupabase } from '../lib/supabase'
 import { scoredWords, unwrap } from './rows'
 
@@ -28,7 +30,7 @@ export async function loadMatchPlayers(gameId: string): Promise<MatchPlayerRow[]
   const supabase = getSupabase()
   const [seats, results] = await Promise.all([
     supabase.from('game_players').select('player_id, status').eq('game_id', gameId),
-    supabase.from('results').select('player_id, score, words').eq('game_id', gameId),
+    supabase.from('results').select('player_id, score').eq('game_id', gameId),
   ])
   const seatRows = (unwrap(seats) ?? []) as SeatRow[]
   const resultRows = (unwrap(results) ?? []) as ResultRow[]
@@ -41,13 +43,47 @@ export async function loadMatchPlayers(gameId: string): Promise<MatchPlayerRow[]
   return assembleMatchPlayers(seatRows, resultRows, (unwrap(profiles) ?? []) as NameRow[])
 }
 
+export async function loadPlayerWords(gameId: string, playerId: string): Promise<ScoredWord[]> {
+  const row = unwrap(
+    await getSupabase()
+      .from('results')
+      .select('words')
+      .eq('game_id', gameId)
+      .eq('player_id', playerId)
+      .maybeSingle(),
+  )
+  return scoredWords(row?.words)
+}
+
+export async function loadBoardSeats(gameId: string): Promise<BoardSeat[]> {
+  const supabase = getSupabase()
+  const [seats, results] = await Promise.all([
+    supabase.from('game_players').select('player_id, status').eq('game_id', gameId),
+    supabase.from('results').select('player_id').eq('game_id', gameId),
+  ])
+  const finished = new Set(
+    ((unwrap(results) ?? []) as { player_id: string }[]).map((row) => row.player_id),
+  )
+  return ((unwrap(seats) ?? []) as SeatRow[]).map((seat) => ({
+    playerId: seat.player_id,
+    status: seat.status,
+    finished: finished.has(seat.player_id),
+  }))
+}
+
 export function watchMatchResults(gameId: string, onChange: () => void): () => void {
   const supabase = getSupabase()
   const channel = supabase
     .channel(`results-${gameId}`)
     .on(
       'postgres_changes',
-      { event: '*', schema: 'public', table: 'results', filter: `game_id=eq.${gameId}` },
+      {
+        event: '*',
+        schema: 'public',
+        table: 'results',
+        filter: `game_id=eq.${gameId}`,
+        select: ['player_id', 'score'],
+      },
       () => {
         onChange()
       },

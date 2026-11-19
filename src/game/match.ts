@@ -90,13 +90,14 @@ export function presentMatch(
 
 export function matchOutcome(players: readonly ResultPlayer[]): MatchOutcome {
   if (players.length < 2) return { kind: 'alone' }
-  const pending = players.filter((player) => player.score === null)
-  if (pending.length > 0) {
+  const finished = players.filter((player) => player.score !== null)
+  if (finished.length < 2) {
+    const pending = players.filter((player) => player.score === null)
     const names = pending.filter((player) => !player.you).map((player) => player.name)
     return { kind: 'waiting', names: names.length > 0 ? names : pending.map((player) => player.name) }
   }
-  const best = Math.max(...players.map((player) => player.score ?? 0))
-  const winners = players.filter((player) => player.score === best)
+  const best = Math.max(...finished.map((player) => player.score ?? 0))
+  const winners = finished.filter((player) => player.score === best)
   if (winners.length !== 1) return { kind: 'tie' }
   return { kind: 'win', id: winners[0].id, name: winners[0].name, you: winners[0].you }
 }

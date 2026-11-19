@@ -8,6 +8,7 @@ import {
   formatRecord,
   matchResult,
   matchResultLabel,
+  inviteMessage,
   playedBackNotices,
   selectActiveGames,
   selectCompletedGames,
@@ -233,7 +234,7 @@ function InvitedList({
       {invites.map((invite) => (
         <li key={invite.gameId}>
           <div className="invited-game">
-            <p>{invite.hostName} invited you.</p>
+            <p>{inviteMessage(invite)}</p>
             {typeof invite.daysLeft === 'number' && (
               <p className={invite.daysLeft <= 1 ? 'invited-deadline is-soon' : 'invited-deadline'}>
                 {daysLeftLabel(invite.daysLeft)}

@@ -10,9 +10,17 @@ export type Invite = {
   gameId: string
   hostId: string
   hostName: string
+  /** Who sent this invitation. Omitted on older invites, which came from the host. */
+  senderId?: string
+  senderName?: string
   board: Board
   /** Whole days left before this invitation is deleted. */
   daysLeft?: number
+}
+
+export function inviteMessage(invite: Pick<Invite, 'hostName' | 'senderName'>): string {
+  const name = invite.senderName?.trim() || invite.hostName
+  return `${name} sent you a board.`
 }
 
 export type Lobby = {
@@ -58,6 +66,8 @@ export type ActiveSeat = {
   status: string
   createdAt: string
   hostId?: string
+  /** Who sent this seat. Missing seats still count as invited by the host. */
+  invitedBy?: string
 }
 
 export type HeadScore = {
@@ -200,20 +210,23 @@ export function assembleActiveGames(
   for (const [gameId, group] of byGame) {
     const viewer = group.find((seat) => seat.playerId === viewerId && seat.status === 'accepted')
     if (!viewer) continue
-    const finished = gameIsFinished(gameId, scores)
-    if (!finished && gameIsExpired(viewer.createdAt, now)) continue
-    const daysLeft = finished ? null : daysLeftToPlay(viewer.createdAt, now)
+    const viewerFinished = scores.some((score) => score.gameId === gameId && score.playerId === viewerId)
+    if (!viewerFinished && gameIsExpired(viewer.createdAt, now)) continue
     const opponents = group.filter((seat) => seat.playerId !== viewerId && seat.status !== 'declined')
     for (const opponent of opponents) {
+      const playedBack = scores.some(
+        (score) => score.gameId === gameId && score.playerId === opponent.playerId,
+      )
+      const deadlineAt = opponent.createdAt || viewer.createdAt
+      if (!playedBack && gameIsExpired(deadlineAt, now)) continue
+      const daysLeft = playedBack ? null : daysLeftToPlay(deadlineAt, now)
       const record = records.get(opponent.playerId) ?? { wins: 0, losses: 0 }
       games.push({
         gameId,
         opponentId: opponent.playerId,
         opponentName: nameOf.get(opponent.playerId) || 'A player',
-        playedBack: scores.some(
-          (score) => score.gameId === gameId && score.playerId === opponent.playerId,
-        ),
-        hosted: viewer.hostId === viewerId,
+        playedBack,
+        hosted: opponent.invitedBy ? opponent.invitedBy === viewerId : viewer.hostId === viewerId,
         wins: record.wins,
         losses: record.losses,
         yourScore: scoreOf(scores, gameId, viewerId),
@@ -237,14 +250,6 @@ export function assembleActiveGames(
 function scoreOf(scores: readonly HeadScore[], gameId: string, playerId: string): number | null {
   const found = scores.find((score) => score.gameId === gameId && score.playerId === playerId)
   return found ? found.score : null
-}
-
-function gameIsFinished(gameId: string, scores: readonly HeadScore[]): boolean {
-  const players = new Set<string>()
-  for (const score of scores) {
-    if (score.gameId === gameId) players.add(score.playerId)
-  }
-  return players.size >= 2
 }
 
 function recordsByOpponent(

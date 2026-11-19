@@ -520,6 +520,57 @@ describe('leaderboard records', () => {
     ])
   })
 
+  it('credits a later send to the player who sent it', () => {
+    const career = (id: string, name: string) =>
+      Array.from({ length: 11 }, (_, index) =>
+        result({
+          game_id: `career-${id}-${index}`,
+          player_id: id,
+          score: 1,
+          words: [],
+          profiles: { name },
+          games: { host_id: id },
+        }),
+      )
+    const boards = buildLeaderboard([
+      ...career('ada', 'Ada Lovelace'),
+      ...career('grace', 'Grace Hopper'),
+      ...career('mina', 'Mina Chen'),
+      result({
+        game_id: 'shared',
+        player_id: 'ada',
+        score: 1,
+        words: [],
+        profiles: { name: 'Ada Lovelace' },
+        invited_by: 'ada',
+        games: { host_id: 'ada' },
+      }),
+      result({
+        game_id: 'shared',
+        player_id: 'grace',
+        score: 1,
+        words: [],
+        profiles: { name: 'Grace Hopper' },
+        invited_by: 'ada',
+        games: { host_id: 'ada' },
+      }),
+      result({
+        game_id: 'shared',
+        player_id: 'mina',
+        score: 1,
+        words: [],
+        profiles: { name: 'Mina Chen' },
+        invited_by: 'grace',
+        games: { host_id: 'ada' },
+      }),
+    ])
+
+    expect(boards.find((board) => board.id === 'outgoing')?.rows.map((row) => [row.name, row.figure])).toEqual([
+      ['Ada Lovelace', '1'],
+      ['Grace Hopper', '1'],
+    ])
+  })
+
   it('leaves out a player with 10 finished games', () => {
     const ten = Array.from({ length: 10 }, (_, index) =>
       result({

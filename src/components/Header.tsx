@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { completedGameKey, type ActiveGame, type Invite } from '../domain/lobby'
+import { inviteMessage } from '../domain/lobby'
 import { InviteActions } from './InviteActions'
 import { playerInitials } from './initials'
 import './Header.css'
@@ -217,7 +218,7 @@ export function Header({
                   <ul>
                     {incoming.map((invite) => (
                       <li key={invite.gameId}>
-                        <p>{invite.hostName} invited you.</p>
+                        <p>{inviteMessage(invite)}</p>
                         <InviteActions
                           invite={invite}
                           onAccept={onAcceptInvite}

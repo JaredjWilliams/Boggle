@@ -443,7 +443,7 @@ describe('HomeDashboard', () => {
 
     expect(screen.getByRole('tab', { name: 'Invited games', selected: true })).toBeInTheDocument()
     const invited = screen.getByRole('list', { name: 'Invited games' })
-    expect(within(invited).getByText('Grace Hopper invited you.')).toBeInTheDocument()
+    expect(within(invited).getByText('Grace Hopper sent you a board.')).toBeInTheDocument()
     expect(within(invited).getByText('2 days left')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Play with Grace Hopper' }))

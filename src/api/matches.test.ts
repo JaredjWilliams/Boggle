@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { blankQuery, queryChain, type QueryResult, type RecordedQuery } from '../test/queryChain'
-import { createMatch } from './matches'
+import { createMatch, inviteToBoard } from './matches'
 
 const supabase = vi.hoisted(() => {
   const calls: RecordedQuery[] = []
@@ -15,9 +15,15 @@ const supabase = vi.hoisted(() => {
     })
   }
 
+  const rpc = vi.fn(async (): Promise<{ data: unknown; error: { message: string } | null }> => ({
+    data: null,
+    error: null,
+  }))
+
   return {
     calls,
     from,
+    rpc,
     failGame(message: string | null) {
       gameError = message ? { message } : null
     },
@@ -25,7 +31,7 @@ const supabase = vi.hoisted(() => {
 })
 
 vi.mock('../lib/supabase', () => ({
-  getSupabase: () => ({ from: supabase.from }),
+  getSupabase: () => ({ from: supabase.from, rpc: supabase.rpc }),
 }))
 
 const board = [
@@ -43,6 +49,7 @@ const input = {
 beforeEach(() => {
   supabase.calls.length = 0
   supabase.failGame(null)
+  supabase.rpc.mockReset()
 })
 
 function inserts() {
@@ -73,6 +80,7 @@ describe('createMatch', () => {
           player_id: 'grace',
           status: 'invited',
           started_at: null,
+          invited_by: 'ada',
         }),
       ],
     })
@@ -89,5 +97,26 @@ describe('createMatch', () => {
 
     await expect(createMatch({ ...input, dailyOn: '2026-10-21' })).rejects.toThrow('insert failed')
     expect(inserts().map((insert) => insert.table)).toEqual(['games'])
+  })
+})
+
+describe('inviteToBoard', () => {
+  it('sends ids only and reports who could not be invited', async () => {
+    supabase.rpc.mockResolvedValueOnce({
+      data: {
+        invited: ['mina'],
+        rejected: [{ id: 'grace', reason: 'played' }],
+      },
+      error: null,
+    })
+
+    await expect(inviteToBoard('game-1', ['mina', 'grace'])).resolves.toEqual({
+      invited: ['mina'],
+      rejected: [{ id: 'grace', reason: 'played' }],
+    })
+    expect(supabase.rpc).toHaveBeenCalledWith('invite_to_board', {
+      target_game: 'game-1',
+      player_ids: ['mina', 'grace'],
+    })
   })
 })

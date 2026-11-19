@@ -136,7 +136,7 @@ describe('Header invitations', () => {
 
     await user.click(bell)
     expect(screen.getByRole('dialog', { name: 'Notifications' })).toHaveTextContent(
-      'Grace Hopper invited you.',
+      'Grace Hopper sent you a board.',
     )
 
     await user.click(screen.getByRole('button', { name: 'Play with Grace Hopper' }))
@@ -185,7 +185,7 @@ describe('Header invitations', () => {
 
     await user.click(bell)
     const dialog = screen.getByRole('dialog', { name: 'Notifications' })
-    expect(dialog).toHaveTextContent('Grace Hopper invited you.')
+    expect(dialog).toHaveTextContent('Grace Hopper sent you a board.')
     expect(dialog).toHaveTextContent('Mina Chen played you back.')
 
     await user.click(screen.getByRole('button', { name: 'View game with Mina Chen' }))

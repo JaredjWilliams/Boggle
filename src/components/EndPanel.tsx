@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { ScoredWord } from '../game/round'
 import { WordList } from './WordList'
 import './EndPanel.css'
@@ -7,9 +8,10 @@ type Props = {
   found: ScoredWord[]
   missed: ScoredWord[]
   onPlayAgain: () => void
+  send?: ReactNode
 }
 
-export function EndPanel({ score, found, missed, onPlayAgain }: Props) {
+export function EndPanel({ score, found, missed, onPlayAgain, send }: Props) {
   return (
     <section className="summary">
       <div className="summary-top">
@@ -26,9 +28,12 @@ export function EndPanel({ score, found, missed, onPlayAgain }: Props) {
             </p>
           </div>
         </div>
-        <button type="button" className="play-again" onClick={onPlayAgain}>
-          Play again
-        </button>
+        <div className="summary-actions">
+          {send}
+          <button type="button" className="play-again" onClick={onPlayAgain}>
+            Play again
+          </button>
+        </div>
       </div>
 
       <div className="summary-columns">

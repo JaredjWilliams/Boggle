@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { blankQuery, queryChain, shiftQueue, type QueryResult, type RecordedQuery } from '../test/queryChain'
-import { loadMatchPlayers, watchMatchResults } from './results'
+import { loadBoardSeats, loadMatchPlayers, loadPlayerWords, watchMatchResults } from './results'
 import { assembleMatchPlayers } from '../domain/results'
 
 const supabase = vi.hoisted(() => {
@@ -114,9 +114,10 @@ describe('loadMatchPlayers', () => {
       filters: [{ op: 'eq', column: 'game_id', value: 'game-1' }],
     })
     expect(supabase.calls[1]).toMatchObject({
-      select: 'player_id, score, words',
+      select: 'player_id, score',
       filters: [{ op: 'eq', column: 'game_id', value: 'game-1' }],
     })
+    expect(supabase.calls[1].select).not.toContain('words')
     expect(supabase.calls[2].filters).toEqual([{ op: 'in', column: 'id', value: ['ada'] }])
   })
 
@@ -136,7 +137,13 @@ describe('watchMatchResults', () => {
     expect(supabase.channel).toHaveBeenCalledWith('results-game-1')
     expect(supabase.channelApi.on).toHaveBeenCalledWith(
       'postgres_changes',
-      { event: '*', schema: 'public', table: 'results', filter: 'game_id=eq.game-1' },
+      {
+        event: '*',
+        schema: 'public',
+        table: 'results',
+        filter: 'game_id=eq.game-1',
+        select: ['player_id', 'score'],
+      },
       expect.any(Function),
     )
     const handler = supabase.channelApi.on.mock.calls[0][2] as () => void
@@ -145,5 +152,41 @@ describe('watchMatchResults', () => {
 
     stop()
     expect(supabase.removeChannel).toHaveBeenCalledOnce()
+  })
+})
+
+describe('loadPlayerWords', () => {
+  it('loads one player’s words and nothing else', async () => {
+    queue('results', { data: { words: [{ word: 'cat', points: 100 }] }, error: null })
+
+    await expect(loadPlayerWords('game-1', 'grace')).resolves.toEqual([{ word: 'cat', points: 100 }])
+    expect(supabase.calls[0]).toMatchObject({
+      select: 'words',
+      filters: [
+        { op: 'eq', column: 'game_id', value: 'game-1' },
+        { op: 'eq', column: 'player_id', value: 'grace' },
+      ],
+    })
+  })
+})
+
+describe('loadBoardSeats', () => {
+  it('loads seat status and who has finished, without word lists', async () => {
+    queue('game_players', {
+      data: [
+        { player_id: 'ada', status: 'accepted' },
+        { player_id: 'grace', status: 'declined' },
+      ],
+      error: null,
+    })
+    queue('results', { data: [{ player_id: 'ada' }], error: null })
+
+    await expect(loadBoardSeats('game-1')).resolves.toEqual([
+      { playerId: 'ada', status: 'accepted', finished: true },
+      { playerId: 'grace', status: 'declined', finished: false },
+    ])
+    expect(supabase.calls.map((call) => call.select)).toEqual(['player_id, status', 'player_id'])
+    expect(supabase.calls.every((call) => !call.select?.includes('words'))).toBe(true)
+    expect(supabase.calls.every((call) => !call.select?.includes('possible_words'))).toBe(true)
   })
 })

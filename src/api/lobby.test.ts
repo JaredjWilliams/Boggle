@@ -51,6 +51,12 @@ function answer(query: RecordedQuery): { data: unknown; error: { message: string
           game_id: 'old-invite',
           games: { board: [['B']], host_id: 'grace', created_at: expired },
         },
+        {
+          game_id: 'resent',
+          invited_at: recent,
+          invited_by: 'mina',
+          games: { board: [['C']], host_id: 'grace', created_at: expired },
+        },
       ],
       error: null,
     }
@@ -141,7 +147,10 @@ describe('loadLobby active games', () => {
     await expect(loadLobby('ada')).resolves.toMatchObject({
       lastScore: 45,
       bestScore: 120,
-      invites: [{ gameId: 'fresh-invite', daysLeft: 3 }],
+      invites: [
+        { gameId: 'fresh-invite', daysLeft: 3, senderName: 'Grace Hopper' },
+        { gameId: 'resent', daysLeft: 3, senderId: 'mina', senderName: 'A player' },
+      ],
       games: [
         {
           gameId: 'g1',

@@ -5,6 +5,7 @@ import { MatchResults, MatchReview, PotentialWords, SavedMatch } from './MatchRe
 
 const mocks = vi.hoisted(() => ({
   loadMatchPlayers: vi.fn(),
+  loadPlayerWords: vi.fn(),
   loadSavedRound: vi.fn(),
   watchMatchResults: vi.fn<(gameId: string, onChange: () => void) => () => void>(() => () => {}),
   loadWordDefinition: vi.fn<(word: string, signal: AbortSignal) => Promise<string | null>>(),
@@ -12,6 +13,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../api/results', () => ({
   loadMatchPlayers: mocks.loadMatchPlayers,
+  loadPlayerWords: mocks.loadPlayerWords,
   loadSavedRound: mocks.loadSavedRound,
   watchMatchResults: mocks.watchMatchResults,
 }))
@@ -307,6 +309,7 @@ describe('MatchReview', () => {
 
   beforeEach(() => {
     mocks.loadMatchPlayers.mockReset()
+    mocks.loadPlayerWords.mockReset()
     mocks.loadSavedRound.mockReset()
     mocks.watchMatchResults.mockReset()
     mocks.watchMatchResults.mockReturnValue(() => {})
@@ -479,6 +482,42 @@ describe('MatchReview', () => {
       vi.advanceTimersByTime(3000)
     })
     expect(mocks.loadMatchPlayers).toHaveBeenCalledTimes(2)
+    expect(mocks.loadPlayerWords).not.toHaveBeenCalled()
+  })
+
+  it('loads a finished word list once while the score poll keeps running', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    mocks.loadPlayerWords.mockResolvedValue([{ word: 'eat', points: 100 }])
+    mocks.loadMatchPlayers.mockResolvedValue([
+      { playerId: 'grace', name: 'Grace Hopper', score: 100, words: null },
+      { playerId: 'mina', name: 'Mina Chen', score: null, words: null },
+    ])
+    render(
+      <MatchReview
+        gameId="game-1"
+        viewerId="ada"
+        viewerName="Ada Lovelace"
+        score={200}
+        words={[{ word: 'cat', points: 100 }]}
+        missed={[]}
+        rivals={[{ id: 'grace', name: 'Grace Hopper' }]}
+        showingPotential={false}
+        onShowPotential={vi.fn()}
+        onBack={vi.fn()}
+        onPlayAgain={vi.fn()}
+      />,
+    )
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'You win' })).toBeInTheDocument()
+    expect(mocks.loadPlayerWords).toHaveBeenCalledTimes(1)
+    expect(mocks.loadPlayerWords).toHaveBeenCalledWith('game-1', 'grace')
+    expect(await screen.findByText('eat')).toBeInTheDocument()
+
+    await act(async () => {
+      vi.advanceTimersByTime(3000)
+    })
+    expect(mocks.loadMatchPlayers).toHaveBeenCalledTimes(2)
+    expect(mocks.loadPlayerWords).toHaveBeenCalledTimes(1)
   })
 
   it('reloads when the other result is saved', async () => {

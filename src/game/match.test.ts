@@ -171,4 +171,25 @@ describe('match outcome', () => {
     ).toBe('Waiting for the other players')
     expect(outcomeLabel(matchOutcome([ada]))).toBe('You finished')
   })
+
+  it('keeps the leader when someone is invited after two people have finished', () => {
+    expect(
+      outcomeLabel(
+        matchOutcome([
+          ada,
+          { ...grace, score: 100 },
+          { id: 'mina', name: 'Mina Chen', you: false, score: null, words: null },
+        ]),
+      ),
+    ).toBe('You win')
+    expect(
+      outcomeLabel(
+        matchOutcome([
+          ada,
+          { ...grace, score: 200 },
+          { id: 'mina', name: 'Mina Chen', you: false, score: null, words: null },
+        ]),
+      ),
+    ).toBe("It's a tie")
+  })
 })

@@ -17,6 +17,7 @@ import { HomeDashboard } from './components/HomeDashboard'
 import { ProfileScreen } from './components/ProfileScreen'
 import { LoginPage } from './components/LoginPage'
 import { ScreenFrame } from './components/ScreenFrame'
+import { SendBoard } from './components/SendBoard'
 import { SettingsScreen } from './components/SettingsScreen'
 import { PlayerStats } from './components/StatsScreen'
 import { StatusBar } from './components/StatusBar'
@@ -242,6 +243,18 @@ function PlayerGame({
 
   const wordsUnavailable = round.phase === 'loading' || round.loadError
 
+  function boardSend(gameId: string, blockDaily: boolean, icon = false) {
+    if (!player.id || (blockDaily && match.daily)) return undefined
+    return (
+      <SendBoard
+        gameId={gameId}
+        friends={lobby.friends}
+        onSend={(ids) => match.sendBoard(gameId, ids)}
+        icon={icon}
+      />
+    )
+  }
+
   if (round.phase === 'ended' && match.rivals.length > 0 && match.matchId && player.id) {
     return (
       <ScreenFrame header={signedInHeader(leaveRound, false)}>
@@ -258,6 +271,7 @@ function PlayerGame({
           onShowPotential={() => match.setShowPotential(true)}
           onBack={() => match.setShowPotential(false)}
           onPlayAgain={() => void match.begin('shake')}
+          send={boardSend(match.matchId, true, true)}
         />
       </ScreenFrame>
     )
@@ -271,6 +285,7 @@ function PlayerGame({
           found={round.found}
           missed={round.missed}
           onPlayAgain={() => void match.begin('shake')}
+          send={match.matchId ? boardSend(match.matchId, true) : undefined}
         />
       </ScreenFrame>
     )
@@ -288,6 +303,7 @@ function PlayerGame({
             setOpenGame(null)
             void match.begin('shake')
           }}
+          send={boardSend(openGame.gameId, false, true)}
         />
       </ScreenFrame>
     )

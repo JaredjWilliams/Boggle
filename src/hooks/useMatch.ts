@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { hasPlayedDaily, loadDailyBoard } from '../api/daily'
-import { answerInvite, createMatch, saveResult } from '../api/matches'
+import { answerInvite, createMatch, inviteToBoard, saveResult, type InviteBoardResult } from '../api/matches'
 import { playedOn } from '../domain/dates'
 import type { Friend, Invite } from '../domain/lobby'
 import type { Board } from '../game/dice'
@@ -141,13 +141,31 @@ export function useMatch({
     try {
       await answerInvite(invite.gameId, playerId, 'accepted')
       void refresh()
-      setRivals([{ id: invite.hostId, name: invite.hostName }])
+      setRivals([
+        {
+          id: invite.senderId || invite.hostId,
+          name: invite.senderName || invite.hostName,
+        },
+      ])
       setShowPotential(false)
       setMatchId(invite.gameId)
       startRound(invite.board)
     } catch (error) {
       setNotice(errorMessage(error, 'Could not join the game.'))
     }
+  }
+
+  async function sendBoard(gameId: string, playerIds: readonly string[]): Promise<InviteBoardResult> {
+    const outcome = await inviteToBoard(gameId, playerIds)
+    const invited = friends
+      .filter((friend) => outcome.invited.includes(friend.id))
+      .map((friend) => ({ id: friend.id, name: friend.name }))
+    setRivals((current) => {
+      const seen = new Set(current.map((rival) => rival.id))
+      return [...current, ...invited.filter((rival) => !seen.has(rival.id))]
+    })
+    void refresh()
+    return outcome
   }
 
   async function decline(invite: Invite) {
@@ -171,6 +189,7 @@ export function useMatch({
     begin,
     accept,
     decline,
+    sendBoard,
     clearRound,
     restoreMatch,
   }

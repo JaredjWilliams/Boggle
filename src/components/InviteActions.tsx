@@ -12,7 +12,7 @@ export function InviteActions({ invite, onAccept, onDecline, onDone }: Props) {
     <>
       <button
         type="button"
-        aria-label={`Play with ${invite.hostName}`}
+        aria-label={`Play with ${invite.senderName?.trim() || invite.hostName}`}
         onClick={() => {
           onDone?.()
           onAccept(invite)
@@ -22,7 +22,7 @@ export function InviteActions({ invite, onAccept, onDecline, onDone }: Props) {
       </button>
       <button
         type="button"
-        aria-label={`Decline invitation from ${invite.hostName}`}
+        aria-label={`Decline invitation from ${invite.senderName?.trim() || invite.hostName}`}
         onClick={() => {
           onDone?.()
           onDecline(invite)

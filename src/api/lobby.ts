@@ -22,6 +22,8 @@ type GameCard = {
 
 type GameSeat = {
   game_id: string
+  invited_at?: string | null
+  invited_by?: string | null
   games: GameCard | GameCard[] | null
 }
 
@@ -41,6 +43,8 @@ type ScoreListRow = {
 type SeatEmbed = {
   player_id: string
   status: string | null
+  invited_at?: string | null
+  invited_by?: string | null
 }
 
 type ScoreEmbed = {
@@ -72,7 +76,7 @@ export async function loadLobby(playerId: string): Promise<Lobby> {
     supabase.from('profiles').select('id, name, username').neq('id', playerId),
     supabase
       .from('game_players')
-      .select('game_id, games(board, host_id, created_at)')
+      .select('game_id, invited_at, invited_by, games(board, host_id, created_at)')
       .eq('player_id', playerId)
       .eq('status', 'invited'),
     supabase.from('results').select('game_id, score, games(created_at)').eq('player_id', playerId),
@@ -81,7 +85,7 @@ export async function loadLobby(playerId: string): Promise<Lobby> {
     supabase
       .from('games')
       .select(
-        'id, created_at, host_id, game_players(player_id, status), results(player_id, score), mine:game_players!inner(player_id)',
+        'id, created_at, host_id, game_players(player_id, status, invited_at, invited_by), results(player_id, score), mine:game_players!inner(player_id)',
       )
       .eq('mine.player_id', playerId)
       .eq('mine.status', 'accepted'),
@@ -104,10 +108,11 @@ export async function loadLobby(playerId: string): Promise<Lobby> {
   const seatRows = (unwrap(seats) ?? []) as GameSeat[]
   const hostIds = seatRows.flatMap((seat) => {
     const game = first(seat.games)
-    return game ? [game.host_id] : []
+    const ids = game ? [game.host_id] : []
+    return seat.invited_by ? [...ids, seat.invited_by] : ids
   })
   const hosts = hostIds.length
-    ? await supabase.from('profiles').select('id, name').in('id', hostIds)
+    ? await supabase.from('profiles').select('id, name').in('id', [...new Set(hostIds)])
     : { data: [], error: null }
   const acceptedRows = (unwrap(accepted) ?? []) as AcceptedGameRow[]
   const playedRows = (unwrap(played) ?? []) as PlayedGameRow[]
@@ -122,13 +127,17 @@ export async function loadLobby(playerId: string): Promise<Lobby> {
 
   const invites: Invite[] = seatRows.flatMap((seat) => {
     const game = first(seat.games)
-    if (!game || (game.created_at && gameIsExpired(game.created_at))) return []
-    const daysLeft = game.created_at ? daysLeftToPlay(game.created_at) : null
+    const sentAt = seat.invited_at || game?.created_at
+    if (!game || (sentAt && gameIsExpired(sentAt))) return []
+    const daysLeft = sentAt ? daysLeftToPlay(sentAt) : null
+    const senderId = seat.invited_by || game.host_id
     return [
       {
         gameId: seat.game_id,
         hostId: game.host_id,
         hostName: hostNames.get(game.host_id) ?? 'A player',
+        senderId,
+        senderName: hostNames.get(senderId) ?? 'A player',
         board: game.board,
         ...(daysLeft === null ? {} : { daysLeft }),
       },
@@ -220,8 +229,9 @@ function seatsOf(games: readonly AcceptedGameRow[]) {
       gameId: game.id,
       playerId: seat.player_id,
       status: seat.status ?? '',
-      createdAt: game.created_at ?? '',
+      createdAt: seat.invited_at || game.created_at || '',
       hostId: game.host_id ?? '',
+      ...(seat.invited_by ? { invitedBy: seat.invited_by } : {}),
     })),
   )
 }

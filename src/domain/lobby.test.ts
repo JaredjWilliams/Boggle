@@ -124,6 +124,7 @@ describe('assembleActiveGames', () => {
         losses: 1,
         yourScore: 80,
         opponentScore: null,
+        daysLeft: 5,
       },
       {
         gameId: 'g1',
@@ -301,6 +302,26 @@ describe('playedBackNotices', () => {
     const read = new Set([completedGameKey(games[0])])
     expect(playedBackNotices(games, read)).toEqual([])
   })
+
+  it('notifies the player who sent a later invitation', () => {
+    const seats: ActiveSeat[] = [
+      seat('board', 'ada', 'accepted', '2026-10-22T18:00:00.000Z', 'ada'),
+      seat('board', 'grace', 'accepted', '2026-10-22T18:00:00.000Z', 'ada', 'ada'),
+      seat('board', 'mina', 'accepted', '2026-10-22T19:00:00.000Z', 'ada', 'grace'),
+    ]
+    const scores: HeadScore[] = [
+      { gameId: 'board', playerId: 'ada', score: 80 },
+      { gameId: 'board', playerId: 'grace', score: 40 },
+      { gameId: 'board', playerId: 'mina', score: 20 },
+    ]
+
+    const games = assembleActiveGames('grace', seats, scores, names, { now })
+    expect(games.map((game) => ({ opponentId: game.opponentId, hosted: game.hosted }))).toEqual([
+      { opponentId: 'ada', hosted: false },
+      { opponentId: 'mina', hosted: true },
+    ])
+    expect(playedBackNotices(games, new Set()).map((game) => game.opponentId)).toEqual(['mina'])
+  })
 })
 
 function game(gameId: string, opponentName: string, playedBack: boolean, hosted = false): ActiveGame {
@@ -323,6 +344,7 @@ function seat(
   status: string,
   createdAt: string,
   hostId = '',
+  invitedBy?: string,
 ): ActiveSeat {
-  return { gameId, playerId, status, createdAt, hostId }
+  return { gameId, playerId, status, createdAt, hostId, ...(invitedBy ? { invitedBy } : {}) }
 }
