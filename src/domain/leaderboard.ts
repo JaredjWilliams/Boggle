@@ -57,6 +57,7 @@ const MINIMUM_FINISHED_GAMES = 10
 export type ArchivedWords = {
   player_id: string
   words_found: number
+  score?: number
 }
 
 const BOARDS: readonly {
@@ -80,7 +81,7 @@ const BOARDS: readonly {
   {
     id: 'bestScore',
     title: 'Highest score',
-    note: 'The highest score from a single game.',
+    note: 'The highest score from a single game, including games kept in history.',
     figureKind: 'count',
   },
   {
@@ -300,10 +301,18 @@ function friendRows(pairs: readonly PairTally[], totals: ReadonlyMap<string, Tot
 function applyArchivedWords(totals: Map<string, Totals>, archived: readonly ArchivedWords[]) {
   for (const row of archived) {
     if (!row.player_id) continue
-    if (typeof row.words_found !== 'number' || !Number.isFinite(row.words_found)) continue
     const player = totals.get(row.player_id)
-    if (!player || row.words_found <= player.bestWords) continue
-    player.bestWords = row.words_found
+    if (!player) continue
+    if (
+      typeof row.words_found === 'number' &&
+      Number.isFinite(row.words_found) &&
+      row.words_found > player.bestWords
+    ) {
+      player.bestWords = row.words_found
+    }
+    if (typeof row.score === 'number' && Number.isFinite(row.score) && row.score > player.bestScore) {
+      player.bestScore = row.score
+    }
   }
 }
 

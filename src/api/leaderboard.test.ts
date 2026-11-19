@@ -269,6 +269,36 @@ describe('leaderboard records', () => {
     })
   })
 
+  it('counts a kept history game toward the highest score', () => {
+    const boards = buildLeaderboard(
+      [
+        result({
+          game_id: 'live',
+          player_id: 'ada',
+          score: 10,
+          words: [{ word: 'cat' }],
+          profiles: { name: 'Ada Lovelace' },
+        }),
+        ...fillers('ada', 'Ada Lovelace', 10),
+      ],
+      [
+        { player_id: 'ada', words_found: 2, score: 80 },
+        { player_id: 'ada', words_found: Number.NaN, score: 90 },
+        { player_id: 'ada', words_found: 1, score: 4 },
+        { player_id: 'ada', words_found: 1, score: Number.NaN },
+        { player_id: '', words_found: 1, score: 500 },
+        { player_id: 'stranger', words_found: 1, score: 999 },
+      ],
+    )
+
+    const best = boards.find((board) => board.id === 'bestScore')
+    expect(best?.note).toBe('The highest score from a single game, including games kept in history.')
+    expect(best?.rows.find((row) => row.playerId === 'ada')).toMatchObject({ value: 90 })
+    expect(boards.find((board) => board.id === 'points')?.rows.find((row) => row.playerId === 'ada')).toMatchObject({
+      value: 10,
+    })
+  })
+
   it('ranks the longest saved word and shares a rank when the lengths match', () => {
     expect(rows('longest')).toEqual([
       {
