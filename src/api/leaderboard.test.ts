@@ -52,6 +52,7 @@ function rows(
     | 'longest'
     | 'wins'
     | 'friends'
+    | 'daily'
     | 'outgoing'
     | 'averageWords'
     | 'averagePoints',
@@ -67,6 +68,22 @@ function rows(
   ).find((item) => item.id === id)
   if (!board) throw new Error(`Missing ${id}`)
   return board.rows
+}
+
+function dailyPlay(
+  playerId: string,
+  name: string,
+  dailyOn: string,
+  createdAt: string,
+  score: number,
+): LeaderboardResult {
+  return result({
+    game_id: `${dailyOn}-${playerId}-${createdAt}`,
+    player_id: playerId,
+    score,
+    profiles: { name },
+    games: { daily_on: dailyOn, created_at: createdAt },
+  })
 }
 
 function fillers(playerId: string, name: string, count: number): LeaderboardResult[] {
@@ -496,6 +513,114 @@ describe('leaderboard records', () => {
     expect(points?.rows.map((row) => row.name)).toEqual(['Grace Hopper'])
   })
 
+  it('gives each closed daily to the unique leader, and lists a player who did not win', () => {
+    const daily = buildLeaderboard(
+      [
+        dailyPlay('ada', 'Ada Lovelace', '2026-10-21', '2026-10-21T08:00:00.000Z', 80),
+        dailyPlay('grace', 'Grace Hopper', '2026-10-21', '2026-10-21T12:00:00.000Z', 40),
+        dailyPlay('ada', 'Ada Lovelace', '2026-10-22', '2026-10-22T08:00:00.000Z', 30),
+        dailyPlay('grace', 'Grace Hopper', '2026-10-22', '2026-10-22T12:00:00.000Z', 20),
+        ...fillers('ada', 'Ada Lovelace', 9),
+        ...fillers('grace', 'Grace Hopper', 9),
+      ],
+      [],
+      new Date('2026-10-23T12:00:00.000Z'),
+    ).find((board) => board.id === 'daily')
+
+    expect(daily?.rows.map((row) => [row.name, row.figure, row.rank])).toEqual([
+      ['Ada Lovelace', '2', 1],
+      ['Grace Hopper', '0', 2],
+    ])
+  })
+
+  it('gives a tied daily to nobody', () => {
+    const daily = buildLeaderboard(
+      [
+        dailyPlay('ada', 'Ada Lovelace', '2026-10-21', '2026-10-21T08:00:00.000Z', 40),
+        dailyPlay('grace', 'Grace Hopper', '2026-10-21', '2026-10-21T12:00:00.000Z', 40),
+        ...fillers('ada', 'Ada Lovelace', 10),
+        ...fillers('grace', 'Grace Hopper', 10),
+      ],
+      [],
+      new Date('2026-10-23T12:00:00.000Z'),
+    ).find((board) => board.id === 'daily')
+
+    expect(daily?.rows.map((row) => [row.name, row.figure])).toEqual([
+      ['Ada Lovelace', '0'],
+      ['Grace Hopper', '0'],
+    ])
+  })
+
+  it('waits to award a daily until the day has closed', () => {
+    const daily = buildLeaderboard(
+      [
+        dailyPlay('ada', 'Ada Lovelace', '2026-10-21', '2026-10-21T08:00:00.000Z', 80),
+        dailyPlay('grace', 'Grace Hopper', '2026-10-21', '2026-10-21T12:00:00.000Z', 40),
+        ...fillers('ada', 'Ada Lovelace', 10),
+        ...fillers('grace', 'Grace Hopper', 10),
+      ],
+      [],
+      new Date('2026-10-21T20:00:00.000Z'),
+    ).find((board) => board.id === 'daily')
+
+    expect(daily?.rows.map((row) => [row.name, row.figure])).toEqual([
+      ['Ada Lovelace', '0'],
+      ['Grace Hopper', '0'],
+    ])
+  })
+
+  it('uses the later score when a player finishes the daily again before the close', () => {
+    const daily = buildLeaderboard(
+      [
+        dailyPlay('ada', 'Ada Lovelace', '2026-10-21', '2026-10-21T08:00:00.000Z', 10),
+        dailyPlay('ada', 'Ada Lovelace', '2026-10-21', '2026-10-21T18:00:00.000Z', 80),
+        dailyPlay('grace', 'Grace Hopper', '2026-10-21', '2026-10-21T12:00:00.000Z', 50),
+        ...fillers('ada', 'Ada Lovelace', 9),
+        ...fillers('grace', 'Grace Hopper', 10),
+      ],
+      [],
+      new Date('2026-10-23T12:00:00.000Z'),
+    ).find((board) => board.id === 'daily')
+
+    expect(daily?.rows.map((row) => [row.name, row.figure])).toEqual([
+      ['Ada Lovelace', '1'],
+      ['Grace Hopper', '0'],
+    ])
+  })
+
+  it('leaves the earlier winner in place when a later score arrives after the close', () => {
+    const daily = buildLeaderboard(
+      [
+        dailyPlay('ada', 'Ada Lovelace', '2026-10-21', '2026-10-21T08:00:00.000Z', 80),
+        dailyPlay('grace', 'Grace Hopper', '2026-10-21', '2026-10-22T13:00:00.000Z', 100),
+        ...fillers('ada', 'Ada Lovelace', 10),
+        ...fillers('grace', 'Grace Hopper', 10),
+      ],
+      [],
+      new Date('2026-10-23T12:00:00.000Z'),
+    ).find((board) => board.id === 'daily')
+
+    expect(daily?.rows.map((row) => [row.name, row.figure])).toEqual([
+      ['Ada Lovelace', '1'],
+      ['Grace Hopper', '0'],
+    ])
+  })
+
+  it('keeps a player with 10 or fewer finished games off the daily board', () => {
+    const daily = buildLeaderboard(
+      [
+        dailyPlay('ada', 'Ada Lovelace', '2026-10-21', '2026-10-21T08:00:00.000Z', 80),
+        dailyPlay('grace', 'Grace Hopper', '2026-10-21', '2026-10-21T12:00:00.000Z', 40),
+        ...fillers('ada', 'Ada Lovelace', 9),
+        ...fillers('grace', 'Grace Hopper', 10),
+      ],
+      [],
+      new Date('2026-10-23T12:00:00.000Z'),
+    ).find((board) => board.id === 'daily')
+
+    expect(daily?.rows.map((row) => row.name)).toEqual(['Grace Hopper'])
+  })
+
   it('uses a saved name when an earlier row had none', () => {
     const boards = buildLeaderboard(
       [
@@ -525,6 +650,8 @@ describe('loadLeaderboard', () => {
             wins: 1,
             comparisons: 2,
             outgoing: 0,
+            dailyWins: 4,
+            dailyStarts: 6,
           },
         ],
         pairs: [],
@@ -545,6 +672,11 @@ describe('loadLeaderboard', () => {
     })
     expect(boards.find((board) => board.id === 'longest')?.rows[0]).toMatchObject({
       figure: 'QUARTZ',
+    })
+    expect(boards.find((board) => board.id === 'daily')?.rows[0]).toMatchObject({
+      name: 'Ada Lovelace',
+      figure: '4',
+      rank: 1,
     })
   })
 

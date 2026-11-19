@@ -4,6 +4,7 @@ import { compareWords } from '../game/words'
 import { formatCount } from '../stats/series'
 
 export type BoardId =
+  | 'daily'
   | 'points'
   | 'bestScore'
   | 'words'
@@ -64,6 +65,12 @@ const BOARDS: readonly {
   note: string
   figureKind: 'count' | 'word'
 }[] = [
+  {
+    id: 'daily',
+    title: 'Daily boards won',
+    note: 'Highest score at the end of that day. A tie is not a win.',
+    figureKind: 'count',
+  },
   {
     id: 'points',
     title: 'Points scored',
@@ -127,6 +134,8 @@ type Play = {
   score: number
   wordCount: number
   longest: string
+  dailyOn: string | null
+  createdAt: number
   hostId: string | null
 }
 
@@ -142,6 +151,8 @@ export type LeaderboardPlayer = {
   wins: number
   comparisons: number
   outgoing: number
+  dailyWins: number
+  dailyStarts: number
 }
 
 export type LeaderboardPair = {
@@ -177,6 +188,7 @@ export function placeLabel(rank: number): string {
 export function buildLeaderboard(
   results: readonly LeaderboardResult[],
   archived: readonly ArchivedWords[] = [],
+  now = new Date(),
 ): LeaderboardBoard[] {
   const plays = results.flatMap(toPlay)
   const byGame = new Map<string, Play[]>()
@@ -205,6 +217,7 @@ export function buildLeaderboard(
 
   applyArchivedWords(totals, archived)
   awardGathering(byGame, totals)
+  awardDaily(plays, totals, now)
   return rankLeaderboard([...totals.values()], tallyPairs(byGame))
 }
 
@@ -216,7 +229,11 @@ export function rankLeaderboard(
   const totals = new Map<string, Totals>()
   for (const player of players) {
     if (!player.playerId || !player.name.trim()) continue
-    totals.set(player.playerId, { ...player })
+    totals.set(player.playerId, {
+      ...player,
+      dailyWins: player.dailyWins ?? 0,
+      dailyStarts: player.dailyStarts ?? 0,
+    })
   }
   return BOARDS.map((board) => ({
     ...board,
@@ -315,6 +332,7 @@ function rowsFor(id: BoardId, totals: Map<string, Totals>): LeaderboardRow[] {
 
 function draftFor(id: BoardId, player: Totals): Draft | null {
   if (player.games <= MINIMUM_FINISHED_GAMES) return null
+  if (id === 'daily' && player.dailyStarts > 0) return counted(player, player.dailyWins)
   if (id === 'points' && player.games > 0) return counted(player, player.points)
   if (id === 'bestScore' && player.games > 0) return counted(player, player.bestScore)
   if (id === 'words' && player.games > 0) return counted(player, player.bestWords)
@@ -389,9 +407,78 @@ function ensure(totals: Map<string, Totals>, play: Play): Totals {
     wins: 0,
     comparisons: 0,
     outgoing: 0,
+    dailyWins: 0,
+    dailyStarts: 0,
   }
   totals.set(play.playerId, created)
   return created
+}
+
+/** The last offset still on a calendar date. Noon UTC the next day is midnight in UTC−12. */
+const DAILY_CLOSE_UTC_HOUR = 12
+
+function awardDaily(plays: readonly Play[], totals: Map<string, Totals>, now: Date) {
+  const latest = new Map<string, Play>()
+  const contenders = new Map<string, Play>()
+  for (const play of plays) {
+    if (!play.dailyOn) continue
+    const key = `${play.dailyOn}\0${play.playerId}`
+    const current = latest.get(key)
+    if (!current || play.createdAt >= current.createdAt) latest.set(key, play)
+
+    const closesAt = dayClosesAt(play.dailyOn)
+    if (closesAt == null || play.createdAt >= closesAt) continue
+    const counted = contenders.get(key)
+    if (!counted || play.createdAt >= counted.createdAt) contenders.set(key, play)
+  }
+
+  const byDay = groupByDay(latest.values())
+  const finalByDay = groupByDay(contenders.values())
+
+  for (const [day, group] of byDay) {
+    for (const play of group) ensure(totals, play).dailyStarts += 1
+    const closesAt = dayClosesAt(day)
+    if (closesAt == null || now.getTime() < closesAt) continue
+    const leaders = uniqueLeaders(finalByDay.get(day) ?? [])
+    if (leaders.length !== 1) continue
+    ensure(totals, leaders[0]).dailyWins += 1
+  }
+}
+
+function groupByDay(plays: Iterable<Play>): Map<string, Play[]> {
+  const byDay = new Map<string, Play[]>()
+  for (const play of plays) {
+    const group = byDay.get(play.dailyOn ?? '') ?? []
+    group.push(play)
+    byDay.set(play.dailyOn ?? '', group)
+  }
+  return byDay
+}
+
+function uniqueLeaders(group: readonly Play[]): Play[] {
+  let best = Number.NEGATIVE_INFINITY
+  for (const play of group) {
+    if (play.score > best) best = play.score
+  }
+  return group.filter((play) => play.score === best)
+}
+
+function dayClosesAt(dailyOn: string): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dailyOn)
+  if (!match) return null
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const start = new Date(Date.UTC(year, month - 1, day))
+  if (start.getUTCFullYear() !== year || start.getUTCMonth() !== month - 1 || start.getUTCDate() !== day) {
+    return null
+  }
+  return Date.UTC(year, month - 1, day + 1, DAILY_CLOSE_UTC_HOUR)
+}
+
+function playedAt(createdAt: string | null | undefined): number {
+  const parsed = Date.parse(createdAt ?? '')
+  return Number.isNaN(parsed) ? 0 : parsed
 }
 
 function betterWord(current: string, next: string): string {
@@ -413,6 +500,8 @@ function toPlay(row: LeaderboardResult): Play[] {
       score: row.score,
       wordCount: words.length,
       longest: longestWord(words),
+      dailyOn: game?.daily_on?.trim() || null,
+      createdAt: playedAt(game?.created_at),
       hostId: game?.host_id?.trim() || null,
     },
   ]
