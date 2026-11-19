@@ -51,6 +51,53 @@ export function boardWords(
   return rankedWords([...byWord.values()])
 }
 
+export const OPPONENT_PALETTE = 4
+
+export type WordTone =
+  | { kind: 'you' }
+  | { kind: 'opponent'; index: number }
+  | { kind: 'shared'; stops: readonly WordToneStop[] }
+  | { kind: 'missed' }
+
+export type WordToneStop = 'you' | number
+
+export function wordTone(word: string, players: readonly ResultPlayer[]): WordTone {
+  const youFound = players.some(
+    (player) => player.you && player.words?.some((item) => item.word === word),
+  )
+  const opponents = players.filter((player) => !player.you)
+  const opponentStops: number[] = []
+  for (let index = 0; index < opponents.length; index += 1) {
+    const opponent = opponents[index]
+    if (!opponent.words?.some((item) => item.word === word)) continue
+    opponentStops.push(index % OPPONENT_PALETTE)
+  }
+
+  const finderCount = (youFound ? 1 : 0) + opponentStops.length
+  if (finderCount === 0) return { kind: 'missed' }
+  if (youFound && opponentStops.length === 0) return { kind: 'you' }
+  if (!youFound && opponentStops.length === 1) {
+    return { kind: 'opponent', index: opponentStops[0] }
+  }
+
+  const stops: WordToneStop[] = []
+  if (youFound) stops.push('you')
+  stops.push(...opponentStops)
+  return { kind: 'shared', stops }
+}
+
+export function wordTones(
+  words: readonly ScoredWord[],
+  players: readonly ResultPlayer[],
+): Map<string, WordTone> {
+  const tones = new Map<string, WordTone>()
+  for (const item of words) {
+    tones.set(item.word, wordTone(item.word, players))
+  }
+  return tones
+}
+
+
 export function presentMatch(
   remote: readonly RosterPlayer[] | null,
   viewer: ViewerResult,

@@ -6,6 +6,13 @@
   min-height: 0;
 }
 
+.potential {
+  --opp-0: var(--bad);
+  --opp-1: #ffb020;
+  --opp-2: #c084fc;
+  --opp-3: #38bdf8;
+}
+
 .match-loading {
   padding: 28px 20px;
 }
@@ -334,6 +341,57 @@
 
 .potential-definition.is-pending {
   color: var(--muted);
+}
+
+.potential-key {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 14px;
+  align-self: stretch;
+  flex: none;
+  margin: 0 0 4px;
+  padding: 0 6px;
+  list-style: none;
+}
+
+.potential-key li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.potential-swatch {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--ink);
+}
+
+.potential-swatch.is-you {
+  background: var(--good);
+}
+
+.potential-swatch.is-opp-0 {
+  background: var(--opp-0);
+}
+
+.potential-swatch.is-opp-1 {
+  background: var(--opp-1);
+}
+
+.potential-swatch.is-opp-2 {
+  background: var(--opp-2);
+}
+
+.potential-swatch.is-opp-3 {
+  background: var(--opp-3);
 }
 
 .potential-scroll {

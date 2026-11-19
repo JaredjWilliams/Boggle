@@ -8,8 +8,10 @@ import type { Board as LetterBoard } from '../game/dice'
 import {
   boardWords,
   matchOutcome,
+  OPPONENT_PALETTE,
   outcomeLabel,
   presentMatch,
+  wordTones,
   type MatchOutcome,
   type ResultPlayer,
   type Rival,
@@ -188,7 +190,12 @@ export function MatchReview({
 
   if (showingPotential) {
     return (
-      <PotentialWords words={boardWords(words ?? [], missed)} board={board} onBack={onBack} />
+      <PotentialWords
+        words={boardWords(words ?? [], missed)}
+        players={players}
+        board={board}
+        onBack={onBack}
+      />
     )
   }
 
@@ -346,10 +353,12 @@ type DefinitionLookup = {
 
 export function PotentialWords({
   words,
+  players = [],
   board,
   onBack,
 }: {
   words: readonly ScoredWord[]
+  players?: readonly ResultPlayer[]
   board: LetterBoard
   onBack: () => void
 }) {
@@ -360,6 +369,8 @@ export function PotentialWords({
     () => (selected ? wordHighlight(board, selected) : emptyHighlight),
     [board, selected],
   )
+  const tones = useMemo(() => wordTones(words, players), [words, players])
+  const opponents = useMemo(() => players.filter((player) => !player.you), [players])
   const selectedPoints = words.find((item) => item.word === selected)?.points
   const definition = lookup?.word === selected ? lookup : null
 
@@ -408,11 +419,29 @@ export function PotentialWords({
               flat
               scores={false}
               selected={selected}
+              tones={tones}
               onSelect={(word) => setSelected((current) => (current === word ? null : word))}
             />
           )}
         </div>
         <div className="potential-board">
+          {opponents.length > 1 && (
+            <ul className="potential-key" aria-label="Player colors">
+              <li>
+                <span className="potential-swatch is-you" aria-hidden="true" />
+                <span>You</span>
+              </li>
+              {opponents.map((opponent, index) => (
+                <li key={opponent.id || opponent.name}>
+                  <span
+                    className={`potential-swatch is-opp-${index % OPPONENT_PALETTE}`}
+                    aria-hidden="true"
+                  />
+                  <span>{opponent.name}</span>
+                </li>
+              ))}
+            </ul>
+          )}
           <p className={selected ? 'potential-trace is-word' : 'potential-trace'} aria-live="polite">
             {selected ? (
               <>

@@ -5,6 +5,8 @@ import {
   matchOutcome,
   outcomeLabel,
   presentMatch,
+  wordTone,
+  wordTones,
   type ResultPlayer,
 } from './match'
 
@@ -42,6 +44,43 @@ describe('boardWords', () => {
       { word: 'cat', points: 100 },
       { word: 'eat', points: 100 },
     ])
+  })
+})
+
+describe('wordTone', () => {
+  const mina: ResultPlayer = {
+    id: 'mina',
+    name: 'Mina Chen',
+    you: false,
+    score: 100,
+    words: [{ word: 'cats', points: 400 }],
+  }
+
+  it('marks words you found, opponents found, shared, or missed', () => {
+    const players = [
+      { ...ada, words: [{ word: 'cat', points: 100 }, { word: 'shared', points: 100 }] },
+      { ...grace, words: [{ word: 'cats', points: 400 }, { word: 'shared', points: 100 }] },
+      mina,
+    ]
+
+    expect(wordTone('cat', players)).toEqual({ kind: 'you' })
+    expect(wordTone('eat', players)).toEqual({ kind: 'missed' })
+    expect(wordTone('cats', players)).toEqual({ kind: 'shared', stops: [0, 1] })
+    expect(wordTone('shared', players)).toEqual({ kind: 'shared', stops: ['you', 0] })
+    expect(wordTone('alone', [
+      ada,
+      { ...grace, words: [{ word: 'alone', points: 100 }] },
+    ])).toEqual({ kind: 'opponent', index: 0 })
+  })
+
+  it('builds tones for a board list', () => {
+    const players = [ada, grace]
+    expect(wordTones([{ word: 'cat', points: 100 }, { word: 'cats', points: 400 }], players)).toEqual(
+      new Map([
+        ['cat', { kind: 'you' }],
+        ['cats', { kind: 'opponent', index: 0 }],
+      ]),
+    )
   })
 })
 

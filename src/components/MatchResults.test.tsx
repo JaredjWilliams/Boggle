@@ -248,6 +248,53 @@ describe('PotentialWords', () => {
     expect(mocks.loadWordDefinition).toHaveBeenCalledTimes(1)
   })
 
+  it('keeps the player color key above the board while a definition is open', async () => {
+    mocks.loadWordDefinition.mockResolvedValue('A feline.')
+    render(
+      <PotentialWords
+        words={[{ word: 'cat', points: 100 }]}
+        players={[
+          {
+            id: 'ada',
+            name: 'Ada Lovelace',
+            you: true,
+            score: 100,
+            words: [{ word: 'cat', points: 100 }],
+          },
+          {
+            id: 'grace',
+            name: 'Grace Hopper',
+            you: false,
+            score: 100,
+            words: [],
+          },
+          {
+            id: 'mina',
+            name: 'Mina Chen',
+            you: false,
+            score: 50,
+            words: [],
+          },
+        ]}
+        board={playedBoard}
+        onBack={vi.fn()}
+      />,
+    )
+
+    const board = document.querySelector('.potential-board')
+    const key = screen.getByRole('list', { name: 'Player colors' })
+    const trace = document.querySelector('.potential-trace')
+    expect(board?.firstElementChild).toBe(key)
+    expect(key.compareDocumentPosition(trace!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+
+    await userEvent.click(screen.getByRole('button', { name: 'cat' }))
+    expect(await screen.findByText('A feline.')).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Player colors' })).toBeInTheDocument()
+    expect(document.querySelector('.potential-board')?.firstElementChild).toBe(
+      screen.getByRole('list', { name: 'Player colors' }),
+    )
+  })
+
   it('keeps a slow definition from replacing the word now selected', async () => {
     const first = deferred<string | null>()
     const second = deferred<string | null>()
@@ -296,6 +343,93 @@ describe('PotentialWords', () => {
     )
     expect(screen.getByText('This board was not saved.')).toBeInTheDocument()
     expect(document.querySelector('.grid')).not.toBeInTheDocument()
+  })
+
+  it('marks words with finder dots and shows a key for multiple opponents', () => {
+    render(
+      <PotentialWords
+        words={[
+          { word: 'yours', points: 100 },
+          { word: 'theirs', points: 100 },
+          { word: 'both', points: 100 },
+          { word: 'rivals', points: 100 },
+          { word: 'missed', points: 100 },
+        ]}
+        players={[
+          {
+            id: 'ada',
+            name: 'Ada Lovelace',
+            you: true,
+            score: 200,
+            words: [
+              { word: 'yours', points: 100 },
+              { word: 'both', points: 100 },
+            ],
+          },
+          {
+            id: 'grace',
+            name: 'Grace Hopper',
+            you: false,
+            score: 100,
+            words: [
+              { word: 'theirs', points: 100 },
+              { word: 'both', points: 100 },
+              { word: 'rivals', points: 100 },
+            ],
+          },
+          {
+            id: 'mina',
+            name: 'Mina Chen',
+            you: false,
+            score: 100,
+            words: [{ word: 'rivals', points: 100 }],
+          },
+        ]}
+        board={playedBoard}
+        onBack={vi.fn()}
+      />,
+    )
+
+    expect(finderDots('yours')).toEqual(['is-you'])
+    expect(finderDots('theirs')).toEqual(['is-opp-0'])
+    expect(finderDots('both')).toEqual(['is-you', 'is-opp-0'])
+    expect(finderDots('rivals')).toEqual(['is-opp-0', 'is-opp-1'])
+    expect(finderDots('missed')).toEqual([])
+    expect(wordLabel('yours')).not.toHaveClass('is-you')
+
+    const key = screen.getByRole('list', { name: 'Player colors' })
+    expect(within(key).getByText('You')).toBeInTheDocument()
+    expect(within(key).getByText('Grace Hopper')).toBeInTheDocument()
+    expect(within(key).getByText('Mina Chen')).toBeInTheDocument()
+  })
+
+  it('hides the color key when there is only one opponent', () => {
+    render(
+      <PotentialWords
+        words={[{ word: 'cat', points: 100 }]}
+        players={[
+          {
+            id: 'ada',
+            name: 'Ada Lovelace',
+            you: true,
+            score: 100,
+            words: [{ word: 'cat', points: 100 }],
+          },
+          {
+            id: 'grace',
+            name: 'Grace Hopper',
+            you: false,
+            score: 100,
+            words: [],
+          },
+        ]}
+        board={playedBoard}
+        onBack={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByRole('list', { name: 'Player colors' })).not.toBeInTheDocument()
+    expect(finderDots('cat')).toEqual(['is-you'])
   })
 })
 
@@ -629,6 +763,20 @@ function score(section: HTMLElement) {
 function lengthsFound(section: HTMLElement) {
   const label = within(section).queryByText('Lengths')
   return label?.closest('p')?.querySelector('.match-length-list')?.textContent ?? null
+}
+
+function wordLabel(word: string) {
+  const button = screen.getByRole('button', { name: word })
+  const label = button.querySelector('.word')
+  if (!(label instanceof HTMLElement)) throw new Error(`Missing word label for ${word}`)
+  return label
+}
+
+function finderDots(word: string) {
+  const button = screen.getByRole('button', { name: word })
+  return [...button.querySelectorAll('.word-dot')].map((dot) =>
+    [...dot.classList].filter((name) => name.startsWith('is-')).join(' '),
+  )
 }
 
 function tile(row: number, col: number) {

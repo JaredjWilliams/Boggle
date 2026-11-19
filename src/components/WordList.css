@@ -49,9 +49,9 @@
 
 .word-pick {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
   width: 100%;
   min-height: 44px;
   padding: 8px 8px;
@@ -67,6 +67,10 @@
   cursor: pointer;
 }
 
+.word-pick .word {
+  flex: 0 1 auto;
+}
+
 .word-pick[aria-pressed='true'] {
   background: var(--tile);
   box-shadow: inset 3px 0 0 var(--accent);
@@ -75,4 +79,48 @@
 .word-pick:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+.word-finders {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  min-width: 10px;
+}
+
+.word-dot {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--ink);
+}
+
+.word-dot.is-you {
+  background: var(--good);
+}
+
+.word-dot.is-opp-0 {
+  background: var(--opp-0);
+}
+
+.word-dot.is-opp-1 {
+  background: var(--opp-1);
+}
+
+.word-dot.is-opp-2 {
+  background: var(--opp-2);
+}
+
+.word-dot.is-opp-3 {
+  background: var(--opp-3);
+}
+
+.word-list:not(.flat) .word-finders {
+  align-self: center;
+}
+
+.word-list:not(.flat) li {
+  gap: 8px;
 }
