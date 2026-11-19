@@ -285,6 +285,7 @@ function PlayerColumn({
     .filter(Boolean)
     .join(' ')
 
+  const wordCount = player.words?.length ?? null
   const lengths =
     player.words === null
       ? null
@@ -295,11 +296,19 @@ function PlayerColumn({
   return (
     <section className={className} aria-labelledby={headingId}>
       <div className="match-score">
-        <div className="match-name">
-          <h2 id={headingId}>{player.name}</h2>
-          {player.you && <span className="match-you">You</span>}
-          {winner && <span className="match-winner">Winner</span>}
-          {tied && <span className="match-tie">Tie</span>}
+        <div className="match-score-top">
+          <div className="match-name">
+            <h2 id={headingId}>{player.name}</h2>
+            {player.you && <span className="match-you">You</span>}
+            {winner && <span className="match-winner">Winner</span>}
+            {tied && <span className="match-tie">Tie</span>}
+          </div>
+          {wordCount !== null && (
+            <p className="match-words">
+              <span className="label">Words</span>
+              <strong>{wordCount}</strong>
+            </p>
+          )}
         </div>
         <div className="match-figures">
           <p className="match-points">

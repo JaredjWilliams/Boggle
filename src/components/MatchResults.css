@@ -11,6 +11,11 @@
   --opp-1: #ffb020;
   --opp-2: #c084fc;
   --opp-3: #38bdf8;
+  --opp-4: #f472b6;
+  --opp-5: #a3e635;
+  --opp-6: #fb923c;
+  --opp-7: #818cf8;
+  --opp-8: #2dd4bf;
 }
 
 .match-loading {
@@ -160,11 +165,35 @@
   padding: 14px 16px 12px;
 }
 
+.match-score-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .match-name {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+}
+
+.match-words {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex: none;
+  gap: 2px;
+  margin: 0;
+  text-align: right;
+}
+
+.match-words strong {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
 .match-name h2 {
@@ -220,7 +249,8 @@
 }
 
 .match-points .label,
-.match-lengths .label {
+.match-lengths .label,
+.match-words .label {
   margin: 0;
   color: var(--muted);
   font-size: 12px;
@@ -392,6 +422,26 @@
 
 .potential-swatch.is-opp-3 {
   background: var(--opp-3);
+}
+
+.potential-swatch.is-opp-4 {
+  background: var(--opp-4);
+}
+
+.potential-swatch.is-opp-5 {
+  background: var(--opp-5);
+}
+
+.potential-swatch.is-opp-6 {
+  background: var(--opp-6);
+}
+
+.potential-swatch.is-opp-7 {
+  background: var(--opp-7);
+}
+
+.potential-swatch.is-opp-8 {
+  background: var(--opp-8);
 }
 
 .potential-scroll {

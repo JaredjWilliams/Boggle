@@ -117,6 +117,26 @@
   background: var(--opp-3);
 }
 
+.word-dot.is-opp-4 {
+  background: var(--opp-4);
+}
+
+.word-dot.is-opp-5 {
+  background: var(--opp-5);
+}
+
+.word-dot.is-opp-6 {
+  background: var(--opp-6);
+}
+
+.word-dot.is-opp-7 {
+  background: var(--opp-7);
+}
+
+.word-dot.is-opp-8 {
+  background: var(--opp-8);
+}
+
 .word-list:not(.flat) .word-finders {
   align-self: center;
 }

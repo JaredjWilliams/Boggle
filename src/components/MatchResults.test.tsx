@@ -60,17 +60,20 @@ describe('MatchResults', () => {
     expect(yours).toHaveTextContent('You')
     expect(yours).not.toHaveTextContent('Winner')
     expect(score(yours)).toBe('200')
+    expect(wordsFound(yours)).toBe('2')
     expect(lengthsFound(yours)).toBe('3:2')
     expect(within(yours).queryByRole('list')).not.toBeInTheDocument()
 
     expect(theirs).toHaveTextContent('Winner')
     expect(theirs).toHaveClass('is-winner')
     expect(score(theirs)).toBe('500')
+    expect(wordsFound(theirs)).toBe('1')
     expect(lengthsFound(theirs)).toBe('4:1')
     expect(within(theirs).queryByRole('list')).not.toBeInTheDocument()
 
     expect(styleOf('.match-columns').display).toBe('flex')
     expect(styleOf('.match-columns').flexDirection).toBe('column')
+    expect(styleOf('.match-score-top').justifyContent).toBe('space-between')
     expect(styleOf('.match-figures').justifyContent).toBe('space-between')
     expect(styleOf('.match-points strong').fontSize).toBe('22px')
   })
@@ -108,6 +111,7 @@ describe('MatchResults', () => {
     )
     const theirs = column('Grace Hopper')
     expect(score(theirs)).toBe('Still playing')
+    expect(wordsFound(theirs)).toBeNull()
     expect(lengthsFound(theirs)).toBeNull()
     expect(theirs).toHaveTextContent('Waiting for their words.')
     expect(within(theirs).queryByRole('list')).not.toBeInTheDocument()
@@ -129,6 +133,7 @@ describe('MatchResults', () => {
     )
 
     expect(column('Ada Lovelace')).toHaveTextContent('None this round.')
+    expect(wordsFound(column('Ada Lovelace'))).toBe('0')
     expect(lengthsFound(column('Ada Lovelace'))).toBeNull()
     expect(screen.getByRole('alert')).toHaveTextContent('Could not load the results.')
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
@@ -401,6 +406,53 @@ describe('PotentialWords', () => {
     expect(within(key).getByText('You')).toBeInTheDocument()
     expect(within(key).getByText('Grace Hopper')).toBeInTheDocument()
     expect(within(key).getByText('Mina Chen')).toBeInTheDocument()
+    const swatches = [...key.querySelectorAll('.potential-swatch')].map((swatch) =>
+      [...swatch.classList].filter((name) => name.startsWith('is-')).join(' '),
+    )
+    expect(swatches).toEqual(['is-you', 'is-opp-0', 'is-opp-1'])
+  })
+
+  it('assigns a unique palette slot to each opponent in the key', () => {
+    const opponents = Array.from({ length: 9 }, (_, index) => ({
+      id: `opp-${index}`,
+      name: `Opponent ${index}`,
+      you: false,
+      score: 100,
+      words: [] as { word: string; points: number }[],
+    }))
+    render(
+      <PotentialWords
+        words={[{ word: 'cat', points: 100 }]}
+        players={[
+          {
+            id: 'ada',
+            name: 'Ada Lovelace',
+            you: true,
+            score: 100,
+            words: [{ word: 'cat', points: 100 }],
+          },
+          ...opponents,
+        ]}
+        board={playedBoard}
+        onBack={vi.fn()}
+      />,
+    )
+
+    const key = screen.getByRole('list', { name: 'Player colors' })
+    const opponentSwatches = [...key.querySelectorAll('.potential-swatch')]
+      .slice(1)
+      .map((swatch) => [...swatch.classList].find((name) => name.startsWith('is-opp-')))
+    expect(opponentSwatches).toEqual([
+      'is-opp-0',
+      'is-opp-1',
+      'is-opp-2',
+      'is-opp-3',
+      'is-opp-4',
+      'is-opp-5',
+      'is-opp-6',
+      'is-opp-7',
+      'is-opp-8',
+    ])
   })
 
   it('hides the color key when there is only one opponent', () => {
@@ -758,6 +810,11 @@ function column(name: string) {
 
 function score(section: HTMLElement) {
   return within(section).getByText('Score').closest('p')?.querySelector('strong')?.textContent
+}
+
+function wordsFound(section: HTMLElement) {
+  const label = within(section).queryByText('Words')
+  return label?.closest('p')?.querySelector('strong')?.textContent ?? null
 }
 
 function lengthsFound(section: HTMLElement) {

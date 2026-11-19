@@ -51,7 +51,7 @@ export function boardWords(
   return rankedWords([...byWord.values()])
 }
 
-export const OPPONENT_PALETTE = 4
+export const OPPONENT_PALETTE = 9
 
 export type WordTone =
   | { kind: 'you' }

@@ -73,6 +73,21 @@ describe('wordTone', () => {
     ])).toEqual({ kind: 'opponent', index: 0 })
   })
 
+  it('keeps opponent colors distinct across a large roster', () => {
+    const opponents = Array.from({ length: 9 }, (_, index) => ({
+      id: `opp-${index}`,
+      name: `Opponent ${index}`,
+      you: false,
+      score: 100,
+      words: [{ word: `word${index}`, points: 100 }],
+    }))
+    const players = [ada, ...opponents]
+
+    for (let index = 0; index < opponents.length; index += 1) {
+      expect(wordTone(`word${index}`, players)).toEqual({ kind: 'opponent', index })
+    }
+  })
+
   it('builds tones for a board list', () => {
     const players = [ada, grace]
     expect(wordTones([{ word: 'cat', points: 100 }, { word: 'cats', points: 400 }], players)).toEqual(
