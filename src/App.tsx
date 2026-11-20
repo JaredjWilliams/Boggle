@@ -25,6 +25,7 @@ import { WordForm } from './components/WordForm'
 import { completedGameKey, playedBackNotices, type ActiveGame } from './domain/lobby'
 import { clearOpenRound, loadOpenRound, saveOpenRound } from './storage/openRound'
 import { loadReadGames, saveReadGames } from './storage/readGames'
+import { useFriends } from './hooks/useFriends'
 import { useLobby } from './hooks/useLobby'
 import { useMatch } from './hooks/useMatch'
 import { useRound, type AttemptFeedback } from './hooks/useRound'
@@ -132,6 +133,8 @@ function PlayerGame({
   const [readKeys, setReadKeys] = useState<ReadonlySet<string>>(() =>
     player.id ? loadReadGames(player.id) : new Set(),
   )
+  const needFriends = view === 'friends' || round.phase === 'ended' || Boolean(openGame)
+  const directory = useFriends(player.id, needFriends)
   const match = useMatch({
     playerId: player.id,
     phase: round.phase,
@@ -139,7 +142,7 @@ function PlayerGame({
     found: round.found,
     trie: round.trie,
     startRound: round.startRound,
-    friends: lobby.friends,
+    friends: directory.friends,
     refresh,
     setNotice,
     closeOpenGame: () => setOpenGame(null),
@@ -248,7 +251,7 @@ function PlayerGame({
     return (
       <SendBoard
         gameId={gameId}
-        friends={lobby.friends}
+        friends={directory.friends}
         onSend={(ids) => match.sendBoard(gameId, ids)}
         icon={icon}
       />
@@ -360,7 +363,7 @@ function PlayerGame({
         games={lobby.games}
         readKeys={readKeys}
         invites={lobby.invites}
-        friends={lobby.friends}
+        friends={[]}
         onOpenGame={openSavedGame}
         onAcceptInvite={(invite) => void match.accept(invite)}
         onDeclineInvite={(invite) => void match.decline(invite)}
@@ -404,10 +407,14 @@ function PlayerGame({
     settings: <SettingsScreen theme={theme} onThemeChange={onThemeChange} />,
     friends: (
       <FriendsScreen
-        friends={player.id ? lobby.friends : []}
-        loading={Boolean(player.id) && lobby.loading}
+        friends={player.id ? directory.friends : []}
+        loading={Boolean(player.id) && directory.loading}
         disabled={wordsUnavailable || match.starting}
-        notice={lobby.notice || (round.loadError ? 'Could not load the word list.' : '')}
+        notice={
+          directory.notice ||
+          lobby.notice ||
+          (round.loadError ? 'Could not load the word list.' : '')
+        }
         onStartWith={(friend) => void match.begin('shake', [friend.id])}
       />
     ),

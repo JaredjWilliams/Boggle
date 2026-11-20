@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { loadLobby, opponentHasScored, watchLobby } from '../api/lobby'
+import {
+  loadLobby,
+  opponentHasScored,
+  watchLobby,
+  watchOpponentResults,
+} from '../api/lobby'
 import type { ActiveGame, Friend, Invite, Lobby } from '../domain/lobby'
 import { errorMessage } from '../lib/errorMessage'
 
 const EMPTY: Lobby = { friends: [], invites: [], games: [], lastScore: null, bestScore: null }
 
-export const LOBBY_REFRESH_MS = 3000
+export const LOBBY_SAFETY_MS = 60_000
 
 export function useLobby(playerId: string | undefined) {
   const [lobby, setLobby] = useState<Lobby>(EMPTY)
@@ -57,7 +62,9 @@ export function useLobby(playerId: string | undefined) {
     if (!playerId || !waitingKey) return
     let cancel = false
     const ids = waitingKey.split(',')
-    // Ask only about games still waiting. Reloading the lobby listed every past game id.
+    const stopResults = watchOpponentResults(ids, () => {
+      void refresh()
+    })
     const timer = window.setInterval(() => {
       if (document.hidden) return
       void opponentHasScored(playerId, ids)
@@ -67,9 +74,10 @@ export function useLobby(playerId: string | undefined) {
         .catch(() => {
           // The next tick asks again.
         })
-    }, LOBBY_REFRESH_MS)
+    }, LOBBY_SAFETY_MS)
     return () => {
       cancel = true
+      stopResults()
       window.clearInterval(timer)
     }
   }, [playerId, waitingKey, refresh])

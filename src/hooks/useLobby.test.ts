@@ -1,10 +1,11 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { LOBBY_REFRESH_MS, useLobby } from './useLobby'
+import { LOBBY_SAFETY_MS, useLobby } from './useLobby'
 
 const mocks = vi.hoisted(() => ({
   loadLobby: vi.fn(),
   opponentHasScored: vi.fn(async () => false),
+  watchOpponentResults: vi.fn(() => () => {}),
 }))
 
 const channel = vi.hoisted(() => {
@@ -20,6 +21,7 @@ const channel = vi.hoisted(() => {
 vi.mock('../api/lobby', () => ({
   loadLobby: mocks.loadLobby,
   opponentHasScored: mocks.opponentHasScored,
+  watchOpponentResults: mocks.watchOpponentResults,
   watchLobby: (playerId: string, onChange: () => void) => {
     channel.on(
       'postgres_changes',
@@ -54,6 +56,8 @@ beforeEach(() => {
   mocks.loadLobby.mockReset()
   mocks.opponentHasScored.mockReset()
   mocks.opponentHasScored.mockResolvedValue(false)
+  mocks.watchOpponentResults.mockReset()
+  mocks.watchOpponentResults.mockReturnValue(() => {})
   channel.on.mockClear()
   channel.subscribe.mockClear()
 })
@@ -74,14 +78,30 @@ describe('useLobby', () => {
     expect(channel.on.mock.calls.map((call) => (call[1] as { table?: string }).table)).toEqual([
       'game_players',
     ])
+    expect(mocks.watchOpponentResults).toHaveBeenCalledWith(['g1'], expect.any(Function))
 
     await act(async () => {
-      vi.advanceTimersByTime(LOBBY_REFRESH_MS)
+      vi.advanceTimersByTime(LOBBY_SAFETY_MS)
     })
     await flush()
 
     expect(mocks.opponentHasScored).toHaveBeenCalledWith('ada', ['g1'])
     expect(result.current.games[0]?.playedBack).toBe(true)
+  })
+
+  it('reloads when realtime reports an opponent result', async () => {
+    mocks.loadLobby.mockResolvedValueOnce(lobby(false)).mockResolvedValueOnce(lobby(true))
+    const { result } = renderHook(() => useLobby('ada'))
+    await flush()
+
+    const onChange = mocks.watchOpponentResults.mock.calls[0]?.[1] as () => void
+    await act(async () => {
+      onChange()
+    })
+    await flush()
+
+    expect(result.current.games[0]?.playedBack).toBe(true)
+    expect(mocks.opponentHasScored).not.toHaveBeenCalled()
   })
 
   it('does not reload the lobby while the opponent is still playing', async () => {
@@ -92,7 +112,7 @@ describe('useLobby', () => {
     const calls = mocks.loadLobby.mock.calls.length
 
     await act(async () => {
-      vi.advanceTimersByTime(LOBBY_REFRESH_MS * 2)
+      vi.advanceTimersByTime(LOBBY_SAFETY_MS * 2)
     })
     await flush()
 
@@ -111,11 +131,12 @@ describe('useLobby', () => {
     const calls = mocks.loadLobby.mock.calls.length
 
     await act(async () => {
-      vi.advanceTimersByTime(LOBBY_REFRESH_MS * 2)
+      vi.advanceTimersByTime(LOBBY_SAFETY_MS * 2)
     })
 
     expect(mocks.loadLobby).toHaveBeenCalledTimes(calls)
     expect(mocks.opponentHasScored).not.toHaveBeenCalled()
+    expect(mocks.watchOpponentResults).not.toHaveBeenCalled()
   })
 })
 

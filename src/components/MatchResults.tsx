@@ -170,8 +170,9 @@ export function MatchReview({
   useEffect(() => {
     if (remote === null || !waiting) return
     const timer = window.setInterval(() => {
+      if (document.hidden) return
       reload()
-    }, 3000)
+    }, 60_000)
     return () => window.clearInterval(timer)
   }, [remote, waiting, reload])
 

@@ -65,15 +65,37 @@ type PlayedGameRow = {
   results: ScoreEmbed[] | ScoreEmbed | null
 }
 
+type NamedRow = {
+  id: string
+  name?: string
+  username?: string
+}
+
+let expiredThisSession = false
+
+/** Test-only: allow expire_stale_games to run again in the next loadLobby. */
+export function resetExpireStaleForTests() {
+  expiredThisSession = false
+}
+
+export async function loadFriends(playerId: string): Promise<Friend[]> {
+  const rows = unwrap(
+    await getSupabase().from('profiles').select('id, name, username').neq('id', playerId),
+  )
+  return (rows ?? []) as Friend[]
+}
+
 export async function loadLobby(playerId: string): Promise<Lobby> {
   const supabase = getSupabase()
-  try {
-    await supabase.rpc('expire_stale_games')
-  } catch {
-    // Opening the lobby still lists games. Ones past the deadline stay hidden.
+  if (!expiredThisSession) {
+    expiredThisSession = true
+    try {
+      await supabase.rpc('expire_stale_games')
+    } catch {
+      // Opening the lobby still lists games. Ones past the deadline stay hidden.
+    }
   }
-  const [profiles, seats, scores, accepted, played, history] = await Promise.all([
-    supabase.from('profiles').select('id, name, username').neq('id', playerId),
+  const [seats, scores, accepted, played, history] = await Promise.all([
     supabase
       .from('game_players')
       .select('game_id, invited_at, invited_by, games(board, host_id, created_at)')
@@ -99,31 +121,42 @@ export async function loadLobby(playerId: string): Promise<Lobby> {
       .eq('player_id', playerId),
   ])
 
-  const friends = (unwrap(profiles) ?? []) as Friend[]
   const scoreRows = (unwrap(scores) ?? []) as ScoreListRow[]
   const historyRows = (unwrap(history) ?? []) as KeptRow[]
   const viewerScores = scoreRows.flatMap((row) =>
     row.game_id ? [{ gameId: row.game_id, playerId, score: row.score }] : [],
   )
   const seatRows = (unwrap(seats) ?? []) as GameSeat[]
-  const hostIds = seatRows.flatMap((seat) => {
-    const game = first(seat.games)
-    const ids = game ? [game.host_id] : []
-    return seat.invited_by ? [...ids, seat.invited_by] : ids
-  })
-  const hosts = hostIds.length
-    ? await supabase.from('profiles').select('id, name').in('id', [...new Set(hostIds)])
-    : { data: [], error: null }
   const acceptedRows = (unwrap(accepted) ?? []) as AcceptedGameRow[]
   const playedRows = (unwrap(played) ?? []) as PlayedGameRow[]
+  const activeSeats = seatsOf(acceptedRows)
+  const neededIds = new Set<string>()
+  for (const seat of seatRows) {
+    const game = first(seat.games)
+    if (game?.host_id) neededIds.add(game.host_id)
+    if (seat.invited_by) neededIds.add(seat.invited_by)
+  }
+  for (const seat of activeSeats) {
+    neededIds.add(seat.playerId)
+    if (seat.hostId) neededIds.add(seat.hostId)
+    if (seat.invitedBy) neededIds.add(seat.invitedBy)
+  }
+  for (const row of historyRows) {
+    if (row.opponent_id) neededIds.add(row.opponent_id)
+  }
+  neededIds.delete(playerId)
+  const names = neededIds.size
+    ? ((unwrap(await supabase.from('profiles').select('id, name, username').in('id', [...neededIds])) ??
+        []) as NamedRow[])
+    : []
   const games = assembleActiveGames(
     playerId,
-    seatsOf(acceptedRows),
+    activeSeats,
     [...viewerScores, ...rivalScores(playerId, acceptedRows), ...rivalScores(playerId, playedRows)],
-    friends,
+    names,
     { kept: keptMatches(historyRows) },
   )
-  const hostNames = new Map((unwrap(hosts) ?? []).map((host) => [host.id as string, host.name as string]))
+  const nameOf = new Map(names.map((row) => [row.id, row.name?.trim() || 'A player']))
 
   const invites: Invite[] = seatRows.flatMap((seat) => {
     const game = first(seat.games)
@@ -135,9 +168,9 @@ export async function loadLobby(playerId: string): Promise<Lobby> {
       {
         gameId: seat.game_id,
         hostId: game.host_id,
-        hostName: hostNames.get(game.host_id) ?? 'A player',
+        hostName: nameOf.get(game.host_id) ?? 'A player',
         senderId,
-        senderName: hostNames.get(senderId) ?? 'A player',
+        senderName: nameOf.get(senderId) ?? 'A player',
         board: game.board,
         ...(daysLeft === null ? {} : { daysLeft }),
       },
@@ -152,7 +185,7 @@ export async function loadLobby(playerId: string): Promise<Lobby> {
     .sort((left, right) => right.created - left.created)
 
   return {
-    friends,
+    friends: [],
     invites,
     games,
     lastScore: ranked[0]?.score ?? null,
@@ -196,6 +229,31 @@ export function watchLobby(playerId: string, onChange: () => void): () => void {
       },
     )
     .subscribe()
+  return () => {
+    void supabase.removeChannel(channel)
+  }
+}
+
+export function watchOpponentResults(gameIds: readonly string[], onChange: () => void): () => void {
+  const ids = [...new Set(gameIds)].filter(Boolean)
+  if (ids.length === 0) return () => {}
+  const supabase = getSupabase()
+  let channel = supabase.channel(`waiting-results-${ids.slice().sort().join(',')}`)
+  for (const gameId of ids) {
+    channel = channel.on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'results',
+        filter: `game_id=eq.${gameId}`,
+      },
+      () => {
+        onChange()
+      },
+    )
+  }
+  channel.subscribe()
   return () => {
     void supabase.removeChannel(channel)
   }

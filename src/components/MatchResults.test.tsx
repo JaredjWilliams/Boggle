@@ -662,7 +662,7 @@ describe('MatchReview', () => {
     })
 
     await act(async () => {
-      vi.advanceTimersByTime(3000)
+      vi.advanceTimersByTime(60_000)
     })
     expect(mocks.loadMatchPlayers).toHaveBeenCalledTimes(2)
     expect(mocks.loadPlayerWords).not.toHaveBeenCalled()
@@ -700,7 +700,7 @@ describe('MatchReview', () => {
     expect(lengthsFound(column('Grace Hopper'))).toBe('3:1')
 
     await act(async () => {
-      vi.advanceTimersByTime(3000)
+      vi.advanceTimersByTime(60_000)
     })
     expect(mocks.loadMatchPlayers).toHaveBeenCalledTimes(2)
     expect(mocks.loadPlayerWords).toHaveBeenCalledTimes(1)

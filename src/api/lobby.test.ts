@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { playedOn } from '../domain/dates'
 import { blankQuery, queryChain, type RecordedQuery } from '../test/queryChain'
-import { loadLobby, opponentHasScored } from './lobby'
+import { loadFriends, loadLobby, opponentHasScored, resetExpireStaleForTests } from './lobby'
 
 type Filter = { op: 'eq' | 'neq' | 'in'; column: string; value: unknown }
 
@@ -140,11 +140,13 @@ function has(query: RecordedQuery, op: Filter['op'], column: string, value?: unk
 beforeEach(() => {
   supabase.calls.length = 0
   supabase.rpc.mockClear()
+  resetExpireStaleForTests()
 })
 
 describe('loadLobby active games', () => {
   it('loads who you are playing and the record from saved and kept results', async () => {
     await expect(loadLobby('ada')).resolves.toMatchObject({
+      friends: [],
       lastScore: 45,
       bestScore: 120,
       invites: [
@@ -180,6 +182,27 @@ describe('loadLobby active games', () => {
     expect(supabase.calls.some((call) => call.filters.some((filter) => filter.op === 'in' && filter.column === 'game_id'))).toBe(
       false,
     )
+    const profiles = supabase.calls.find((call) => call.table === 'profiles')
+    expect(profiles?.filters.some((filter) => filter.op === 'in' && filter.column === 'id')).toBe(true)
+    expect(profiles?.filters.some((filter) => filter.op === 'neq' && filter.column === 'id')).toBe(false)
+  })
+
+  it('expires stale games only once per session', async () => {
+    await loadLobby('ada')
+    supabase.rpc.mockClear()
+    await loadLobby('ada')
+    expect(supabase.rpc).not.toHaveBeenCalled()
+  })
+})
+
+describe('loadFriends', () => {
+  it('loads the full directory except the viewer', async () => {
+    await expect(loadFriends('ada')).resolves.toEqual([
+      { id: 'grace', name: 'Grace Hopper', username: 'grace' },
+    ])
+    const profiles = supabase.calls.find((call) => call.table === 'profiles')
+    expect(profiles?.select).toBe('id, name, username')
+    expect(profiles?.filters).toEqual([{ op: 'neq', column: 'id', value: 'ada' }])
   })
 })
 
