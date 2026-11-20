@@ -5,7 +5,9 @@ import { LOBBY_SAFETY_MS, useLobby } from './useLobby'
 const mocks = vi.hoisted(() => ({
   loadLobby: vi.fn(),
   opponentHasScored: vi.fn(async () => false),
-  watchOpponentResults: vi.fn(() => () => {}),
+  watchOpponentResults: vi.fn<(gameIds: readonly string[], onChange: () => void) => () => void>(
+    () => () => {},
+  ),
 }))
 
 const channel = vi.hoisted(() => {
@@ -94,9 +96,10 @@ describe('useLobby', () => {
     const { result } = renderHook(() => useLobby('ada'))
     await flush()
 
-    const onChange = mocks.watchOpponentResults.mock.calls[0]?.[1] as () => void
+    const onChange = mocks.watchOpponentResults.mock.calls[0]?.[1]
+    expect(onChange).toEqual(expect.any(Function))
     await act(async () => {
-      onChange()
+      onChange?.()
     })
     await flush()
 
