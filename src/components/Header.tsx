@@ -9,6 +9,7 @@ type Panel = 'notices' | 'menu'
 
 type Props = {
   onHome?: () => void
+  showHomeButton?: boolean
   onLeaderboard?: () => void
   onLearn?: () => void
   onSettings?: () => void
@@ -25,6 +26,7 @@ type Props = {
 
 export function Header({
   onHome,
+  showHomeButton = false,
   onLeaderboard,
   onLearn,
   onSettings,
@@ -67,14 +69,30 @@ export function Header({
     setPanel((current) => (current === next ? null : next))
   }
 
+  function goHome() {
+    if (!onHome) return
+    setPanel(null)
+    onHome()
+  }
+
+  const brand = (
+    <>
+      <img src="/assets/942c6.svg" alt="" width={36} height={36} />
+      <span className="brand-name">Boggle</span>
+    </>
+  )
+
   return (
     <div className="app-bar">
       <header className="app-header">
-        <div className="brand">
-          <img src="/assets/942c6.svg" alt="" width={36} height={36} />
-          <span className="brand-name">Boggle</span>
-        </div>
-        {(showNotifications || onHome || showMenu) && (
+        {onHome ? (
+          <button type="button" className="brand" aria-label="Boggle home" onClick={goHome}>
+            {brand}
+          </button>
+        ) : (
+          <div className="brand">{brand}</div>
+        )}
+        {(showNotifications || (onHome && showHomeButton) || showMenu) && (
           <div className="header-actions">
             {showNotifications && (
               <button
@@ -109,15 +127,8 @@ export function Header({
                 )}
               </button>
             )}
-            {onHome && (
-              <button
-                type="button"
-                className="header-home"
-                onClick={() => {
-                  setPanel(null)
-                  onHome()
-                }}
-              >
+            {onHome && showHomeButton && (
+              <button type="button" className="header-home" onClick={goHome}>
                 Home
               </button>
             )}

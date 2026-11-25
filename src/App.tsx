@@ -91,6 +91,7 @@ function App() {
         header={
           <Header
             onHome={guestView === 'settings' ? () => setGuestView('login') : undefined}
+            showHomeButton={guestView === 'settings'}
             onSettings={() => setGuestView('settings')}
           />
         }
@@ -224,10 +225,11 @@ function PlayerGame({
     void refresh()
   }
 
-  function signedInHeader(onHome?: () => void, includeSignOut = true) {
+  function signedInHeader(onHome?: () => void, includeSignOut = true, showHomeButton = false) {
     return (
       <Header
-        onHome={onHome}
+        onHome={onHome ?? (() => setView('home'))}
+        showHomeButton={showHomeButton}
         onLeaderboard={includeSignOut ? () => setView('leaderboard') : undefined}
         onLearn={includeSignOut ? () => setView('learn') : undefined}
         onSettings={includeSignOut ? () => setView('settings') : undefined}
@@ -260,7 +262,7 @@ function PlayerGame({
 
   if (round.phase === 'ended' && match.rivals.length > 0 && match.matchId && player.id) {
     return (
-      <ScreenFrame header={signedInHeader(leaveRound, false)}>
+      <ScreenFrame header={signedInHeader(leaveRound, false, true)}>
         <MatchReview
           gameId={match.matchId}
           viewerId={player.id}
@@ -282,7 +284,7 @@ function PlayerGame({
 
   if (round.phase === 'ended') {
     return (
-      <ScreenFrame header={signedInHeader(leaveRound, false)}>
+      <ScreenFrame header={signedInHeader(leaveRound, false, true)}>
         <EndPanel
           score={round.score}
           found={round.found}
@@ -296,7 +298,7 @@ function PlayerGame({
 
   if (round.phase !== 'playing' && openGame && player.id) {
     return (
-      <ScreenFrame header={signedInHeader(() => setOpenGame(null), false)}>
+      <ScreenFrame header={signedInHeader(() => setOpenGame(null), false, true)}>
         <SavedMatch
           gameId={openGame.gameId}
           viewerId={player.id}
@@ -314,7 +316,7 @@ function PlayerGame({
 
   if (round.phase === 'playing') {
     return (
-      <ScreenFrame header={signedInHeader(leaveRound, false)}>
+      <ScreenFrame header={signedInHeader(leaveRound, false, true)}>
         <StatusBar
           secondsLeft={round.secondsLeft}
           score={round.score}

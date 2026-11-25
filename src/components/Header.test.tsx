@@ -82,7 +82,7 @@ describe('Header menu', () => {
   it('closes the menu when going home', async () => {
     const user = userEvent.setup()
     const onHome = vi.fn()
-    render(<Header onHome={onHome} onLearn={vi.fn()} onSignOut={vi.fn()} />)
+    render(<Header onHome={onHome} showHomeButton onLearn={vi.fn()} onSignOut={vi.fn()} />)
 
     await user.click(screen.getByRole('button', { name: 'Menu' }))
     await user.click(screen.getByRole('button', { name: 'Home' }))
@@ -91,8 +91,20 @@ describe('Header menu', () => {
     expect(screen.queryByRole('navigation', { name: 'Menu' })).not.toBeInTheDocument()
   })
 
+  it('goes home from the brand', async () => {
+    const user = userEvent.setup()
+    const onHome = vi.fn()
+    render(<Header onHome={onHome} onLearn={vi.fn()} onSignOut={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: 'Menu' }))
+    await user.click(screen.getByRole('button', { name: 'Boggle home' }))
+
+    expect(onHome).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('navigation', { name: 'Menu' })).not.toBeInTheDocument()
+  })
+
   it('hides the menu until learn or sign out is available', () => {
-    render(<Header onHome={vi.fn()} />)
+    render(<Header onHome={vi.fn()} showHomeButton />)
 
     expect(screen.queryByRole('button', { name: 'Menu' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Home' })).toBeInTheDocument()
