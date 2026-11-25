@@ -1,5 +1,6 @@
 import { first, profileName, scoredWords } from '../api/rows'
 import { longestWord } from '../game/match'
+import { countByLength } from '../stats/series'
 
 export type DailyStanding = {
   playerId: string
@@ -7,6 +8,7 @@ export type DailyStanding = {
   score: number
   wordCount: number
   longest: string
+  byLength: Readonly<Record<number, number>>
 }
 
 export type DailyRow = {
@@ -35,6 +37,7 @@ export function dailyStandings(rows: readonly DailyRow[]): DailyStanding[] {
         score: row.score,
         wordCount: words.length,
         longest: longestWord(words),
+        byLength: countByLength(words.map((item) => item.word)),
       }
     })
     .sort((left, right) => right.score - left.score || left.name.localeCompare(right.name))

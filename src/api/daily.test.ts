@@ -84,6 +84,7 @@ describe('daily standings', () => {
         score: 400,
         wordCount: 1,
         longest: 'cats',
+        byLength: { 4: 1 },
       },
       {
         playerId: 'ada',
@@ -91,6 +92,7 @@ describe('daily standings', () => {
         score: 50,
         wordCount: 2,
         longest: 'quartz',
+        byLength: { 3: 1, 6: 1 },
       },
       {
         playerId: 'anon',
@@ -98,6 +100,7 @@ describe('daily standings', () => {
         score: 0,
         wordCount: 0,
         longest: '',
+        byLength: {},
       },
     ])
   })
@@ -145,6 +148,7 @@ describe('daily standings', () => {
         score: 10,
         wordCount: 0,
         longest: '',
+        byLength: {},
       },
       {
         playerId: 'mina',
@@ -152,6 +156,7 @@ describe('daily standings', () => {
         score: 10,
         wordCount: 1,
         longest: 'rat',
+        byLength: { 3: 1 },
       },
     ])
   })
@@ -210,6 +215,7 @@ describe('daily board lookup', () => {
         score: 400,
         wordCount: 1,
         longest: 'cats',
+        byLength: { 4: 1 },
       },
       {
         playerId: 'ada',
@@ -217,6 +223,7 @@ describe('daily board lookup', () => {
         score: 50,
         wordCount: 2,
         longest: 'quartz',
+        byLength: { 3: 1, 6: 1 },
       },
     ])
     expect(queryFor('results')).toMatchObject({

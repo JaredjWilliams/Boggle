@@ -15,6 +15,7 @@ const standings = [
     score: 500,
     wordCount: 2,
     longest: 'quartz',
+    byLength: { 3: 1, 6: 1 },
   },
   {
     playerId: 'grace',
@@ -22,11 +23,12 @@ const standings = [
     score: 0,
     wordCount: 0,
     longest: '',
+    byLength: {},
   },
 ]
 
 describe('DailyResults', () => {
-  it('lists each player’s score, word count, and longest word', () => {
+  it('lists each player’s score, word count, longest word, and lengths', () => {
     render(<DailyResults viewerId="ada" standings={standings} loading={false} notice="" />)
 
     expect(screen.getByRole('heading', { name: "Today's results" })).toBeInTheDocument()
@@ -35,12 +37,14 @@ describe('DailyResults', () => {
     expect(ada).toHaveTextContent(/Score\s*500/)
     expect(ada).toHaveTextContent(/Words\s*2/)
     expect(ada).toHaveTextContent(/Longest word\s*quartz/i)
+    expect(ada).toHaveTextContent(/Lengths\s*3:1\s*·\s*6:1/)
     expect(screen.queryByText('cat')).not.toBeInTheDocument()
 
     const grace = card('Grace Hopper')
     expect(grace).toHaveTextContent(/Score\s*0/)
     expect(grace).toHaveTextContent(/Words\s*0/)
     expect(grace).toHaveTextContent(/Longest word\s*None/i)
+    expect(grace).not.toHaveTextContent('Lengths')
   })
 
   it('shows a loading state, then an error that can be retried', async () => {

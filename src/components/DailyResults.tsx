@@ -51,30 +51,56 @@ export function DailyResults({ viewerId, standings, loading, notice, onRetry }: 
 
       {!loading && !notice && standings.length > 0 && (
         <ul className="daily-standings">
-          {standings.map((standing) => (
-            <li key={standing.playerId}>
-              <article>
-                <div className="daily-name">
-                  <h2>{standing.name}</h2>
-                  {standing.playerId === viewerId && <span className="daily-you">You</span>}
-                </div>
-                <dl className="daily-facts">
-                  <div>
-                    <dt>Score</dt>
-                    <dd>{standing.score}</dd>
+          {standings.map((standing) => {
+            const lengths = Object.entries(standing.byLength)
+              .map(([length, count]) => ({ length: Number(length), count }))
+              .sort((left, right) => left.length - right.length)
+
+            return (
+              <li key={standing.playerId}>
+                <article>
+                  <div className="daily-name">
+                    <h2>{standing.name}</h2>
+                    {standing.playerId === viewerId && <span className="daily-you">You</span>}
                   </div>
-                  <div>
-                    <dt>Words</dt>
-                    <dd>{standing.wordCount}</dd>
-                  </div>
-                  <div>
-                    <dt>Longest word</dt>
-                    <dd className="daily-word">{standing.longest || 'None'}</dd>
-                  </div>
-                </dl>
-              </article>
-            </li>
-          ))}
+                  <dl className="daily-facts">
+                    <div>
+                      <dt>Score</dt>
+                      <dd>{standing.score}</dd>
+                    </div>
+                    <div>
+                      <dt>Words</dt>
+                      <dd>{standing.wordCount}</dd>
+                    </div>
+                    <div>
+                      <dt>Longest word</dt>
+                      <dd className="daily-word">{standing.longest || 'None'}</dd>
+                    </div>
+                  </dl>
+                  {lengths.length > 0 && (
+                    <p className="daily-lengths">
+                      <span className="daily-lengths-label">Lengths</span>
+                      <span className="daily-length-list">
+                        {lengths.map(({ length, count }, index) => (
+                          <span key={length}>
+                            {index > 0 && (
+                              <span className="daily-length-sep" aria-hidden="true">
+                                {' '}
+                                ·{' '}
+                              </span>
+                            )}
+                            <span className="daily-length">
+                              {length}:{count}
+                            </span>
+                          </span>
+                        ))}
+                      </span>
+                    </p>
+                  )}
+                </article>
+              </li>
+            )
+          })}
         </ul>
       )}
     </main>
