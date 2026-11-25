@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { AdminGame } from '../domain/admin'
+import type { DenseCandidate } from '../game/denseBoards'
 import { AdminScreen } from './AdminScreen'
 
 const daily: AdminGame = {
@@ -31,11 +32,36 @@ const players = [
   { id: 'grace', name: 'Grace Hopper', username: 'grace' },
 ]
 
-function renderAdmin(games: AdminGame[] = [daily, friends]) {
+const candidate: DenseCandidate = {
+  board: [
+    ['c', 'a', 't', 's', 'x'],
+    ['r', 'a', 't', 's', 'x'],
+    ['x', 'x', 'x', 'x', 'x'],
+    ['x', 'x', 'x', 'x', 'x'],
+    ['x', 'x', 'x', 'x', 'x'],
+  ],
+  totalScore: 2400,
+  wordCount: 6,
+  possibleWords: [
+    { word: 'cat', points: 100 },
+    { word: 'cats', points: 400 },
+  ],
+}
+
+function renderAdmin(
+  games: AdminGame[] = [daily, friends],
+  overrides: Partial<Parameters<typeof AdminScreen>[0]> = {},
+) {
   const onProfile = vi.fn()
   const onAskDelete = vi.fn()
   const onConfirmDelete = vi.fn()
   const onCancelDelete = vi.fn()
+  const onGenerate = vi.fn()
+  const onSelectCandidate = vi.fn()
+  const onDailyOn = vi.fn()
+  const onFriend = vi.fn()
+  const onSetDaily = vi.fn()
+  const onSendFriend = vi.fn()
   const view = render(
     <AdminScreen
       profiles={players}
@@ -46,14 +72,43 @@ function renderAdmin(games: AdminGame[] = [daily, friends]) {
       profile={players[0]}
       games={games}
       notice=""
+      status=""
       pendingKey={null}
       deleting={false}
       onAskDelete={onAskDelete}
       onConfirmDelete={onConfirmDelete}
       onCancelDelete={onCancelDelete}
+      trieReady
+      generating={false}
+      settingDaily={false}
+      sending={false}
+      candidates={[]}
+      selectedIndex={0}
+      dailyOn="2026-11-25"
+      friendProfiles={players}
+      friendId=""
+      onGenerate={onGenerate}
+      onSelectCandidate={onSelectCandidate}
+      onDailyOn={onDailyOn}
+      onFriend={onFriend}
+      onSetDaily={onSetDaily}
+      onSendFriend={onSendFriend}
+      {...overrides}
     />,
   )
-  return { ...view, onProfile, onAskDelete, onConfirmDelete, onCancelDelete }
+  return {
+    ...view,
+    onProfile,
+    onAskDelete,
+    onConfirmDelete,
+    onCancelDelete,
+    onGenerate,
+    onSelectCandidate,
+    onDailyOn,
+    onFriend,
+    onSetDaily,
+    onSendFriend,
+  }
 }
 
 describe('AdminScreen', () => {
@@ -119,11 +174,27 @@ describe('AdminScreen', () => {
         profile={players[0]}
         games={[daily]}
         notice=""
+        status=""
         pendingKey="game:daily"
         deleting={false}
         onAskDelete={onAskDelete}
         onConfirmDelete={onConfirmDelete}
         onCancelDelete={onCancelDelete}
+        trieReady
+        generating={false}
+        settingDaily={false}
+        sending={false}
+        candidates={[]}
+        selectedIndex={0}
+        dailyOn="2026-11-25"
+        friendProfiles={players}
+        friendId=""
+        onGenerate={vi.fn()}
+        onSelectCandidate={vi.fn()}
+        onDailyOn={vi.fn()}
+        onFriend={vi.fn()}
+        onSetDaily={vi.fn()}
+        onSendFriend={vi.fn()}
       />,
     )
 
@@ -138,5 +209,55 @@ describe('AdminScreen', () => {
     renderAdmin([])
     expect(screen.getByText('No games saved for this player.')).toBeInTheDocument()
     expect(screen.getByText('0 games')).toBeInTheDocument()
+  })
+
+  it('shows publish actions for a selected dense candidate', async () => {
+    const user = userEvent.setup()
+    const { onGenerate, onSetDaily, onSendFriend, onSelectCandidate } = renderAdmin([], {
+      candidates: [candidate, { ...candidate, totalScore: 100, wordCount: 1 }],
+      selectedIndex: 0,
+      friendId: 'grace',
+    })
+
+    expect(screen.getByRole('region', { name: 'Publish board' })).toBeInTheDocument()
+    expect(screen.getByText('2,400 pts · 6 words')).toBeInTheDocument()
+    expect(screen.getByLabelText('Daily date')).toHaveValue('2026-11-25')
+
+    await user.click(screen.getByRole('button', { name: 'Generate dense boards' }))
+    expect(onGenerate).toHaveBeenCalledOnce()
+
+    await user.click(screen.getByRole('button', { name: /100 pts · 1 words/ }))
+    expect(onSelectCandidate).toHaveBeenCalledWith(1)
+
+    await user.click(screen.getByRole('button', { name: 'Set as daily' }))
+    expect(onSetDaily).toHaveBeenCalledOnce()
+
+    await user.click(screen.getByRole('button', { name: 'Send to friend' }))
+    expect(onSendFriend).toHaveBeenCalledOnce()
+  })
+
+  it('disables publish actions while generating or saving', () => {
+    renderAdmin([], {
+      candidates: [candidate],
+      selectedIndex: 0,
+      friendId: 'grace',
+      generating: true,
+    })
+
+    expect(screen.getByRole('button', { name: 'Generating…' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Set as daily' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Send to friend' })).toBeDisabled()
+  })
+
+  it('keeps the selected date as a YYYY-MM-DD string', () => {
+    const { onDailyOn } = renderAdmin([], {
+      candidates: [candidate],
+      selectedIndex: 0,
+    })
+
+    fireEvent.change(screen.getByLabelText('Daily date'), {
+      target: { value: '2026-12-01' },
+    })
+    expect(onDailyOn).toHaveBeenCalledWith('2026-12-01')
   })
 })

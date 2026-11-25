@@ -405,7 +405,7 @@ function PlayerGame({
       />
     ),
     learn: <LearnScreen />,
-    admin: isAdmin(player) ? <AdminPage /> : null,
+    admin: isAdmin(player) ? <AdminPage hostId={player.id ?? ''} trie={round.trie} /> : null,
     settings: <SettingsScreen theme={theme} onThemeChange={onThemeChange} />,
     friends: (
       <FriendsScreen

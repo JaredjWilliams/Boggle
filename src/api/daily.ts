@@ -42,3 +42,12 @@ export async function loadDailyBoard(): Promise<Board> {
   if (retry.error) throw new Error(retry.error.message)
   return retry.data.board as Board
 }
+
+export async function setDailyBoard(day: string, board: Board): Promise<void> {
+  unwrap(
+    await getSupabase().rpc('set_daily_board', {
+      p_played_on: day,
+      p_board: board,
+    }),
+  )
+}

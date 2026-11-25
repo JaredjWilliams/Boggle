@@ -6,6 +6,7 @@
 }
 
 .admin h1,
+.admin h2,
 .admin-profile h2 {
   margin: 0;
   font-family: Georgia, 'Palatino Linotype', Palatino, serif;
@@ -18,15 +19,120 @@
   font-size: 36px;
 }
 
+.admin h2 {
+  margin-top: 8px;
+  font-size: 28px;
+}
+
 .admin-lede,
 .admin-profile p,
 .admin-empty,
 .admin-date,
 .admin-score,
-.admin-opponents {
+.admin-opponents,
+.admin-candidate-stats {
   margin: 8px 0 0;
   color: var(--muted);
   font-size: 16px;
+}
+
+.admin-publish {
+  margin-top: 22px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--line);
+}
+
+.admin-delete-lede {
+  margin-top: 22px;
+}
+
+.admin-action {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 14px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--accent);
+  color: white;
+  font: inherit;
+  font-weight: 700;
+}
+
+.admin-candidates {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-candidate {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--tile);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-candidate.is-selected {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.admin-mini-board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  width: 100%;
+  max-width: 220px;
+}
+
+.admin-mini-board span {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--cream);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.admin-publish-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 16px;
+}
+
+.admin-date-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--tile);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.admin-status {
+  margin: 14px 0 0;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
 }
 
 .admin-search {
@@ -170,7 +276,10 @@
 .admin-sort-chip:focus-visible,
 .admin-delete:focus-visible,
 .admin-delete-confirm:focus-visible,
-.admin-keep:focus-visible {
+.admin-keep:focus-visible,
+.admin-action:focus-visible,
+.admin-candidate:focus-visible,
+.admin-date-input:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -187,7 +296,10 @@
 .admin-select:disabled,
 .admin-delete:disabled,
 .admin-delete-confirm:disabled,
-.admin-keep:disabled {
+.admin-keep:disabled,
+.admin-action:disabled,
+.admin-candidate:disabled,
+.admin-date-input:disabled {
   opacity: 0.45;
 }
 

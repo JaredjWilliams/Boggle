@@ -1,12 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { blankQuery, queryChain, shiftQueue, type QueryResult, type RecordedQuery } from '../test/queryChain'
-import { hasPlayedDaily, loadDailyStandings } from './daily'
+import { hasPlayedDaily, loadDailyStandings, setDailyBoard } from './daily'
 import { dailyStandings } from '../domain/daily'
 import { longestWord } from '../game/match'
 
 const supabase = vi.hoisted(() => {
   const calls: RecordedQuery[] = []
   const queues = new Map<string, QueryResult[]>()
+  const rpc = vi.fn(async (): Promise<{ data: unknown; error: { message: string } | null }> => ({
+    data: null,
+    error: null,
+  }))
 
   function from(table: string) {
     const query = blankQuery(table)
@@ -14,11 +18,11 @@ const supabase = vi.hoisted(() => {
     return queryChain(query, () => shiftQueue(queues, table))
   }
 
-  return { calls, queues, from }
+  return { calls, queues, from, rpc }
 })
 
 vi.mock('../lib/supabase', () => ({
-  getSupabase: () => ({ from: supabase.from }),
+  getSupabase: () => ({ from: supabase.from, rpc: supabase.rpc }),
 }))
 
 function queue(table: string, result: QueryResult) {
@@ -36,6 +40,8 @@ function queryFor(table: string): RecordedQuery {
 beforeEach(() => {
   supabase.calls.length = 0
   supabase.queues.clear()
+  supabase.rpc.mockReset()
+  supabase.rpc.mockResolvedValue({ data: null, error: null })
 })
 
 describe('daily standings', () => {
@@ -245,5 +251,42 @@ describe('daily board lookup', () => {
 
     queue('results', { data: null, error: { message: 'results unavailable' } })
     await expect(loadDailyStandings('2026-10-21')).rejects.toThrow('results unavailable')
+  })
+})
+
+describe('setDailyBoard', () => {
+  const board = [
+    ['A', 'B', 'C', 'D', 'E'],
+    ['F', 'G', 'H', 'I', 'J'],
+    ['K', 'L', 'M', 'N', 'O'],
+    ['P', 'R', 'S', 'T', 'U'],
+    ['V', 'W', 'X', 'Y', 'Z'],
+  ]
+
+  it('calls the admin RPC with the day and board', async () => {
+    await setDailyBoard('2026-11-26', board)
+
+    expect(supabase.rpc).toHaveBeenCalledWith('set_daily_board', {
+      p_played_on: '2026-11-26',
+      p_board: board,
+    })
+  })
+
+  it('surfaces authorization and guard errors from the RPC', async () => {
+    supabase.rpc.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'Only the admin can set the daily board.' },
+    })
+    await expect(setDailyBoard('2026-11-26', board)).rejects.toThrow(
+      'Only the admin can set the daily board.',
+    )
+
+    supabase.rpc.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'That day already has daily results.' },
+    })
+    await expect(setDailyBoard('2026-11-26', board)).rejects.toThrow(
+      'That day already has daily results.',
+    )
   })
 })
