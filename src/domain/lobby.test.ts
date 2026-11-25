@@ -8,6 +8,7 @@ import {
   daysLeftToPlay,
   formatMatchScore,
   formatRecord,
+  inviteStartsSolo,
   matchResult,
   matchResultLabel,
   gameIsExpired,
@@ -25,6 +26,14 @@ const names = [
   { id: 'grace', name: ' Grace Hopper ' },
   { id: 'mina', name: '   ' },
 ]
+
+describe('inviteStartsSolo', () => {
+  it('is solo only for the first play on a pass-along board', () => {
+    expect(inviteStartsSolo({ passAlongSolo: true })).toBe(true)
+    expect(inviteStartsSolo({ passAlongSolo: false })).toBe(false)
+    expect(inviteStartsSolo({})).toBe(false)
+  })
+})
 
 describe('bestScoreOnDay', () => {
   it('keeps the highest score played on that day', () => {

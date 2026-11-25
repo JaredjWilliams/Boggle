@@ -16,6 +16,17 @@ export type Invite = {
   board: Board
   /** Whole days left before this invitation is deleted. */
   daysLeft?: number
+  /**
+   * Accept as a solo round with no waiting opponent.
+   * True for the first play on an admin pass-along board; false after someone
+   * has finished and forwarded the board (H2H / comparison play).
+   */
+  passAlongSolo?: boolean
+}
+
+/** First acceptor on a pass-along board plays alone; later accepts keep the sender as rival. */
+export function inviteStartsSolo(invite: Pick<Invite, 'passAlongSolo'>): boolean {
+  return Boolean(invite.passAlongSolo)
 }
 
 export function inviteMessage(invite: Pick<Invite, 'hostName' | 'senderName'>): string {

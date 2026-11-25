@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { hasPlayedDaily, loadDailyBoard } from '../api/daily'
 import { answerInvite, createMatch, inviteToBoard, saveResult, type InviteBoardResult } from '../api/matches'
 import { playedOn } from '../domain/dates'
-import type { Friend, Invite } from '../domain/lobby'
+import { inviteStartsSolo, type Friend, type Invite } from '../domain/lobby'
 import type { Board } from '../game/dice'
 import { shakeBoard } from '../game/dice'
 import type { Trie } from '../game/dictionary'
@@ -141,14 +141,19 @@ export function useMatch({
     try {
       await answerInvite(invite.gameId, playerId, 'accepted')
       void refresh()
-      setRivals([
-        {
-          id: invite.senderId || invite.hostId,
-          name: invite.senderName || invite.hostName,
-        },
-      ])
+      if (inviteStartsSolo(invite)) {
+        setRivals([])
+      } else {
+        setRivals([
+          {
+            id: invite.senderId || invite.hostId,
+            name: invite.senderName || invite.hostName,
+          },
+        ])
+      }
       setShowPotential(false)
       setMatchId(invite.gameId)
+      dailyRound.current = false
       startRound(invite.board)
     } catch (error) {
       setNotice(errorMessage(error, 'Could not join the game.'))

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { deletePlayedGame, loadProfileGames, loadProfiles } from '../api/admin'
 import { setDailyBoard } from '../api/daily'
-import { createMatch } from '../api/matches'
+import { createSoloInvite } from '../api/matches'
 import {
   deleteLabel,
   formatPlayedOn,
@@ -449,11 +449,10 @@ export function AdminPage({
     setActionNotice('')
     setStatus('')
     try {
-      await createMatch({
-        hostId,
+      await createSoloInvite({
         board: candidate.board,
         possibleWords: candidate.possibleWords,
-        inviteIds: [friendId],
+        friendId,
       })
       const friend = friendProfiles.find((player) => player.id === friendId)
       setStatus(friend ? `Sent to ${friend.name}.` : 'Sent to friend.')

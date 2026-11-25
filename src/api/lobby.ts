@@ -18,6 +18,8 @@ type GameCard = {
   board: Board
   host_id: string
   created_at?: string
+  pass_along?: boolean | null
+  results?: { player_id: string }[] | { player_id: string } | null
 }
 
 type GameSeat = {
@@ -98,7 +100,7 @@ export async function loadLobby(playerId: string): Promise<Lobby> {
   const [seats, scores, accepted, played, history] = await Promise.all([
     supabase
       .from('game_players')
-      .select('game_id, invited_at, invited_by, games(board, host_id, created_at)')
+      .select('game_id, invited_at, invited_by, games(board, host_id, created_at, pass_along, results(player_id))')
       .eq('player_id', playerId)
       .eq('status', 'invited'),
     supabase.from('results').select('game_id, score, games(created_at)').eq('player_id', playerId),
@@ -164,6 +166,8 @@ export async function loadLobby(playerId: string): Promise<Lobby> {
     if (!game || (sentAt && gameIsExpired(sentAt))) return []
     const daysLeft = sentAt ? daysLeftToPlay(sentAt) : null
     const senderId = seat.invited_by || game.host_id
+    const results = listOf(game.results)
+    const passAlongSolo = Boolean(game.pass_along) && results.length === 0
     return [
       {
         gameId: seat.game_id,
@@ -173,6 +177,7 @@ export async function loadLobby(playerId: string): Promise<Lobby> {
         senderName: nameOf.get(senderId) ?? 'A player',
         board: game.board,
         ...(daysLeft === null ? {} : { daysLeft }),
+        ...(passAlongSolo ? { passAlongSolo: true } : {}),
       },
     ]
   })

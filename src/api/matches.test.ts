@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { blankQuery, queryChain, type QueryResult, type RecordedQuery } from '../test/queryChain'
-import { createMatch, inviteToBoard } from './matches'
+import { createMatch, createSoloInvite, inviteToBoard } from './matches'
 
 const supabase = vi.hoisted(() => {
   const calls: RecordedQuery[] = []
@@ -69,6 +69,7 @@ describe('createMatch', () => {
         possible_words: input.possibleWords,
         host_id: 'ada',
         daily_on: '2026-10-21',
+        pass_along: false,
       },
     })
     expect(inserts()[1]).toMatchObject({
@@ -88,7 +89,7 @@ describe('createMatch', () => {
     supabase.calls.length = 0
     await createMatch(input)
     expect(inserts()[0]).toMatchObject({
-      payload: { daily_on: null },
+      payload: { daily_on: null, pass_along: false },
     })
   })
 
@@ -118,5 +119,41 @@ describe('inviteToBoard', () => {
       target_game: 'game-1',
       player_ids: ['mina', 'grace'],
     })
+  })
+})
+
+describe('createSoloInvite', () => {
+  it('calls the admin RPC and does not insert a host seat from the client', async () => {
+    supabase.rpc.mockResolvedValueOnce({ data: 'solo-game', error: null })
+
+    await expect(
+      createSoloInvite({
+        board,
+        possibleWords: input.possibleWords,
+        friendId: 'grace',
+      }),
+    ).resolves.toBe('solo-game')
+
+    expect(supabase.rpc).toHaveBeenCalledWith('create_solo_invite', {
+      p_board: board,
+      p_possible_words: input.possibleWords,
+      p_friend_id: 'grace',
+    })
+    expect(inserts()).toEqual([])
+  })
+
+  it('surfaces admin authorization errors', async () => {
+    supabase.rpc.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'Only the admin can send a solo board.' },
+    })
+
+    await expect(
+      createSoloInvite({
+        board,
+        possibleWords: input.possibleWords,
+        friendId: 'grace',
+      }),
+    ).rejects.toThrow('Only the admin can send a solo board.')
   })
 })

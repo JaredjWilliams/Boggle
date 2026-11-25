@@ -45,7 +45,7 @@ function answer(query: RecordedQuery): { data: unknown; error: { message: string
       data: [
         {
           game_id: 'fresh-invite',
-          games: { board: [['A']], host_id: 'grace', created_at: recent },
+          games: { board: [['A']], host_id: 'grace', created_at: recent, pass_along: false },
         },
         {
           game_id: 'old-invite',
@@ -56,6 +56,30 @@ function answer(query: RecordedQuery): { data: unknown; error: { message: string
           invited_at: recent,
           invited_by: 'mina',
           games: { board: [['C']], host_id: 'grace', created_at: expired },
+        },
+        {
+          game_id: 'solo-pass',
+          invited_at: recent,
+          invited_by: 'admin',
+          games: {
+            board: [['D']],
+            host_id: 'admin',
+            created_at: recent,
+            pass_along: true,
+            results: [],
+          },
+        },
+        {
+          game_id: 'solo-forward',
+          invited_at: recent,
+          invited_by: 'grace',
+          games: {
+            board: [['E']],
+            host_id: 'admin',
+            created_at: recent,
+            pass_along: true,
+            results: [{ player_id: 'grace' }],
+          },
         },
       ],
       error: null,
@@ -152,6 +176,19 @@ describe('loadLobby active games', () => {
       invites: [
         { gameId: 'fresh-invite', daysLeft: 3, senderName: 'Grace Hopper' },
         { gameId: 'resent', daysLeft: 3, senderId: 'mina', senderName: 'A player' },
+        {
+          gameId: 'solo-pass',
+          daysLeft: 3,
+          senderId: 'admin',
+          senderName: 'A player',
+          passAlongSolo: true,
+        },
+        {
+          gameId: 'solo-forward',
+          daysLeft: 3,
+          senderId: 'grace',
+          senderName: 'Grace Hopper',
+        },
       ],
       games: [
         {

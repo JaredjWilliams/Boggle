@@ -25,6 +25,7 @@ export async function createMatch(input: {
         possible_words: input.possibleWords,
         host_id: input.hostId,
         daily_on: input.dailyOn ?? null,
+        pass_along: false,
       })
       .select('id')
       .single(),
@@ -53,6 +54,25 @@ export async function createMatch(input: {
     })),
   ]
   unwrap(await supabase.from('game_players').insert(seats))
+  return gameId
+}
+
+/** Admin pass-along: host_id is the admin, but only the friend gets an invited seat. */
+export async function createSoloInvite(input: {
+  board: Board
+  possibleWords: ScoredWord[]
+  friendId: string
+}): Promise<string> {
+  const gameId = unwrap(
+    await getSupabase().rpc('create_solo_invite', {
+      p_board: input.board,
+      p_possible_words: input.possibleWords,
+      p_friend_id: input.friendId,
+    }),
+  )
+  if (typeof gameId !== 'string' || !gameId) {
+    throw new Error('Could not send that board.')
+  }
   return gameId
 }
 
