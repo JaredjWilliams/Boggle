@@ -35,6 +35,12 @@ export type Trend = {
   intercept: number
 }
 
+export type DailyRange = {
+  playedOn: string
+  low: number
+  high: number
+}
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 export function dayIndex(iso: string): number {
@@ -222,6 +228,22 @@ export function formatCount(value: number): string {
 
 export function formatAverage(value: number): string {
   return value.toLocaleString('en-US', { maximumFractionDigits: 1 })
+}
+
+export function dailyRange(points: readonly { playedOn: string; value: number }[]): DailyRange[] {
+  const byDay = new Map<string, { low: number; high: number }>()
+  for (const point of points) {
+    const existing = byDay.get(point.playedOn)
+    if (!existing) {
+      byDay.set(point.playedOn, { low: point.value, high: point.value })
+      continue
+    }
+    existing.low = Math.min(existing.low, point.value)
+    existing.high = Math.max(existing.high, point.value)
+  }
+  return [...byDay.entries()]
+    .map(([playedOn, range]) => ({ playedOn, low: range.low, high: range.high }))
+    .sort((left, right) => dayIndex(left.playedOn) - dayIndex(right.playedOn) || left.playedOn.localeCompare(right.playedOn))
 }
 
 export function linearTrend(xs: readonly number[], ys: readonly number[]): Trend | null {

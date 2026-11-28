@@ -6,6 +6,7 @@ import {
   formatCount,
   formatPlayedOn,
   axisMax,
+  dailyRange,
   linearTrend,
   type HeadToHead,
 } from '../stats/series'
@@ -23,7 +24,7 @@ const PAD = { top: 16, right: 12, bottom: 32, left: 42 }
 const PIE = 120
 const PIE_RADIUS = 52
 
-export function ScatterPlot({
+export function DailyRangeChart({
   label,
   points,
   valueName,
@@ -73,10 +74,7 @@ export function ScatterPlot({
     return PAD.top + plotHeight - (clamped / max) * plotHeight
   }
 
-  const seen = new Map<string, number>()
-  const counts = new Map<string, number>()
-  for (const point of ordered) counts.set(point.playedOn, (counts.get(point.playedOn) ?? 0) + 1)
-
+  const days = dailyRange(ordered)
   const sameDay = maxIndex === minIndex
   const trendX1 = sameDay ? PAD.left + 8 : xFor(ordered[0].playedOn)
   const trendX2 = sameDay ? WIDTH - PAD.right - 8 : xFor(ordered[ordered.length - 1].playedOn)
@@ -85,11 +83,13 @@ export function ScatterPlot({
   const base = yFor(0)
   const ticks = [0, max / 2, max]
   const span = maxIndex - minIndex
-  const middle = ordered[Math.floor(ordered.length / 2)]
-  const labels = span >= 10 ? [ordered[0], middle, ordered[ordered.length - 1]] : [ordered[0], ordered[ordered.length - 1]]
+  const middle = days[Math.floor(days.length / 2)]
+  const labels = span >= 10 ? [days[0], middle, days[days.length - 1]] : [days[0], days[days.length - 1]]
   const uniqueLabels = labels.filter(
-    (point, index, list) => list.findIndex((item) => item.playedOn === point.playedOn) === index,
+    (day, index, list) => list.findIndex((item) => item.playedOn === day.playedOn) === index,
   )
+  const lowLine = days.map((day) => `${xFor(day.playedOn)},${yFor(day.low)}`).join(' ')
+  const highLine = days.map((day) => `${xFor(day.playedOn)},${yFor(day.high)}`).join(' ')
 
   return (
     <figure className="chart-block">
@@ -115,33 +115,48 @@ export function ScatterPlot({
           </g>
         ))}
         {fit && ordered.length > 1 && (
-          <>
-            <polygon
-              points={`${trendX1},${base} ${trendX1},${trendY1} ${trendX2},${trendY2} ${trendX2},${base}`}
-              fill={`url(#${gradientId})`}
-            />
-            <line
-              data-testid="trend-line"
-              x1={trendX1}
-              y1={trendY1}
-              x2={trendX2}
-              y2={trendY2}
-              className="trend-line"
-            />
-          </>
+          <polygon
+            points={`${trendX1},${base} ${trendX1},${trendY1} ${trendX2},${trendY2} ${trendX2},${base}`}
+            fill={`url(#${gradientId})`}
+          />
         )}
-        {ordered.map((point) => {
-          const slot = seen.get(point.playedOn) ?? 0
-          seen.set(point.playedOn, slot + 1)
-          const count = counts.get(point.playedOn) ?? 1
-          const offset = (slot - (count - 1) / 2) * 8
-          const cx = xFor(point.playedOn) + offset
-          const cy = yFor(point.value)
+        {days.length > 1 && (
+          <polyline data-testid="range-low" points={lowLine} className="range-low" />
+        )}
+        {days.length > 1 && (
+          <polyline data-testid="range-high" points={highLine} className="range-high" />
+        )}
+        {fit && ordered.length > 1 && (
+          <line
+            data-testid="trend-line"
+            x1={trendX1}
+            y1={trendY1}
+            x2={trendX2}
+            y2={trendY2}
+            className="trend-line"
+          />
+        )}
+        {days.map((day) => {
+          const x = xFor(day.playedOn)
+          const date = formatPlayedOn(day.playedOn)
+          if (day.low === day.high) {
+            return (
+              <g key={day.playedOn}>
+                <title>{`${date}: ${formatCount(day.high)} ${valueName}`}</title>
+                <circle cx={x} cy={yFor(day.high)} r="3.6" className="range-high-dot" />
+              </g>
+            )
+          }
           return (
-            <g key={point.id}>
-              <title>{`${formatPlayedOn(point.playedOn)}: ${formatCount(point.value)} ${valueName}`}</title>
-              <circle cx={cx} cy={cy} r="7" className="plot-halo" />
-              <circle cx={cx} cy={cy} r="3.6" className="plot-dot" />
+            <g key={day.playedOn}>
+              <g>
+                <title>{`${date}: lowest ${formatCount(day.low)} ${valueName}`}</title>
+                <circle cx={x} cy={yFor(day.low)} r="3.6" className="range-low-dot" />
+              </g>
+              <g>
+                <title>{`${date}: highest ${formatCount(day.high)} ${valueName}`}</title>
+                <circle cx={x} cy={yFor(day.high)} r="3.6" className="range-high-dot" />
+              </g>
             </g>
           )
         })}
@@ -173,14 +188,16 @@ export function ScatterPlot({
         <thead>
           <tr>
             <th>Date</th>
-            <th>{valueName}</th>
+            <th>Lowest {valueName}</th>
+            <th>Highest {valueName}</th>
           </tr>
         </thead>
         <tbody>
-          {ordered.map((point) => (
-            <tr key={point.id}>
-              <td>{formatPlayedOn(point.playedOn)}</td>
-              <td>{formatCount(point.value)}</td>
+          {days.map((day) => (
+            <tr key={day.playedOn}>
+              <td>{formatPlayedOn(day.playedOn)}</td>
+              <td>{formatCount(day.low)}</td>
+              <td>{formatCount(day.high)}</td>
             </tr>
           ))}
         </tbody>

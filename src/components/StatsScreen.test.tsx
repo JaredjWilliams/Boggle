@@ -53,6 +53,14 @@ describe('StatsScreen', () => {
     expect(figure('Words a game')).toHaveTextContent('6')
     expect(words).toHaveTextContent('Up about 1 word a week.')
     expect(within(words).getByRole('img', { name: 'Words found on each date' })).toBeInTheDocument()
+    expect(within(words).getAllByTestId('range-high')).toHaveLength(1)
+    expect(within(words).getAllByTestId('range-low')).toHaveLength(1)
+    expect(within(words).getAllByTestId('trend-line')).toHaveLength(1)
+
+    await userEvent.click(within(words).getByRole('button', { name: 'Points' }))
+    expect(within(words).getByRole('img', { name: 'Score on each date' })).toBeInTheDocument()
+    expect(within(words).getAllByTestId('range-high')).toHaveLength(1)
+    expect(within(words).getAllByTestId('range-low')).toHaveLength(1)
     expect(within(words).getAllByTestId('trend-line')).toHaveLength(1)
 
     const wins = section('Win rate')
@@ -82,6 +90,8 @@ describe('StatsScreen', () => {
     const score = section('Points a game')
     expect(figure('Points a game')).toHaveTextContent('1,500')
     expect(score).toHaveTextContent('Up about 250 points a week.')
+    expect(within(score).getAllByTestId('range-high')).toHaveLength(1)
+    expect(within(score).getAllByTestId('range-low')).toHaveLength(1)
     expect(within(score).getAllByTestId('trend-line')).toHaveLength(1)
   })
 

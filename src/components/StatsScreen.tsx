@@ -26,7 +26,7 @@ import {
   wordsByLength,
   type GameStat,
 } from '../stats/series'
-import { PieChart, ScatterPlot } from './StatCharts'
+import { DailyRangeChart, PieChart } from './StatCharts'
 import { StatusBlock } from './StatusBlock'
 import './StatsScreen.css'
 
@@ -260,9 +260,9 @@ export function StatsScreen({ playerName, games, loading, notice, onRetry }: Pro
                     <span>{metric === 'words' ? 'words per game' : 'points per game'}</span>
                   </div>
                   {metric === 'words' ? (
-                    <ScatterPlot label="Words found on each date" points={wordPoints} valueName="words" />
+                    <DailyRangeChart label="Words found on each date" points={wordPoints} valueName="words" />
                   ) : (
-                    <ScatterPlot label="Score on each date" points={scorePoints} valueName="points" />
+                    <DailyRangeChart label="Score on each date" points={scorePoints} valueName="points" />
                   )}
                 </div>
               </section>
@@ -406,7 +406,7 @@ export function StatsScreen({ playerName, games, loading, notice, onRetry }: Pro
                 </div>
                 <p className="stat-figure">{summary.score === null ? '—' : formatAverage(summary.score)}</p>
                 <p className="stat-note">{trendNote(scorePoints, 'point')}</p>
-                <ScatterPlot label="Score on each date" points={scorePoints} valueName="points" />
+                <DailyRangeChart label="Score on each date" points={scorePoints} valueName="points" />
               </section>
 
               <section className="panel" aria-labelledby="bands-heading">

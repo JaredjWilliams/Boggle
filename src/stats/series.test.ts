@@ -9,6 +9,7 @@ import {
   gamesAgainst,
   headToHead,
   lengthNote,
+  dailyRange,
   linearTrend,
   startCells,
   startHeat,
@@ -159,6 +160,23 @@ describe('stats series', () => {
     expect(headToHead(games, 'Mina Chen')).toEqual({ wins: 1, losses: 0, ties: 1 })
     expect(winRate(headToHead(games, 'Jonah Park'))).toBe(0)
     expect(winRate({ wins: 0, losses: 0, ties: 0 })).toBeNull()
+  })
+
+  it('collapses each day to its lowest and highest game', () => {
+    expect(
+      dailyRange([
+        { playedOn: '2026-10-21', value: 38 },
+        { playedOn: '2026-10-21', value: 28 },
+        { playedOn: '2026-10-21', value: 34 },
+        { playedOn: '2026-10-22', value: 46 },
+        { playedOn: '2026-11-05', value: 12 },
+      ]),
+    ).toEqual([
+      { playedOn: '2026-10-21', low: 28, high: 38 },
+      { playedOn: '2026-10-22', low: 46, high: 46 },
+      { playedOn: '2026-11-05', low: 12, high: 12 },
+    ])
+    expect(dailyRange([])).toEqual([])
   })
 
   it('fits a line through dated scores', () => {

@@ -808,15 +808,34 @@
   stroke-width: 2.25;
 }
 
-.plot-halo {
-  fill: var(--accent);
-  opacity: 0.16;
+.range-high,
+.range-low {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.25;
 }
 
-.plot-dot {
-  fill: var(--accent);
+.range-high {
+  stroke: var(--accent);
+}
+
+.range-low {
+  stroke: var(--muted);
+}
+
+.range-high-dot,
+.range-low-dot {
   stroke: var(--tile);
   stroke-width: 1.5;
+}
+
+.range-high-dot {
+  fill: var(--accent);
+}
+
+.range-low-dot {
+  fill: var(--muted);
 }
 
 .pie-layout {
