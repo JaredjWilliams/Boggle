@@ -109,6 +109,59 @@ describe('assembleActiveGames', () => {
     ])
   })
 
+  it('lists a finished solo board and a finished pass-along with nobody else seated', () => {
+    const seats: ActiveSeat[] = [
+      seat('solo', 'ada', 'accepted', '2026-10-22T19:00:00.000Z'),
+      seat('pass', 'ada', 'accepted', '2026-10-22T18:00:00.000Z'),
+      seat('open', 'ada', 'accepted', '2026-10-22T17:00:00.000Z'),
+      { ...seat('daily', 'ada', 'accepted', '2026-10-22T16:00:00.000Z'), dailyOn: '2026-10-22' },
+    ]
+    const scores: HeadScore[] = [
+      { gameId: 'solo', playerId: 'ada', score: 42 },
+      { gameId: 'pass', playerId: 'ada', score: 15 },
+      { gameId: 'daily', playerId: 'ada', score: 99 },
+    ]
+
+    expect(assembleActiveGames('ada', seats, scores, names, { now })).toEqual([
+      {
+        gameId: 'solo',
+        opponentId: '',
+        opponentName: 'Solo',
+        playedBack: true,
+        hosted: false,
+        wins: 0,
+        losses: 0,
+        yourScore: 42,
+        opponentScore: null,
+        solo: true,
+      },
+      {
+        gameId: 'pass',
+        opponentId: '',
+        opponentName: 'Solo',
+        playedBack: true,
+        hosted: false,
+        wins: 0,
+        losses: 0,
+        yourScore: 15,
+        opponentScore: null,
+        solo: true,
+      },
+    ])
+  })
+
+  it('keeps a finished solo board out of played-back notices', () => {
+    const games = assembleActiveGames(
+      'ada',
+      [seat('solo', 'ada', 'accepted', '2026-10-22T19:00:00.000Z')],
+      [{ gameId: 'solo', playerId: 'ada', score: 42 }],
+      names,
+      { now },
+    )
+    expect(playedBackNotices(games, new Set())).toEqual([])
+    expect(activeGameLabel(games[0])).toBe('Solo, 42')
+  })
+
   it('marks a zero score as played back and keeps each opponent’s record', () => {
     const seats: ActiveSeat[] = [
       seat('g1', 'ada', 'accepted', '2026-10-22T18:00:00.000Z'),

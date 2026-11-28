@@ -69,6 +69,8 @@ export type ActiveGame = {
   opponentScore: number | null
   /** Whole days left before this game is deleted. */
   daysLeft?: number
+  /** Finished board with no opponent seat (Play solo or a pass-along played alone). */
+  solo?: boolean
 }
 
 export type ActiveSeat = {
@@ -79,6 +81,8 @@ export type ActiveSeat = {
   hostId?: string
   /** Who sent this seat. Missing seats still count as invited by the host. */
   invitedBy?: string
+  /** Calendar day when this game was the daily board. */
+  dailyOn?: string | null
 }
 
 export type HeadScore = {
@@ -167,6 +171,9 @@ export function matchResultLabel(result: MatchResult): string {
 }
 
 export function activeGameLabel(game: ActiveGame): string {
+  if (game.solo) {
+    return `Solo, ${formatPoints(game.yourScore)}`
+  }
   const place = typeof game.daysLeft === 'number' ? daysLeftLabel(game.daysLeft) : game.playedBack ? 'played back' : 'waiting'
   return `${game.opponentName}, ${formatMatchScore(game.yourScore, game.opponentScore)}, ${recordPhrase(game.wins, game.losses)}, ${place}`
 }
@@ -224,6 +231,23 @@ export function assembleActiveGames(
     const viewerFinished = scores.some((score) => score.gameId === gameId && score.playerId === viewerId)
     if (!viewerFinished && gameIsExpired(viewer.createdAt, now)) continue
     const opponents = group.filter((seat) => seat.playerId !== viewerId && seat.status !== 'declined')
+    if (opponents.length === 0) {
+      if (!viewerFinished || viewer.dailyOn) continue
+      games.push({
+        gameId,
+        opponentId: '',
+        opponentName: 'Solo',
+        playedBack: true,
+        hosted: false,
+        wins: 0,
+        losses: 0,
+        yourScore: scoreOf(scores, gameId, viewerId),
+        opponentScore: null,
+        solo: true,
+        createdAt: viewer.createdAt,
+      })
+      continue
+    }
     for (const opponent of opponents) {
       const playedBack = scores.some(
         (score) => score.gameId === gameId && score.playerId === opponent.playerId,

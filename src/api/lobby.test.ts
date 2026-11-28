@@ -101,6 +101,22 @@ function answer(query: RecordedQuery): { data: unknown; error: { message: string
             { player_id: 'grace', score: 50 },
           ],
         },
+        {
+          id: 'solo-done',
+          created_at: recent,
+          host_id: 'ada',
+          daily_on: null,
+          game_players: [{ player_id: 'ada', status: 'accepted' }],
+          results: [{ player_id: 'ada', score: 42 }],
+        },
+        {
+          id: 'daily-done',
+          created_at: recent,
+          host_id: 'ada',
+          daily_on: '2026-10-22',
+          game_players: [{ player_id: 'ada', status: 'accepted' }],
+          results: [{ player_id: 'ada', score: 99 }],
+        },
       ],
       error: null,
     }
@@ -121,6 +137,14 @@ function answer(query: RecordedQuery): { data: unknown; error: { message: string
             { player_id: 'ada', score: 20 },
             { player_id: 'grace', score: 10 },
           ],
+        },
+        {
+          id: 'solo-done',
+          results: [{ player_id: 'ada', score: 42 }],
+        },
+        {
+          id: 'daily-done',
+          results: [{ player_id: 'ada', score: 99 }],
         },
       ],
       error: null,
@@ -144,6 +168,8 @@ function answer(query: RecordedQuery): { data: unknown; error: { message: string
       data: [
         { game_id: 'g1', score: 80, games: { created_at: recent } },
         { game_id: 'old', score: 20, games: { created_at: older } },
+        { game_id: 'solo-done', score: 42, games: { created_at: recent } },
+        { game_id: 'daily-done', score: 99, games: { created_at: recent } },
         { game_id: 'today', score: 45, games: { created_at: localNoon(0) } },
         { game_id: 'yesterday', score: 900, games: { created_at: localNoon(-1) } },
         { game_id: 'blank', score: 70, games: { created_at: 'not-a-date' } },
@@ -202,6 +228,18 @@ describe('loadLobby active games', () => {
           yourScore: 80,
           opponentScore: 50,
         },
+        {
+          gameId: 'solo-done',
+          opponentId: '',
+          opponentName: 'Solo',
+          playedBack: true,
+          hosted: false,
+          wins: 0,
+          losses: 0,
+          yourScore: 42,
+          opponentScore: null,
+          solo: true,
+        },
       ],
     })
     expect(supabase.rpc).toHaveBeenCalledWith('expire_stale_games')
@@ -210,6 +248,7 @@ describe('loadLobby active games', () => {
     )
 
     const accepted = supabase.calls.find((call) => call.table === 'games' && call.select?.includes('game_players'))
+    expect(accepted?.select).toContain('daily_on')
     expect(accepted?.filters).toEqual([
       { op: 'eq', column: 'mine.player_id', value: 'ada' },
       { op: 'eq', column: 'mine.status', value: 'accepted' },

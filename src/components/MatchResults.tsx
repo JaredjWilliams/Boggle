@@ -45,7 +45,7 @@ type SavedProps = {
   gameId: string
   viewerId: string
   viewerName: string
-  rival: Rival
+  rival?: Rival
   onPlayAgain: () => void
   send?: ReactNode
 }
@@ -71,6 +71,18 @@ export function SavedMatch({ gameId, viewerId, viewerName, rival, onPlayAgain, s
           statusClassName="match-kicker"
         />
       </section>
+    )
+  }
+
+  if (!rival) {
+    return (
+      <EndPanel
+        score={round.score ?? 0}
+        found={round.words ? [...round.words] : []}
+        missed={round.missed}
+        onPlayAgain={onPlayAgain}
+        send={send}
+      />
     )
   }
 

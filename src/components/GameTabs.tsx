@@ -5,6 +5,7 @@ import {
   completedGameKey,
   daysLeftLabel,
   formatMatchScore,
+  formatPoints,
   formatRecord,
   matchResult,
   matchResultLabel,
@@ -171,7 +172,8 @@ function GameList({
     <ul className="active-games" aria-label={label}>
       {games.map((game) => {
         const unread = unreadKeys?.has(completedGameKey(game)) ?? false
-        const result = game.playedBack ? matchResult(game.yourScore, game.opponentScore) : null
+        const result =
+          game.solo || !game.playedBack ? null : matchResult(game.yourScore, game.opponentScore)
         return (
           <li key={`${game.gameId}:${game.opponentId}`}>
             <button
@@ -196,8 +198,12 @@ function GameList({
                   )}
                 </span>
                 <span className="active-game-record">
-                  <strong>{formatMatchScore(game.yourScore, game.opponentScore)}</strong>
-                  <span className="active-game-tally">{formatRecord(game.wins, game.losses)}</span>
+                  <strong>
+                    {game.solo ? formatPoints(game.yourScore) : formatMatchScore(game.yourScore, game.opponentScore)}
+                  </strong>
+                  {!game.solo && (
+                    <span className="active-game-tally">{formatRecord(game.wins, game.losses)}</span>
+                  )}
                 </span>
               </span>
             </button>

@@ -303,7 +303,11 @@ function PlayerGame({
           gameId={openGame.gameId}
           viewerId={player.id}
           viewerName={player.name}
-          rival={{ id: openGame.opponentId, name: openGame.opponentName }}
+          rival={
+            openGame.solo
+              ? undefined
+              : { id: openGame.opponentId, name: openGame.opponentName }
+          }
           onPlayAgain={() => {
             setOpenGame(null)
             void match.begin('shake')

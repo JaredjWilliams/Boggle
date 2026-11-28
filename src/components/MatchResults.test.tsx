@@ -529,6 +529,25 @@ describe('MatchReview', () => {
     expect(lengthsFound(column('Grace Hopper'))).toBe('4:1')
   })
 
+  it('opens a finished solo board on the solo summary', async () => {
+    mocks.loadSavedRound.mockResolvedValue({
+      score: 200,
+      words: [{ word: 'cat', points: 100 }],
+      missed: [{ word: 'eat', points: 100 }],
+    })
+
+    render(
+      <SavedMatch gameId="solo-1" viewerId="ada" viewerName="Ada Lovelace" onPlayAgain={vi.fn()} />,
+    )
+
+    expect(await screen.findByText("Time's up")).toBeInTheDocument()
+    expect(screen.getByText('Score').parentElement).toHaveTextContent('200')
+    expect(screen.getByText('Words').parentElement).toHaveTextContent('1')
+    expect(screen.getByRole('heading', { name: 'Your words' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Possible words' })).toBeInTheDocument()
+    expect(mocks.loadMatchPlayers).not.toHaveBeenCalled()
+  })
+
   it('traces a potential word on the board from that game', async () => {
     mocks.loadSavedRound.mockResolvedValue({
       score: 100,

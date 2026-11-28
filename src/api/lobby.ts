@@ -58,6 +58,7 @@ type AcceptedGameRow = {
   id: string
   created_at?: string
   host_id?: string
+  daily_on?: string | null
   game_players: SeatEmbed[] | SeatEmbed | null
   results: ScoreEmbed[] | ScoreEmbed | null
 }
@@ -109,7 +110,7 @@ export async function loadLobby(playerId: string): Promise<Lobby> {
     supabase
       .from('games')
       .select(
-        'id, created_at, host_id, game_players(player_id, status, invited_at, invited_by), results(player_id, score), mine:game_players!inner(player_id)',
+        'id, created_at, host_id, daily_on, game_players(player_id, status, invited_at, invited_by), results(player_id, score), mine:game_players!inner(player_id)',
       )
       .eq('mine.player_id', playerId)
       .eq('mine.status', 'accepted'),
@@ -295,6 +296,7 @@ function seatsOf(games: readonly AcceptedGameRow[]) {
       createdAt: seat.invited_at || game.created_at || '',
       hostId: game.host_id ?? '',
       ...(seat.invited_by ? { invitedBy: seat.invited_by } : {}),
+      ...(game.daily_on ? { dailyOn: game.daily_on } : {}),
     })),
   )
 }

@@ -419,6 +419,38 @@ describe('HomeDashboard', () => {
     expect(onOpenGame).toHaveBeenCalledExactlyOnceWith(played)
   })
 
+  it('lists a finished solo board in completed games', async () => {
+    const solo: ActiveGame = {
+      gameId: 'solo-1',
+      opponentId: '',
+      opponentName: 'Solo',
+      playedBack: true,
+      hosted: false,
+      wins: 0,
+      losses: 0,
+      yourScore: 1500,
+      opponentScore: null,
+      solo: true,
+    }
+    const onOpenGame = vi.fn()
+    render(<HomeDashboard {...props} games={[solo]} onOpenGame={onOpenGame} />)
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Completed games' }))
+
+    const finished = screen.getByRole('list', { name: 'Completed games' })
+    const button = within(finished).getByRole('button')
+    expect(button).toHaveAttribute('aria-label', 'Solo, 1,500')
+    expect(button).toHaveTextContent('Solo')
+    expect(button).toHaveTextContent('1,500')
+    expect(button).not.toHaveTextContent('Win')
+    expect(button).not.toHaveTextContent('Lose')
+    expect(button).not.toHaveTextContent('0–0')
+    expect(button).not.toHaveClass('is-unread')
+
+    await userEvent.click(button)
+    expect(onOpenGame).toHaveBeenCalledExactlyOnceWith(solo)
+  })
+
   it('lists invitations and plays or declines the one you choose', async () => {
     const invite: Invite = {
       gameId: 'game-1',
