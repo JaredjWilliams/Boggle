@@ -10,6 +10,12 @@ export const UPDATES: readonly UpdateNote[] = [
   {
     date: '2026-11-27',
     label: 'Nov 27',
+    title: 'Browse anyone’s stats',
+    body: 'On Stats, tap the name under Your stats to open a player picker. It starts on you, and you can switch to anyone else to see their charts and records.',
+  },
+  {
+    date: '2026-11-27',
+    label: 'Nov 27',
     title: 'Solo games in Completed',
     body: 'Finished Play Solo boards, and pass-along boards you finished alone, show up under Completed games while the board still exists. Open one to see your summary. The daily board stays on its own results screen.',
   },

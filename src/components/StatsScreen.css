@@ -3,6 +3,7 @@
 }
 
 .stats-player {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -10,7 +11,7 @@
 }
 
 .eyebrow,
-.stats-player span,
+.stats-player .eyebrow,
 .filter-label {
   margin: 0;
   color: var(--accent);
@@ -21,12 +22,89 @@
   text-transform: uppercase;
 }
 
-.stats-player strong {
+.stats-player-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.stats-player-trigger strong {
   color: var(--muted);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
+}
+
+.stats-player-chevron {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.stats-player-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.stats-player-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: min(240px, 100%);
+  max-height: 240px;
+  margin: 0;
+  padding: 6px;
+  overflow: auto;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--tile);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--ink) 18%, transparent);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.stats-player-menu::-webkit-scrollbar {
+  display: none;
+}
+
+.stats-player-menu button {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stats-player-menu button[aria-selected='true'] {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+
+.stats-player-menu button:focus-visible,
+.stats-player-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .stats h1 {

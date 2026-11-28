@@ -1,8 +1,16 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { START_CELLS, type GameStat } from '../stats/series'
-import { StatsScreen } from './StatsScreen'
+import { PlayerStats, StatsScreen } from './StatsScreen'
+
+vi.mock('../api/stats', () => ({
+  loadPlayerStats: vi.fn(),
+}))
+
+import { loadPlayerStats } from '../api/stats'
+
+const loadStats = vi.mocked(loadPlayerStats)
 
 const games: GameStat[] = [
   {
@@ -34,8 +42,18 @@ const games: GameStat[] = [
   },
 ]
 
+const players = [
+  { id: 'ada', name: 'Ada Lovelace' },
+  { id: 'mina', name: 'Mina Chen' },
+  { id: 'jonah', name: 'Jonah Park' },
+]
+
 const props = {
   playerName: 'Ada Lovelace',
+  players,
+  selectedId: 'ada',
+  viewingSelf: true,
+  onSelectPlayer: vi.fn(),
   games,
   loading: false,
   notice: '',
@@ -208,6 +226,92 @@ describe('StatsScreen', () => {
     expect(section('Win rate')).toHaveTextContent(
       '1 solo game stays on the words, score, longest-word, length, and where-you-start cards.',
     )
+  })
+
+  it('lets the viewer pick whose stats to show', async () => {
+    const onSelectPlayer = vi.fn()
+    const { rerender } = render(<StatsScreen {...props} onSelectPlayer={onSelectPlayer} />)
+
+    expect(screen.getByText('Your stats')).toBeInTheDocument()
+    expect(screen.getByText(/your story so far/)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Your stats' }))
+    expect(screen.getByRole('option', { name: 'Ada Lovelace' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('option', { name: 'Mina Chen' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Jonah Park' })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('option', { name: 'Mina Chen' }))
+    expect(onSelectPlayer).toHaveBeenCalledWith('mina')
+
+    rerender(
+      <StatsScreen
+        {...props}
+        playerName="Mina Chen"
+        selectedId="mina"
+        viewingSelf={false}
+        onSelectPlayer={onSelectPlayer}
+      />,
+    )
+
+    expect(screen.getByText('Stats')).toBeInTheDocument()
+    expect(screen.queryByText('Your stats')).not.toBeInTheDocument()
+    expect(screen.getByText(/their story so far/)).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Stats' })).toHaveTextContent('Mina Chen')
+  })
+})
+
+describe('PlayerStats', () => {
+  beforeEach(() => {
+    loadStats.mockReset()
+  })
+
+  it('defaults to the logged-in player and reloads when another is chosen', async () => {
+    loadStats.mockImplementation(async (playerId) => {
+      if (playerId === 'mina') {
+        return [
+          {
+            id: 'm1',
+            playedOn: '2026-10-10',
+            words: 2,
+            score: 400,
+            longest: 'me',
+            byLength: { 2: 2 },
+            opponents: [],
+          },
+        ]
+      }
+      return games
+    })
+
+    render(
+      <PlayerStats
+        playerId="ada"
+        playerName="Ada Lovelace"
+        friends={[
+          { id: 'mina', name: 'Mina Chen', username: 'mina' },
+          { id: 'jonah', name: 'Jonah Park', username: 'jonah' },
+        ]}
+      />,
+    )
+
+    await waitFor(() => expect(loadStats).toHaveBeenCalledWith('ada'))
+    expect(await screen.findByText('Your stats')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Your stats' })).toHaveTextContent('Ada Lovelace')
+    expect(await screen.findByText('days of wordplay')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Your stats' }))
+    await userEvent.click(screen.getByRole('option', { name: 'Mina Chen' }))
+
+    await waitFor(() => expect(loadStats).toHaveBeenCalledWith('mina'))
+    expect(await screen.findByText('Stats')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Stats' })).toHaveTextContent('Mina Chen')
+    expect(screen.getByText(/their story so far/)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Stats' }))
+    await userEvent.click(screen.getByRole('option', { name: 'Ada Lovelace' }))
+
+    await waitFor(() => expect(loadStats).toHaveBeenLastCalledWith('ada'))
+    expect(await screen.findByText('Your stats')).toBeInTheDocument()
   })
 })
 

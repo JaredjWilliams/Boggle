@@ -1,6 +1,16 @@
-import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+} from 'react'
 import { loadPlayerStats } from '../api/stats'
+import type { Friend } from '../domain/lobby'
 import { SIDE } from '../game/dice'
+import { useFriends } from '../hooks/useFriends'
 import { useLoaded } from '../hooks/useLoaded'
 import {
   averages,
@@ -30,8 +40,17 @@ import { DailyRangeChart, PieChart } from './StatCharts'
 import { StatusBlock } from './StatusBlock'
 import './StatsScreen.css'
 
+type StatsPlayer = {
+  id: string
+  name: string
+}
+
 type Props = {
   playerName: string
+  players: readonly StatsPlayer[]
+  selectedId: string
+  viewingSelf: boolean
+  onSelectPlayer: (playerId: string) => void
   games: readonly GameStat[]
   loading: boolean
   notice: string
@@ -49,17 +68,50 @@ const TABS: { id: Tab; label: string; icon: IconName }[] = [
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
-export function PlayerStats({ playerId, playerName }: { playerId: string; playerName: string }) {
+export function PlayerStats({
+  playerId,
+  playerName,
+  friends: friendsProp,
+}: {
+  playerId: string
+  playerName: string
+  /** When set (tests), skip the directory fetch and use this list. */
+  friends?: readonly Friend[]
+}) {
+  const [selectedId, setSelectedId] = useState(playerId)
+  const directory = useFriends(playerId || undefined, friendsProp === undefined)
+  const friends = friendsProp ?? directory.friends
+
+  useEffect(() => {
+    setSelectedId(playerId)
+  }, [playerId])
+
+  const players = useMemo(() => {
+    const others = [...friends]
+      .filter((friend) => friend.id !== playerId)
+      .sort((left, right) => left.name.localeCompare(right.name) || left.username.localeCompare(right.username))
+    return [{ id: playerId, name: playerName }, ...others.map((friend) => ({ id: friend.id, name: friend.name }))]
+  }, [friends, playerId, playerName])
+
+  const selectedName =
+    players.find((player) => player.id === selectedId)?.name ??
+    (selectedId === playerId ? playerName : 'Player')
+  const viewingSelf = selectedId === playerId
+
   const stats = useLoaded(
-    () => (playerId ? loadPlayerStats(playerId) : Promise.resolve([])),
+    () => (selectedId ? loadPlayerStats(selectedId) : Promise.resolve([])),
     [] as GameStat[],
-    'Could not load your stats.',
-    [playerId],
+    viewingSelf ? 'Could not load your stats.' : 'Could not load those stats.',
+    [selectedId],
   )
 
   return (
     <StatsScreen
-      playerName={playerName}
+      playerName={selectedName}
+      players={players}
+      selectedId={selectedId}
+      viewingSelf={viewingSelf}
+      onSelectPlayer={setSelectedId}
       games={stats.data}
       loading={stats.loading}
       notice={stats.notice}
@@ -68,7 +120,17 @@ export function PlayerStats({ playerId, playerName }: { playerId: string; player
   )
 }
 
-export function StatsScreen({ playerName, games, loading, notice, onRetry }: Props) {
+export function StatsScreen({
+  playerName,
+  players,
+  selectedId,
+  viewingSelf,
+  onSelectPlayer,
+  games,
+  loading,
+  notice,
+  onRetry,
+}: Props) {
   const pageRef = useRef<HTMLElement>(null)
   const names = useMemo(() => opponentNames(games), [games])
   const [opponent, setOpponent] = useState<string | null>(null)
@@ -99,6 +161,9 @@ export function StatsScreen({ playerName, games, loading, notice, onRetry }: Pro
   const totalScore = visible.reduce((sum, game) => sum + game.score, 0)
   const playedLabel = dates.length === 1 ? 'day of wordplay' : 'days of wordplay'
   const ready = !loading && !notice
+  const lede = viewingSelf
+    ? 'A little wordplay. A lot of progress. Here’s your story so far.'
+    : 'A little wordplay. A lot of progress. Here’s their story so far.'
 
   function selectTab(next: Tab) {
     setTab(next)
@@ -108,14 +173,17 @@ export function StatsScreen({ playerName, games, loading, notice, onRetry }: Pro
 
   return (
     <main className="page stats" ref={pageRef}>
-      <p className="stats-player">
-        <span className="eyebrow">Your stats</span>
-        <strong>{playerName}</strong>
-      </p>
+      <StatsPlayerPicker
+        players={players}
+        selectedId={selectedId}
+        playerName={playerName}
+        viewingSelf={viewingSelf}
+        onSelectPlayer={onSelectPlayer}
+      />
       <h1>
         Every game, plotted<span className="title-mark">.</span>
       </h1>
-      <p className="page-lede">A little wordplay. A lot of progress. Here’s your story so far.</p>
+      <p className="page-lede">{lede}</p>
 
       <StatusBlock
         loading={loading}
@@ -439,6 +507,134 @@ export function StatsScreen({ playerName, games, loading, notice, onRetry }: Pro
         </>
       )}
     </main>
+  )
+}
+
+function StatsPlayerPicker({
+  players,
+  selectedId,
+  playerName,
+  viewingSelf,
+  onSelectPlayer,
+}: {
+  players: readonly StatsPlayer[]
+  selectedId: string
+  playerName: string
+  viewingSelf: boolean
+  onSelectPlayer: (playerId: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const labelId = 'stats-player-label'
+  const listId = 'stats-player-list'
+
+  useEffect(() => {
+    if (!open) return
+    const selectedOption = rootRef.current?.querySelector<HTMLButtonElement>('[aria-selected="true"]')
+    const firstOption = rootRef.current?.querySelector<HTMLButtonElement>('[role="option"]')
+    ;(selectedOption ?? firstOption)?.focus()
+
+    function onPointer(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setOpen(false)
+        buttonRef.current?.focus()
+      }
+    }
+    document.addEventListener('pointerdown', onPointer)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onPointer)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  function moveOption(event: ReactKeyboardEvent, direction: 1 | -1) {
+    const options = [...(rootRef.current?.querySelectorAll<HTMLButtonElement>('[role="option"]') ?? [])]
+    const index = options.indexOf(document.activeElement as HTMLButtonElement)
+    const next = options[index + direction]
+    if (!next) return
+    event.preventDefault()
+    next.focus()
+  }
+
+  return (
+    <div className="stats-player" ref={rootRef}>
+      <span className="eyebrow" id={labelId}>
+        {viewingSelf ? 'Your stats' : 'Stats'}
+      </span>
+      <button
+        ref={buttonRef}
+        type="button"
+        className="stats-player-trigger"
+        role="combobox"
+        aria-labelledby={labelId}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={listId}
+        onClick={() => setOpen((current) => !current)}
+        onKeyDown={(event) => {
+          if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            setOpen(true)
+          }
+        }}
+      >
+        <strong>{playerName}</strong>
+        <Chevron open={open} />
+      </button>
+      {open && (
+        <ul
+          id={listId}
+          className="stats-player-menu"
+          role="listbox"
+          aria-labelledby={labelId}
+          onKeyDown={(event) => {
+            if (event.key === 'ArrowDown') moveOption(event, 1)
+            if (event.key === 'ArrowUp') moveOption(event, -1)
+          }}
+        >
+          {players.map((player) => (
+            <li key={player.id} role="presentation">
+              <button
+                type="button"
+                role="option"
+                aria-selected={player.id === selectedId}
+                onClick={() => {
+                  onSelectPlayer(player.id)
+                  setOpen(false)
+                  buttonRef.current?.focus()
+                }}
+              >
+                {player.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      className={open ? 'stats-player-chevron is-open' : 'stats-player-chevron'}
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path
+        d="M6 9l6 6 6-6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }
 
