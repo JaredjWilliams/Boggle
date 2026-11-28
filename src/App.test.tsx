@@ -404,9 +404,13 @@ describe('home dashboard', () => {
 
     await user.click(screen.getByRole('button', { name: 'Profile' }))
     expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument()
-    const updates = screen.getByRole('region', { name: 'Updates' })
+    await user.click(screen.getByRole('button', { name: 'Updates' }))
+    expect(screen.getByRole('heading', { name: 'Updates' })).toBeInTheDocument()
+    const updates = screen.getByRole('list', { name: 'Updates' })
     expect(updates).toHaveTextContent('Words you had started is gone')
     expect(updates).toHaveTextContent('every possible word from every board')
+    expect(updates).toHaveTextContent('Solo games in Completed')
+    await user.click(screen.getByRole('button', { name: 'Profile' }))
     await user.click(screen.getByRole('button', { name: 'Settings' }))
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
 

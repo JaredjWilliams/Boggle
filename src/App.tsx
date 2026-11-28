@@ -19,6 +19,7 @@ import { LoginPage } from './components/LoginPage'
 import { ScreenFrame } from './components/ScreenFrame'
 import { SendBoard } from './components/SendBoard'
 import { SettingsScreen } from './components/SettingsScreen'
+import { UpdatesScreen } from './components/UpdatesScreen'
 import { PlayerStats } from './components/StatsScreen'
 import { StatusBar } from './components/StatusBar'
 import { WordForm } from './components/WordForm'
@@ -36,7 +37,18 @@ import './App.css'
 
 const testing = import.meta.env.MODE === 'test'
 
-type View = 'home' | 'games' | 'stats' | 'daily' | 'friends' | 'learn' | 'leaderboard' | 'settings' | 'admin' | 'profile'
+type View =
+  | 'home'
+  | 'games'
+  | 'stats'
+  | 'daily'
+  | 'friends'
+  | 'learn'
+  | 'leaderboard'
+  | 'settings'
+  | 'admin'
+  | 'profile'
+  | 'updates'
 
 function navFor(view: View): AppNav {
   if (view === 'games') return 'games'
@@ -46,7 +58,8 @@ function navFor(view: View): AppNav {
     view === 'settings' ||
     view === 'learn' ||
     view === 'leaderboard' ||
-    view === 'admin'
+    view === 'admin' ||
+    view === 'updates'
   ) {
     return 'profile'
   }
@@ -403,11 +416,13 @@ function PlayerGame({
         name={player.name}
         onSettings={() => setView('settings')}
         onHelp={() => setView('learn')}
+        onUpdates={() => setView('updates')}
         onLeaderboard={() => setView('leaderboard')}
         onAdmin={isAdmin(player) ? () => setView('admin') : undefined}
         onSignOut={onSignOut}
       />
     ),
+    updates: <UpdatesScreen />,
     learn: <LearnScreen />,
     admin: isAdmin(player) ? <AdminPage hostId={player.id ?? ''} trie={round.trie} /> : null,
     settings: <SettingsScreen theme={theme} onThemeChange={onThemeChange} />,
