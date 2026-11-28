@@ -20,6 +20,7 @@ import {
   type Phase,
   type ScoredWord,
 } from '../game/round'
+import { playAttempt, playConnectTick, unlockAudio } from '../audio/sounds'
 import {
   aimedNeighbor,
   pathOnDrag,
@@ -240,6 +241,7 @@ export function useRound() {
       const points = scoreWord(word)
       attemptSeq.current += 1
       const id = attemptSeq.current
+      playAttempt(verdict.kind)
 
       if (verdict.kind !== 'new') {
         setMessage(verdict.message)
@@ -267,6 +269,7 @@ export function useRound() {
     const cell = tileAt(event.clientX, event.clientY)
     if (!cell) return
 
+    const prevLen = pathRef.current.length
     const nextPath = pathOnPress(pathRef.current, cell)
     if (!nextPath) return
 
@@ -274,6 +277,8 @@ export function useRound() {
     pathRef.current = nextPath
     setPath(nextPath)
     setDraft('')
+    void unlockAudio()
+    if (nextPath.length > prevLen) playConnectTick(nextPath.length - 1)
     try {
       event.currentTarget.setPointerCapture(event.pointerId)
     } catch {
@@ -298,6 +303,7 @@ export function useRound() {
     setDrag({ x: event.clientX, y: event.clientY, over })
     if (!aimed) return
 
+    const prevLen = gesture.path.length
     const nextPath = pathOnDrag(gesture.path, aimed)
     if (!nextPath) return
 
@@ -306,6 +312,7 @@ export function useRound() {
     pathRef.current = nextPath
     setPath(nextPath)
     setDraft('')
+    if (nextPath.length > prevLen) playConnectTick(nextPath.length - 1)
   }
 
   function onPointerUp(event: PointerEvent<HTMLDivElement>) {

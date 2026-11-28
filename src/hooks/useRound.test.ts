@@ -32,6 +32,15 @@ vi.mock('../game/dictionary', async () => {
   }
 })
 
+vi.mock('../audio/sounds', () => ({
+  unlockAudio: vi.fn(() => Promise.resolve()),
+  playConnectTick: vi.fn(),
+  playAttempt: vi.fn(),
+  attemptSoundUrl: (kind: string) => `/sounds/${kind}.wav`,
+  connectTickHz: (index: number) => 220 * 2 ** (Math.max(0, index) / 12),
+  resetAudioForTests: vi.fn(),
+}))
+
 const elementFromPoint = document.elementFromPoint
 
 describe('home', () => {
